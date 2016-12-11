@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <filter class="com.ccadllc.cedi.dtrace.logging.TestLogInterceptor"/>
+        <encoder>
+            <pattern>%-5p %logger{36} - %m%n</pattern>
+        </encoder>
+    </appender>
+    <logger name="com.ccadllc.cedi.dtrace" level="DEBUG"/>
+    <logger name="distributed-trace.txt" level="DEBUG"/>
+    <logger name="distributed-trace.json" level="DEBUG"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>
