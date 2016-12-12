@@ -168,7 +168,7 @@ task.unsafeRun()
 
 ### <a id="getit"></a>How to get latest Version
 
-Cedi Distributed Trace supports Scala 2.10, 2.11, and 2.12. This distribution will be published to Maven Central soon and consists of two library components.
+Cedi Distributed Trace supports Scala 2.11 and 2.12. This distribution will be published to Maven Central soon and consists of two library components.
 
 dtrace-core
 ===========
