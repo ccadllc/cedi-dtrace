@@ -20,7 +20,6 @@ import fs2.util.syntax._
 
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.io.{ PrintWriter, StringWriter }
 import java.util.UUID
 
 import scala.concurrent.duration._
@@ -28,24 +27,30 @@ import scala.language.higherKinds
 import scala.util.{ Random, Try }
 import scala.util.matching.Regex
 
-sealed abstract class FailureDetail extends Product with Serializable { def render: String }
-object FailureDetail {
-  case class Message(m: String) extends FailureDetail { override def render: String = m }
-  case class Exception(e: Throwable) extends FailureDetail {
-    override def render: String = {
-      val exceptionMessage = new StringWriter
-      e.printStackTrace(new PrintWriter(exceptionMessage))
-      exceptionMessage.toString
-    }
-  }
-  def apply(m: String): FailureDetail = Message(m)
-  def apply(e: Throwable): FailureDetail = Exception(e)
-}
-
+/**
+ * System level configuration for the trace system.
+ * @param identity - the system-level environment (node, deployment, program identities)
+ *   information rendered as metadata during the recording of a span.
+ * @param emitter - responsible for actually recording the span information for a distributed trace
+ *   to some external sink (e.g., log file, remote database, JMX, etc.).
+ */
 case class TraceSystem(identity: TraceSystem.Identity, emitter: TraceSystem.Emitter) {
   override def toString: String = s"[emitter=$identity] [emitter=${emitter.description}]"
 }
+
+/**
+ * Companion object which provides the `Identity` object for system-level metadata and the trait which
+ * describes the behavior of a trace `Emitter`.
+ */
 object TraceSystem {
+  /**
+   * Provides system level identification information, used as metadata when recording trace spans.
+   * @param app - identifies the application being traced.
+   * @param node - identifies the node on the network where this instance of the traced application is running.
+   * @param process - identifies the process on the node where this instance of the traced application is running.
+   * @param deployment - identifies the deployment (e.g., ashburn-east-1) where this instance of the traced application is running.
+   * @param environment - identifies the environment (e.g., test, production) where this instance of the traced application is running.
+   */
   case class Identity(app: Identity.Application, node: Identity.Node, process: Identity.Process, deployment: Identity.Deployment, environment: Identity.Environment) {
     override def toString: String = s"[app=${app.name}] [node=${node.name}] [process=${process.id}] [deployment=${deployment.name}] [environment=${environment.name}]"
   }
@@ -56,11 +61,18 @@ object TraceSystem {
     case class Deployment(name: String)
     case class Environment(name: String)
   }
+  /**
+   * Describes how to emit the current [[Span]] and its metadata (together constituting the [[TraceContext]]) to an external sink
+   * (e.g., database, JMX, log file, etc).
+   */
   trait Emitter {
+    /** Emits the [[Span]] and metadata in the [[TraceContext]] to some external sink using the effectful program `F[A]` */
     def emit[F[_]: Async](tc: TraceContext): F[Unit]
+    /** Provides a description of this emitter */
     def description: String
   }
   import Identity._
+  /* An empty `TraceSystem`, used internally when the `TraceAsync` needs to be represented as a `Monad` */
   private[dtrace] val empty: TraceSystem = TraceSystem(
     Identity(Application("", UUID.randomUUID), Node("", UUID.randomUUID), Process(UUID.randomUUID), Deployment(""), Environment("")),
     new Emitter {
@@ -70,6 +82,14 @@ object TraceSystem {
   )
 }
 
+/**
+ * Represents a cursor into the "current" [[Span]] and associated system-level metadata and is associated with an
+ * effectful program `F[A]` to realize a trace over that program.
+ * @param currentSpan - the current [[Span]] associated with a particular effectful program.
+ * @param system - system-level metadata which further annotates a [[Span]] when recording it.  The application, node,
+ *  and deployment environment of the program being traced constitute the properties of this data type, along with the
+ *  implementation of the `Emitter` used to perform the recording.
+ */
 case class TraceContext(currentSpan: Span, system: TraceSystem) {
   override def toString: String = s"[currentSpan=$currentSpan] [system=$system]"
   private[dtrace] def childSpan[F[_]: Async](spanName: Span.Name): F[TraceContext] =
@@ -82,33 +102,76 @@ case class TraceContext(currentSpan: Span, system: TraceSystem) {
   private def finishFailure[F[_]: Async](detail: FailureDetail): F[TraceContext] = currentSpan.finishFailure(detail) map { us => copy(currentSpan = us) }
 }
 
-object TraceContext { private[dtrace] val empty: TraceContext = TraceContext(Span.empty, TraceSystem.empty) }
+object TraceContext {
+  /* An empty `TraceContext`, used internally when the `TraceAsync` needs to be represented as a `Monad` */
+  private[dtrace] val empty: TraceContext = TraceContext(Span.empty, TraceSystem.empty)
+}
 
+/**
+ * Represents the core identity of a [[Span]].
+ * @param traceId - the globally unique identifier for the trace of which this span is a component.
+ * @param parentSpanId - the parent identifier of this span.  If this span is the root of the trace,
+ *   this identifier will equal the `spanId`.
+ * @param spanId - the identifier of this span.  If this span is the root of the trace,
+ *   this identifier will equal the `parentSpanId`.
+ */
 case class SpanId(traceId: UUID, parentSpanId: Long, spanId: Long) {
+  /**
+   * This is [[Span]] the root of the trace?
+   */
   def root: Boolean = parentSpanId == spanId
+  /**
+   * Converts the span to a `Money`-compliant HTTP Header.
+   * @return header - the `Money`-compliant header consisting of
+   *   `X-MoneyTrace=trace-id=<trace id UUID>;parent-id=<long integer>;span-id=<long integer>`
+   */
   val toHeader: String = s"${SpanId.TraceIdHeader}=$traceId;${SpanId.ParentIdHeader}=$parentSpanId;${SpanId.SpanIdHeader}=$spanId"
+  /**
+   * Creates a new Child span identifier from `this`, which the `parentSpanId` equal to `this.spanId` and a new value generated
+   *   for the `spanId`.
+   */
   def newChild[F[_]: Async]: F[SpanId] = SpanId.nextSpanIdValue map { newSpanId => copy(parentSpanId = spanId, spanId = newSpanId) }
   override def toString: String = s"SpanId~$traceId~$parentSpanId~$spanId"
 }
 
+/**
+ * Companion object of the `SpanId` datatype.  Provides smart constructors and commonly used constants.
+ */
 object SpanId {
+  /** The `Money` compliant HTTP header name. */
   final val HeaderName: String = "X-MoneyTrace"
+  /** The `Money` compliant HTTP header trace GUID component value identifier. */
   final val TraceIdHeader: String = "trace-id"
+  /** The `Money` compliant HTTP header Parent Span ID component value identifier. */
   final val ParentIdHeader: String = "parent-id"
+  /** The `Money` compliant HTTP header Span ID component value identifier. */
   final val SpanIdHeader: String = "span-id"
-  final val HeaderRegex: Regex = s"$TraceIdHeader=([0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-fA-F]{12});$ParentIdHeader=([\\-0-9]+);$SpanIdHeader=([\\-0-9]+)".r
 
+  /* Used to validate / parse `Money` compliant HTTP header into a [[SpanId]] instance. */
+  private[dtrace] final val HeaderRegex: Regex = s"$TraceIdHeader=([0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-fA-F]{12});$ParentIdHeader=([\\-0-9]+);$SpanIdHeader=([\\-0-9]+)".r
+
+  /**
+   * Creates a root [[SpanId]] from stratch in an effectful program `F[A]`.
+   *
+   * @return newSpanIdDescription - an effectful description of a new [[SpanId]].
+   */
   def root[F[_]](implicit F: Async[F]): F[SpanId] = for {
     traceId <- F.delay(UUID.randomUUID)
     parentChildId <- nextSpanIdValue
   } yield SpanId(traceId, parentChildId, parentChildId)
 
-  def fromHeader(headerName: String, headerValue: String): Option[SpanId] =
-    if (headerName == HeaderName) fromHeaderValue(headerValue) else None
+  /**
+   * Creates an instance of a [[SpanId]] from the given header name and value, if the
+   * header name matches the `Money` compliant header name of `X-MoneyTrace` and the header
+   * value is in the proper format; otherwise, an error is returned.
+   * @return newSpanIdOrError - a [[SpanId]] if successful; otherwise, an error message is returned.
+   */
+  def fromHeader(headerName: String, headerValue: String): Either[String, SpanId] =
+    if (headerName == HeaderName) fromHeaderValue(headerValue) else Left(s"Header name $headerName is not a Money-compliant trace header")
 
-  def fromHeaderValue(headerValue: String): Option[SpanId] = headerValue match {
-    case HeaderRegex(traceId, parentId, spanId) => Try(SpanId(UUID.fromString(traceId), parentId.toLong, spanId.toLong)).toOption
-    case _ => None
+  def fromHeaderValue(headerValue: String): Either[String, SpanId] = headerValue match {
+    case HeaderRegex(traceId, parentId, spanId) => Try(SpanId(UUID.fromString(traceId), parentId.toLong, spanId.toLong)).toEither.left.map { _.toString }
+    case _ => Left(s"Could not parse $headerValue into a SpanId")
   }
 
   private[dtrace] def nextSpanIdValue[F[_]](implicit F: Async[F]): F[Long] = F.delay(Random.nextLong)
