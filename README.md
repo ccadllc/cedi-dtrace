@@ -170,8 +170,7 @@ task.unsafeRun()
 
 Cedi Distributed Trace supports Scala 2.11 and 2.12. This distribution will be published to Maven Central soon and consists of two library components.
 
-dtrace-core
-===========
+#### dtrace-core
 
 This is the core functionality, recording trace and span information over effectful programs, passing these recorded events to registred emitters for disposition.
 
@@ -180,8 +179,7 @@ This is the core functionality, recording trace and span information over effect
 libraryDependencies += "com.ccadllc.cedi" %% "dtrace-core" % "1.0.0-SNAPSHOT"
 ```
 
-dtrace-logging
-==============
+#### dtrace-logging
 
 This component provides emitters for logging the trace spans in text and/or JSON format using the `sf4j` logging framework.  It uses the `circe` library for formatting the trace span information as JSON.
 
