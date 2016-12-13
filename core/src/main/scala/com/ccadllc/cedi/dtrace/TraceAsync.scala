@@ -22,25 +22,109 @@ import fs2.util.syntax._
 import scala.language.higherKinds
 
 /**
- * Represents a function `TraceContext => F[A]` when there is an instance of `fs2.util.Async[F]` in implicit scope.
+ * This is the main construct of the library.  It represents a function `TraceContext => F[A]`
+ * when there is an instance of `fs2.util.Async[F]` in implicit scope, conceptually similiar to a
+ * `cats.data.Kleisli`.  The [[TraceContext]] holds the "current" [[Span]] information for the program `F[A]`
+ * and this information, along with timing and result data derived when `F[A]` is run, is recorded via the `Emitter`,
+ * also included in the [[TraceContext]], when the `F[A]` execution is complete.  This class is never
+ * instantiated by API users; Rather, instances are created via as needed via the public instance and companion
+ * object methods described below.
  */
 final class TraceAsync[F[_], A](private[dtrace] val tie: TraceContext => F[A])(implicit F: Async[F]) { self =>
   import syntax._
 
+  /**
+   * Generate a new `TraceAsync[F, B]` given the current instance of `TraceAsync[F, A]` and a function `A => TraceAsync[B]`.
+   * @param f - function from `A` => `TraceAsync[F, B]`
+   */
   def flatMap[B](f: A => TraceAsync[F, B]): TraceAsync[F, B] =
     TraceAsync { tc => F.suspend { tie(tc).flatMap { f andThen { _.tie(tc) } } } }
 
+  /**
+   * Generate a new `TraceAsync[F, B]` given the current instance of `TraceAsync[F, A]` and a function `A => B`.
+   * @param f - function from `A` => `B`
+   */
   def map[B](f: A => B): TraceAsync[F, B] = flatMap(f andThen TraceAsync.now[F, B])
 
+  /**
+   * Creates a new child [[Span]] from the current span represented by this instance, using the
+   * default [[Evaluator]] to determine success/failure of the `F[A]` for the purposes of span recording.
+   * For example:
+   *   ```
+   *   queryProductsTraceAsync.newSpan(
+   *     Span.Name("query-products-for-sale",
+   *     Note.string("sale-date", date.toString), Note.double("sale-max-price", 80.50)
+   *   )
+   *   ```
+   * @param spanName - a descriptive name, emitted when the span is recorded.
+   * @param notes - one or more [[Note]]s which annotate the span (often the input parameters to the `F[A]`
+   *   execution).
+   * @return childTraceAsync - a new instance of `TraceAsync` representing a child span of `this`.
+   */
   def newSpan(spanName: Span.Name, notes: Note*): TraceAsync[F, A] =
     newAnnotatedSpan(spanName, notes: _*)(PartialFunction.empty)
 
+  /**
+   * Creates a new child [[Span]] from the current span represented by this instance, providing the capability
+   * of annotating the span with notes based on the execution result of the `F[A]`, using the
+   * default [[Evaluator]] to determine success/failure of the `F[A]` for the purposes of recording.
+   * For example:
+   *   ```
+   *   queryProductsTraceAsync.newAnnotatedSpan(
+   *     Span.Name("query-products-for-sale",
+   *     Note.string("sale-date", date.toString), Note.double("sale-max-price", 80.50)
+   *   ) {
+   *     case Right(saleProducts) => Vector(Note.string("sale-products", saleProducts.mkString(",")))
+   *   }
+   *   ```
+   * @param spanName - a descriptive name, emitted when the span is recorded.
+   * @param notes - one or more [[Note]]s which annotate the span (often the input parameters to the `F[A]`
+   *   execution).
+   * @param resultsAnnotator - a partial function from an `Either[Throwable, A]` to a `Vector[Note]`, providing
+   *   for the ability to add additional annotation of the [[Span]] based on the result of the underlying `F[A]` run.
+   * @return childTraceAsync - a new instance of `TraceAsync` representing a child span of `this`.
+   */
   def newAnnotatedSpan(spanName: Span.Name, notes: Note*)(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]]): TraceAsync[F, A] =
     newAnnotatedSpan(spanName, Evaluator.default[A], notes: _*)(resultAnnotator)
 
+  /**
+   * Creates a new child span from the current span represented by this instance, providing for custom
+   * evaluation and rendering of the underlying `F[A]` when recording the [[Span]]
+   *   ```
+   *   queryProductsTraceAsync.newSpan(
+   *     Span.Name("query-products-for-sale",
+   *     Evaluator.resultToFailure[Vector[Product]
+   *     Note.string("sale-date", date.toString), Note.double("sale-max-price", 80.50)
+   *   )
+   *   ```
+   * @param spanName - a descriptive name, emitted when the span is recorded.
+   * @param evaluator - an [[Evaluator]] which converts either a `Throwable` or `A` to an optional [[FailureDetail]]
+   * @param notes - one or more [[Note]]s which annotate the span (often the input parameters to the `F[A]`
+   *   execution).
+   */
   def newSpan(spanName: Span.Name, evaluator: Evaluator[A], notes: Note*): TraceAsync[F, A] =
     newAnnotatedSpan(spanName, evaluator, notes: _*)(PartialFunction.empty)
 
+  /**
+   * Creates a new child [[Span]] from the current span represented by this instance, providing the capability
+   * of annotating the span with notes based on the execution result of the `F[A]`, using the
+   * a custom [[Evaluator]] to determine success/failure of the `F[A]` for the purposes of recording.
+   * For example:
+   *   ```
+   *   queryProductsTraceAsync.newAnnotatedSpan(
+   *     Span.Name("query-products-for-sale",
+   *     Note.string("sale-date", date.toString), Note.double("sale-max-price", 80.50)
+   *   ) {
+   *     case Right(saleProducts) => Vector(Note.string("sale-products", saleProducts.mkString(",")))
+   *   }
+   *   ```
+   * @param spanName - a descriptive name, emitted when the span is recorded.
+   * @param notes - one or more [[Note]]s which annotate the span (often the input parameters to the `F[A]`
+   *   execution).
+   * @param resultsAnnotator - a partial function from an `Either[Throwable, A]` to a `Vector[Note]`, providing
+   *   for the ability to add additional annotation of the [[Span]] based on the result of the underlying `F[A]` run.
+   * @return childTraceAsync - a new instance of `TraceAsync` representing a child span of `this`.
+   */
   def newAnnotatedSpan(
     spanName: Span.Name,
     evaluator: Evaluator[A],
