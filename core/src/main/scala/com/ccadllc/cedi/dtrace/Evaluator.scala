@@ -15,26 +15,6 @@
  */
 package com.ccadllc.cedi.dtrace
 
-import java.io.{ PrintWriter, StringWriter }
-
-/**
- * This represents a failure of the underlying traced program, providing the
- * means to render the failure when the span is recorded.
- */
-sealed abstract class FailureDetail extends Product with Serializable { def render: String }
-object FailureDetail {
-  case class Message(m: String) extends FailureDetail { override def render: String = m }
-  case class Exception(e: Throwable) extends FailureDetail {
-    override def render: String = {
-      val exceptionMessage = new StringWriter
-      e.printStackTrace(new PrintWriter(exceptionMessage))
-      exceptionMessage.toString
-    }
-  }
-  def apply(m: String): FailureDetail = Message(m)
-  def apply(e: Throwable): FailureDetail = Exception(e)
-}
-
 /**
  * Provides the hooks by which the result of a effectful program can be converted into a `FailureDetail` for use in
  * determining whether the program has failed for the purposes of the trace and how to render that failure.
@@ -45,13 +25,21 @@ object FailureDetail {
  * The default evaluator for a span, if a custom one is not specified, is to treat a failures and successes at
  * the effectful program-level as such for the span, converting the `Throwable` to a string with the stacktrace.
  */
-class Evaluator[A](val exceptionToFailure: Throwable => Option[FailureDetail], val resultToFailure: A => Option[FailureDetail])
+class Evaluator[A](
+  val exceptionToFailure: Throwable => Option[FailureDetail],
+  val resultToFailure: A => Option[FailureDetail]
+)
+
 object Evaluator {
+
   def default[A]: Evaluator[A] = new Evaluator[A](e => Some(FailureDetail(e)), _ => None)
 
   def apply[A](exceptionToFailure: Throwable => Option[FailureDetail], resultToFailure: A => Option[FailureDetail]): Evaluator[A] =
     new Evaluator[A](exceptionToFailure, resultToFailure)
 
-  def exceptionToFailure[A](e2f: Throwable => Option[FailureDetail]): Evaluator[A] = apply(e2f, default[A].resultToFailure)
-  def resultToFailure[A](r2f: A => Option[FailureDetail]): Evaluator[A] = apply(default[A].exceptionToFailure, r2f)
+  def exceptionToFailure[A](e2f: Throwable => Option[FailureDetail]): Evaluator[A] =
+    apply(e2f, default[A].resultToFailure)
+
+  def resultToFailure[A](r2f: A => Option[FailureDetail]): Evaluator[A] =
+    apply(default[A].exceptionToFailure, r2f)
 }

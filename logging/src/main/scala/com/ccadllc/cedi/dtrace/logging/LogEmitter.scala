@@ -16,7 +16,7 @@
 package com.ccadllc.cedi.dtrace
 package logging
 
-import fs2.util.Async
+import fs2.util.Suspendable
 import fs2.util.syntax._
 
 import io.circe.syntax._
@@ -25,12 +25,12 @@ import org.slf4j.LoggerFactory
 
 import scala.language.higherKinds
 
-object LogEmitter extends TraceSystem.Emitter {
+class LogEmitter[F[_]](implicit F: Suspendable[F]) extends TraceSystem.Emitter[F] {
 
   private val textLogger = LoggerFactory.getLogger("distributed-trace.txt")
   private val jsonLogger = LoggerFactory.getLogger("distributed-trace.json")
 
-  override def emit[F[_]](context: TraceContext)(implicit F: Async[F]): F[Unit] = {
+  override def emit(context: TraceContext[F]): F[Unit] = {
     def emitText: F[Unit] = {
       def formatText = s"Span: [ span-id=${context.currentSpan.spanId.spanId} ] [ trace-id=${context.currentSpan.spanId.traceId} ] [ parent-id=${context.currentSpan.spanId.parentSpanId} ] [ root=${context.currentSpan.root} ] [ span-name=${context.currentSpan.spanName} ] [ app-name=${context.system.identity.app.name} ] [ start-time=${context.currentSpan.startTime} ] [ span-duration=${context.currentSpan.duration} ] [ span-success=${context.currentSpan.failure.isEmpty} ] [ failure-detail=${context.currentSpan.failure.fold("N/A")(_.render)} ][ notes=[${context.currentSpan.notes.mkString("] [")}] ] [ node-name=${context.system.identity.node.name} ]"
       F.delay(if (textLogger.isDebugEnabled) textLogger.debug(formatText))
@@ -45,4 +45,8 @@ object LogEmitter extends TraceSystem.Emitter {
     } yield ()
   }
   override val description: String = "SLF4J Log Emitter"
+}
+
+object LogEmitter {
+  def apply[F[_]: Suspendable]: LogEmitter[F] = new LogEmitter[F]
 }

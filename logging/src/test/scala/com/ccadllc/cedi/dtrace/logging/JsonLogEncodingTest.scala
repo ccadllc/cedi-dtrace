@@ -16,6 +16,11 @@
 package com.ccadllc.cedi.dtrace
 package logging
 
+import scala.language.higherKinds
+
+import fs2.Task
+import fs2.util.Suspendable
+
 import io.circe._
 import io.circe.java8.time._
 import io.circe.syntax._
@@ -57,8 +62,8 @@ class JsonLogEncodingTests extends WordSpec with TestSupport {
   )
   // format: ON
 
-  implicit val arbTrace: Arbitrary[TraceContext] = Arbitrary(genTraceContext)
+  implicit def arbTrace[F[_]: Suspendable]: Arbitrary[TraceContext[F]] = Arbitrary(genTraceContext)
 
-  "Trace" should { encodeArbitraryJson[TraceContext] }
+  "Trace" should { encodeArbitraryJson[TraceContext[Task]] }
   "Trace" should { encodeSpecificJson(refreshAuthsTraceContext, rfreshAuthsTraceContextJson) }
 }

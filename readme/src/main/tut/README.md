@@ -12,7 +12,7 @@ Quick links:
 Overview
 ========
 
-The Cedi Distributed Trace library provides the capability to instrument effectful programs such that logical traces can be derived and recorded across physical processes and machines.  This instrumentation is expressed in a format that is interoperable with [Comcast Money](https://github.com/Comcast/money).  This library consists of immutable data structures which represent the instrumentation and an interpreter - the `TraceAsync[F, A]` - which annotates the underlying action (represented as an `F[A]` where `F` is the effectful action and `A` is the result type).  The `TraceAsync[F, A]` can be thought of as a function from a `TraceContext` (the cursor into the active trace) to an effectful program  whose execution you wish to trace (the effectful program can be any `F` which has an instance of `fs2.util.Async[F]` in implicit scope, such as `fs2.Task`).  Because `fs2.Task` is often used as the effectful data type, this library provides a type alias `TraceTask[A]` for `TraceAsync[Task, A]` and convenience methods to work with this type alias a `TraceTask` object.
+The Cedi Distributed Trace library provides the capability to instrument effectful programs such that logical traces can be derived and recorded across physical processes and machines.  This instrumentation is expressed in a format that is interoperable with [Comcast Money](https://github.com/Comcast/money).  This library consists of immutable data structures which represent the instrumentation and an interpreter - the `TraceT[F, A]` - which annotates the underlying action (represented as an `F[A]` where `F` is the effectful action and `A` is the result type).  The `TraceT[F, A]` can be thought of as a function from a `TraceContext` (the cursor into the active trace) to an effectful program whose execution you wish to trace (the effectful program can be any `F`, such as `fs2.Task`, though often you'll need implicit `fs2.util.Catchable[F]` or `fs2.util.Suspendable[F]` instances if you using something other than `Task`).  Because `fs2.Task` is often used as the effectful data type, this library provides a type alias `TraceTask[A]` for `TraceT[Task, A]` and convenience methods to work with this type alias a `TraceTask` object.
 
 Design Constraints
 ==================
@@ -69,13 +69,13 @@ val traceSystem = TraceSystem(
   ),
  /* This emitter will write a text entry for each span to "distributed-trace.txt"
   * logger and a JSON entry for each span to "distributed-trace.json" logger; however,
-  * it is easy to provide your own emitter by implementing the `TraceSystem.Emitter`
+  * it is easy to provide your own emitter by implementing the `TraceSystem.Emitter[F]`
   * trait, which requires providing implementations for two methods:
   *   `def description: String` to provide a description of your emitter and
-  *   `def emit[F[_]: Async](tc: TraceContext): F[Unit]` to actually do the work of
+  *   `def emit(tc: TraceContext[F]): F[Unit]` to actually do the work of
   * emitting the current Span to the destination and in the format of your choosing.
   */
-  emitter = LogEmitter
+  emitter = LogEmitter[Task]
 )
 
 val cmd = Command("action")
@@ -86,14 +86,14 @@ def encodeInitCommand(cmd: Command): Task[Array[Byte]] = Task.now(Array(20.toByt
 
 def transmitInitCommand(bytes: Array[Byte], host: Host): Task[Result] = Task.now(Result("success!"))
 
-def writeInitializeCommandToSettop(cmd: Command, host: Host): TraceAsync[Task, Result] = for {
+def writeInitializeCommandToSettop(cmd: Command, host: Host): TraceT[Task, Result] = for {
  /*
   * Encode the command to a byte vector and then transmit it.  Note that the import of
-  * `com.ccadllc.cedi.dtrace.syntax._` enriches the `fs2.Task` type (or any `F` with an `fs2.Async[F]`
-  * instance) by adding a `newSpan` method to it using an implicit class.  The two lines that follow this
-  * comment would, without the syntax enrichment, be written as:
-  *  bytes <- TraceAsync.toTraceAsync(encodeInitCommand(cmd)).newSpan(Span.Name("encode-init-command"), Note.string("cmd", cmd.toString))
-  *  result <- TraceAsync.toTraceAsync(transmitInitCommand(bytes, host)).newSpan(
+  * `com.ccadllc.cedi.dtrace.syntax._` enriches the `fs2.Task` type by adding a `newSpan`
+  * method to it using an implicit class.  The two lines that follow this comment would,
+  * without the syntax enrichment, be written as:
+  *  bytes <- TraceT.toTraceT(encodeInitCommand(cmd)).newSpan(Span.Name("encode-init-command"), Note.string("cmd", cmd.toString))
+  *  result <- TraceT.toTraceT(transmitInitCommand(bytes, host)).newSpan(
   *    Span.Name("transmit-init-command"), Note.string("settop-host", host.toString), Note.long("payload-size", bytes.size.toLong)
   *  )
   */
@@ -107,7 +107,7 @@ def writeInitializeCommandToSettop(cmd: Command, host: Host): TraceAsync[Task, R
  * Retrieve the span, in this example, in the HTTP header from the originating business system, if it exists.
  * This logic may be included an an `akka-http` directive, for example.
  */
-val rootSpanMaybe = SpanId.fromHeader(httpHeader.name, httpHeader.value) map {
+val rootSpanEither = SpanId.fromHeader(httpHeader.name, httpHeader.value).right.map {
   spanId => Span.newChild[Task](spanId, Span.Name("business-system-init"))
 }
 
@@ -116,7 +116,7 @@ val rootSpanMaybe = SpanId.fromHeader(httpHeader.name, httpHeader.value) map {
  * showing the ability to create Span notes from the traced action result
  * with `newAnnotatedSpan`.
  */
-val tracedTask: TraceAsync[Task, Result] = writeInitializeCommandToSettop(cmd, host).newAnnotatedSpan(
+val tracedTask: TraceT[Task, Result] = writeInitializeCommandToSettop(cmd, host).newAnnotatedSpan(
   Span.Name("write-initialize-command"), Note.string("command", cmd.toString), Note.string("host", host.toString)
 ) { case Right(result) => Vector(Note.string("result", result.toString)) }
 
@@ -125,17 +125,17 @@ val tracedTask: TraceAsync[Task, Result] = writeInitializeCommandToSettop(cmd, h
  */
 val task: Task[Result] = for {
   /* If there was no Span originating from another system found in the HTTP Header, we create a local root Span */
-  rootSpan <- rootSpanMaybe.getOrElse(Span.root[Task](Span.Name("locally-initiated-init")))
+  rootSpan <- rootSpanEither.right.getOrElse(Span.root[Task](Span.Name("locally-initiated-init")))
   /*
    * The tracedTask we've derived earlier around `writeInitialCommandToSettop` (which includes
-   * the encode and transmit nested actions, each with their own Spans) is an instance of `TraceAsync[Task, A]`,
+   * the encode and transmit nested actions, each with their own Spans) is an instance of `TraceT[Task, A]`,
    * which is a data structure associating a Span (like "write-initialize-command") with its underlying `Task`
    * (reiterating that we're using `fs2.Task` in this example, but again, `Task` can be substituted with any
-   * `F` which has an `fs2.Async[F]` instance in implicit scope).  When we are done building up these annotated
-   * `TraceAsync` instances, we need to "tie the knot" by converting the top-level instance back into a plain
-   * `Task` again before we can actually run it. This is accomplished by applying the root `Span`
-   * for this process (in this example, the one we extracted from an HTTP header) using the `trace` method on
-   * on our top-level `TraceAsync` instance (represented here by the `tracedTask` value).
+   * `F`).  When we are done building up these annotated `TraceT` instances, we need to "tie the knot" by
+   * converting the top-level instance back into a plain `Task` again before we can actually run it. This is
+   * accomplished by applying the root `Span` for this process (in this example, the one we extracted from an
+   * HTTP header) using the `trace` method on on our top-level `TraceT` instance (represented here by the
+   * `tracedTask` value).
    */
   result <- tracedTask.trace(TraceContext(rootSpan, traceSystem))
 } yield result
@@ -168,10 +168,9 @@ task.unsafeRun()
 
 ### <a id="getit"></a>How to get latest Version
 
-Cedi Distributed Trace supports Scala 2.10, 2.11, and 2.12. This distribution will be published to Maven Central soon and consists of two library components.
+Cedi Distributed Trace supports Scala 2.11 and 2.12. This distribution will be published to Maven Central soon and consists of two library components.
 
-dtrace-core
-===========
+#### dtrace-core
 
 This is the core functionality, recording trace and span information over effectful programs, passing these recorded events to registred emitters for disposition.
 
@@ -180,8 +179,7 @@ This is the core functionality, recording trace and span information over effect
 libraryDependencies += "com.ccadllc.cedi" %% "dtrace-core" % "1.0.0-SNAPSHOT"
 ```
 
-dtrace-logging
-==============
+#### dtrace-logging
 
 This component provides emitters for logging the trace spans in text and/or JSON format using the `sf4j` logging framework.  It uses the `circe` library for formatting the trace span information as JSON.
 

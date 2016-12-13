@@ -10,7 +10,8 @@ lazy val commonSettings = Seq(
   libraryDependencies ++= Seq(
     "co.fs2" %% "fs2-core" % "0.9.2",
     "org.scalatest" %% "scalatest" % "3.0.1" % "test"
-  )
+  ),
+  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3")
 )
 
 lazy val root = project.in(file(".")).aggregate(core, logging).settings(commonSettings).settings(noPublish)

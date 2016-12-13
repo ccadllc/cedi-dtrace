@@ -16,6 +16,8 @@
 package com.ccadllc.cedi.dtrace
 package logging
 
+import scala.language.higherKinds
+
 import io.circe._
 import io.circe.java8.time._
 import io.circe.syntax._
@@ -23,7 +25,7 @@ import io.circe.syntax._
 object json {
   object encoding {
     // format: OFF
-    implicit val traceContextEncoderJson: Encoder[TraceContext] = Encoder.instance { tc =>
+    implicit def traceContextEncoderJson[F[_]]: Encoder[TraceContext[F]] = Encoder.instance { tc =>
       Json.obj(
         "where"        -> Json.obj(
           "appId"           -> tc.system.identity.app.id.toString.asJson,
