@@ -43,7 +43,8 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
    * Generates a new `TraceT[F, B]` from this instance using the supplied function `A => B`.
    * @param f - function from `A` => `TraceT[F, B]`
    */
-  def map[B](f: A => B)(implicit F: Suspendable[F]): TraceT[F, B] = flatMap(f andThen TraceT.pure[F, B])
+  def map[B](f: A => B)(implicit F: Functor[F]): TraceT[F, B] =
+    TraceT { tc => tie(tc).map(f) }
 
   /**
    * Creates a new child [[Span]] from the current span represented by this instance, using the
@@ -83,7 +84,9 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
    *   for the ability to add additional annotation of the [[Span]] based on the result of the underlying `F[A]` run.
    * @return a new instance of `TraceT` representing a child span of `this`.
    */
-  def newAnnotatedSpan(spanName: Span.Name, notes: Note*)(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
+  def newAnnotatedSpan(
+    spanName: Span.Name, notes: Note*
+  )(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
     newAnnotatedSpan(spanName, Evaluator.default[A], notes: _*)(resultAnnotator)
 
   /**
