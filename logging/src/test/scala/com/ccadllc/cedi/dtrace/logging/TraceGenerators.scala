@@ -16,15 +16,16 @@
 package com.ccadllc.cedi.dtrace
 package logging
 
-import java.time.Instant
+import scala.language.higherKinds
+import scala.concurrent.duration._
 
+import java.time.Instant
 import java.util.UUID
 
 import org.scalacheck.{ Arbitrary, Gen }
-
 import Arbitrary.arbitrary
 
-import scala.concurrent.duration._
+import fs2.util.Suspendable
 
 trait TraceGenerators {
 
@@ -67,7 +68,7 @@ trait TraceGenerators {
     environment <- genIdentityEnvironment
   } yield TraceSystem.Identity(app, node, process, deployment, environment)
 
-  def genTraceSystem: Gen[TraceSystem] = genTraceSystemIdentity map { TraceSystem(_, LogEmitter) }
+  def genTraceSystem[F[_]: Suspendable]: Gen[TraceSystem[F]] = genTraceSystemIdentity map { TraceSystem(_, new LogEmitter[F]) }
 
   def genSpanId: Gen[SpanId] = for {
     traceId <- genUUID
@@ -105,8 +106,8 @@ trait TraceGenerators {
     notes <- genNotes
   } yield Span(spanId, spanName, startTime, failure, duration, notes)
 
-  def genTraceContext: Gen[TraceContext] = for {
+  def genTraceContext[F[_]: Suspendable]: Gen[TraceContext[F]] = for {
     span <- genSpan
-    system <- genTraceSystem
+    system <- genTraceSystem[F]
   } yield TraceContext(span, system)
 }

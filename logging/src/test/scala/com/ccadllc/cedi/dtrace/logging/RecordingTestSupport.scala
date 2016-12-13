@@ -50,7 +50,7 @@ trait RecordingTestSupport extends TestSupport with BeforeAndAfterEach {
 
   protected def assertRootSpanRecorded(): Unit = {
     val spanRoot = Span.root[Task](Span.Name("refresh-config")).unsafeRun
-    Task.delay(Thread.sleep(5L)).toTraceAsync.trace(TraceContext(spanRoot, terminalHandlerSystem)).unsafeRun
+    Task.delay(Thread.sleep(5L)).toTraceT.trace(TraceContext(spanRoot, terminalHandlerSystem)).unsafeRun
     LogEmitterTestCache.containingAll(spanId(spanRoot.spanId.spanId), parentSpanId(spanRoot.spanId.spanId), spanName(spanRoot.spanName)) should have size (1)
     ()
   }

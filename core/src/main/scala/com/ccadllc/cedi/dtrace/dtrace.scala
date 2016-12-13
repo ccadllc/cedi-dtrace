@@ -15,45 +15,49 @@
  */
 package com.ccadllc.cedi
 
-import fs2.{ Strategy, Task }
-import fs2.util.Async
+import fs2.Task
+import fs2.util._
 import fs2.util.syntax._
 
 import scala.language.higherKinds
 
 package object dtrace {
-  type TraceTask[A] = TraceAsync[Task, A]
+
+  type TraceTask[A] = TraceT[Task, A]
+
   object TraceTask {
-    def ask(implicit S: Strategy): TraceTask[TraceContext] = TraceAsync { Task.now }
-    def now[A](a: A)(implicit S: Strategy): TraceTask[A] = toTraceTask(Task.now(a))
-    def delay[A](a: => A)(implicit S: Strategy): TraceTask[A] = toTraceTask(Task.delay(a))
-    def fail[A](t: Throwable)(implicit S: Strategy): TraceTask[A] = toTraceTask(Task.fail(t): Task[A])
-    def toTraceTask[A](task: Task[A])(implicit S: Strategy): TraceTask[A] = TraceAsync { _ => task }
+    def ask: TraceTask[TraceContext[Task]] = TraceT { Task.now }
+    def now[A](a: A): TraceTask[A] = toTraceTask(Task.now(a))
+    def delay[A](a: => A): TraceTask[A] = toTraceTask(Task.delay(a))
+    def suspend[A](t: => Task[A]): TraceTask[A] = toTraceTask(Task.suspend(t))
+    def fail[A](t: Throwable): TraceTask[A] = toTraceTask(Task.fail(t): Task[A])
+    def toTraceTask[A](task: Task[A]): TraceTask[A] = TraceT { _ => task }
   }
 
   object syntax {
-    implicit class TraceEnrichedAsync[F[_], A](val async: F[A]) extends AnyVal {
-      def newSpan(spanName: Span.Name, notes: Note*)(implicit F: Async[F]): TraceAsync[F, A] =
-        toTraceAsync.newSpan(spanName, notes: _*)
+    implicit class TraceEnrichedEffect[F[_], A](private val self: F[A]) extends AnyVal {
+      def newSpan(spanName: Span.Name, notes: Note*)(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
+        toTraceT.newSpan(spanName, notes: _*)
 
-      def newAnnotatedSpan(spanName: Span.Name, notes: Note*)(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Async[F]): TraceAsync[F, A] =
-        toTraceAsync.newAnnotatedSpan(spanName, notes: _*)(resultAnnotator)
+      def newAnnotatedSpan(spanName: Span.Name, notes: Note*)(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
+        toTraceT.newAnnotatedSpan(spanName, notes: _*)(resultAnnotator)
 
-      def newSpan(spanName: Span.Name, evaluator: Evaluator[A], notes: Note*)(implicit F: Async[F]): TraceAsync[F, A] =
-        toTraceAsync.newSpan(spanName, evaluator, notes: _*)
+      def newSpan(spanName: Span.Name, evaluator: Evaluator[A], notes: Note*)(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
+        toTraceT.newSpan(spanName, evaluator, notes: _*)
 
       def newAnnotatedSpan(
         spanName: Span.Name,
         evaluator: Evaluator[A],
         notes: Note*
-      )(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Async[F]): TraceAsync[F, A] =
-        toTraceAsync.newAnnotatedSpan(spanName, evaluator, notes: _*)(resultAnnotator)
+      )(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
+        toTraceT.newAnnotatedSpan(spanName, evaluator, notes: _*)(resultAnnotator)
 
-      def toTraceAsync(implicit F: Async[F]): TraceAsync[F, A] = TraceAsync.toTraceAsync[F, A](async)
+      def toTraceT: TraceT[F, A] = TraceT.toTraceT[F, A](self)
 
-      def bestEffortOnFinish(f: Option[Throwable] => F[Unit])(implicit F: Async[F]): F[A] = async.attempt flatMap { r =>
-        f(r.left.toOption).attempt flatMap { _ => r.fold(F.fail, F.pure) }
-      }
+      def bestEffortOnFinish(f: Option[Throwable] => F[Unit])(implicit F: Catchable[F]): F[A] =
+        self.attempt flatMap { r =>
+          f(r.left.toOption).attempt flatMap { _ => r.fold(F.fail, F.pure) }
+        }
     }
   }
 }
