@@ -32,7 +32,7 @@ trait TestSupport extends WordSpecLike with Matchers with GeneratorDrivenPropert
   self: Suite =>
 
   implicit override val generatorDrivenConfig: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful = 100)
-  val salesManagementSystem = TraceSystem(testIdentity, new LogEmitter[Task])
+  val salesManagementSystem = TraceSystem(testSystemMetadata, new LogEmitter[Task])
   val calculateQuarterlySalesTraceContext = TraceContext(quarterlySalesCalculationSpan, salesManagementSystem)
 
   def encodeArbitraryJson[A: Arbitrary](implicit encoder: Lazy[Encoder[A]]): Unit = {

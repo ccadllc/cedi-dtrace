@@ -57,15 +57,16 @@ implicit val strategy: Strategy = Strategy.fromFixedDaemonPool(
 /*
  * Near the beginning of the universe, create a `TraceSystem` object to
  * hold the top-level information about the program (application and node name,
- * process identifier, deployment and environment names, etc.)
+ * deployment and environment names, etc.)
  */
 val traceSystem = TraceSystem(
-  identity = Identity(
-    Identity.Application("sales-management-system", UUID.randomUUID),
-    Identity.Node("crm.widgetsforsale.com", UUID.randomUUID),
-    Identity.Process(UUID.randomUUID),
-    Identity.Deployment("Ashburn-DC-East"),
-    Identity.Environment("production")
+  metadata = Map(
+    "application name" -> "sales-management-system",
+    "application ID" -> UUID.randomUUID.toString,
+    "node name" -> "crm.widgetsforsale.com",
+    "node ID" -> UUID.randomUUID.toString,
+    "deployment name" -> "us-west-2",
+    "environment name" -> "production"
   ),
  /* This emitter will write a text entry for each span to "distributed-trace.txt"
   * logger and a JSON entry for each span to "distributed-trace.json" logger; however,
