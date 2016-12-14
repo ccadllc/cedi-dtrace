@@ -15,12 +15,28 @@
  */
 package com.ccadllc.cedi.dtrace
 
+/**
+ * This data type represents metadata used to annotate a distributed trace
+ * [[Span]].  Examples of `Note`s might be the input parameters to the program being executed
+ * as part of the span, or it might be values derived from the result of that program.
+ * @param name - the human readable name of the `Note`.
+ * @param value - the possible value of the `Note` (or None if a note has no value when the [[Span]] is recorded.
+ */
 case class Note(name: Note.Name, value: Option[Note.Value]) {
   override def toString: String = s"name=$name,value=${value.fold("")(_.toString)}"
 }
 
+/**
+ * The companion to the `Note` instances defines the `Note.Name` data type and the
+ * associated `Note.Value` ADT, as well as providing convenience constructors for the different
+ * value types.
+ */
 object Note {
 
+  /**
+   * This ADT represents a `Note` value - it has enumerated types to represent the primative values of `Long`, `Double`,
+   * `Boolean` and `String`.
+   */
   sealed abstract class Value extends Product with Serializable
   final case class LongValue(value: Long) extends Value { override def toString: String = value.toString }
   final case class DoubleValue(value: Double) extends Value { override def toString: String = value.toString }

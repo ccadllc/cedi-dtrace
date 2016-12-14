@@ -29,23 +29,31 @@ trait TestData {
 
   protected implicit val testStrategy: Strategy = Strategy.fromExecutor(testExecutor)
 
-  protected val testApplication: TraceSystem.Identity.Application = TraceSystem.Identity.Application("terminal manager", UUID.randomUUID)
-  protected val testNode: TraceSystem.Identity.Node = TraceSystem.Identity.Node("terminal-manager-xyz001.comcast.com", UUID.randomUUID)
+  protected val testApplication: TraceSystem.Identity.Application = TraceSystem.Identity.Application("widget sales manager", UUID.randomUUID)
+  protected val testNode: TraceSystem.Identity.Node = TraceSystem.Identity.Node("crm.widgetsales.com", UUID.randomUUID)
   protected val testProcess: TraceSystem.Identity.Process = TraceSystem.Identity.Process(UUID.randomUUID)
   protected val testDeployment: TraceSystem.Identity.Deployment = TraceSystem.Identity.Deployment("Ashburn VA DC")
   protected val testEnvironment: TraceSystem.Identity.Environment = TraceSystem.Identity.Environment("production")
   protected val testIdentity: TraceSystem.Identity = TraceSystem.Identity(testApplication, testNode, testProcess, testDeployment, testEnvironment)
 
-  protected val updateEmmsSpanId: SpanId = SpanId(UUID.randomUUID, 20L, 30L)
-  protected val updateEmmsLongNoteValue: Note.LongValue = Note.LongValue(450L)
-  protected val updateEmmsLongNote: Note = Note(Note.Name("sizeOfEmms"), Some(updateEmmsLongNoteValue))
-  protected val updateEmmsBooleanNoteValue: Note.BooleanValue = Note.BooleanValue(true)
-  protected val updateEmmsBooleanNote: Note = Note(Note.Name("buildByCET"), Some(updateEmmsBooleanNoteValue))
-  protected val updateEmmsStringNoteValue: Note.StringValue = Note.StringValue("DAC Philadelphia County")
-  protected val updateEmmsStringNote: Note = Note(Note.Name("securityDomain"), Some(updateEmmsStringNoteValue))
-  protected val updateEmmsDoubleNoteValue: Note.DoubleValue = Note.DoubleValue(95.6)
-  protected val updateEmmsDoubleNote: Note = Note(Note.Name("percentageRebuild"), Some(updateEmmsDoubleNoteValue))
-  protected val updateEmmsSpanNotes: Vector[Note] = Vector[Note](updateEmmsLongNote, updateEmmsBooleanNote, updateEmmsStringNote, updateEmmsDoubleNote)
-  protected val updateEmmsSpan: Span = Span(updateEmmsSpanId, Span.Name("Update EMMs"), Instant.now, None, 15000.microseconds, updateEmmsSpanNotes)
-
+  protected val quarterlySalesCalculationSpanId: SpanId = SpanId(UUID.randomUUID, 20L, 30L)
+  protected val quarterlySalesUnitsNoteValue: Note.LongValue = Note.LongValue(450000L)
+  protected val quarterlySalesUnitsNote: Note = Note(Note.Name("quarterlySalesUnits"), Some(quarterlySalesUnitsNoteValue))
+  protected val quarterlySalesGoalReachedNoteValue: Note.BooleanValue = Note.BooleanValue(true)
+  protected val quarterlySalesGoalReachedNote: Note = Note(Note.Name("quarterlySalesGoalReached"), Some(quarterlySalesGoalReachedNoteValue))
+  protected val salesRegionNoteValue: Note.StringValue = Note.StringValue("Philadelphia County Sales Region")
+  protected val salesRegionNote: Note = Note(Note.Name("salesRegion"), Some(salesRegionNoteValue))
+  protected val quarterlySalesTotalNoteValue: Note.DoubleValue = Note.DoubleValue(95.6)
+  protected val quarterlySalesTotalNote: Note = Note(Note.Name("quarterlySalesTotal"), Some(quarterlySalesTotalNoteValue))
+  protected val quarterlySalesCalculationSpanNotes: Vector[Note] = Vector[Note](
+    quarterlySalesUnitsNote, quarterlySalesGoalReachedNote, salesRegionNote, quarterlySalesTotalNote
+  )
+  protected val quarterlySalesCalculationSpan: Span = Span(
+    quarterlySalesCalculationSpanId,
+    Span.Name("Calculate Quarterly Sales"),
+    Instant.now,
+    None,
+    15000.microseconds,
+    quarterlySalesCalculationSpanNotes
+  )
 }
