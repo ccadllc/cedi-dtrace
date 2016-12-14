@@ -49,26 +49,26 @@ trait RecordingTestSupport extends TestSupport with BeforeAndAfterEach {
   protected def spanNote(note: Note): String
 
   protected def assertRootSpanRecorded(): Unit = {
-    val spanRoot = Span.root[Task](Span.Name("refresh-config")).unsafeRun
-    Task.delay(Thread.sleep(5L)).toTraceT.trace(TraceContext(spanRoot, terminalHandlerSystem)).unsafeRun
+    val spanRoot = Span.root[Task](Span.Name("calculate-quarterly-sales")).unsafeRun
+    Task.delay(Thread.sleep(5L)).toTraceT.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRun
     LogEmitterTestCache.containingAll(spanId(spanRoot.spanId.spanId), parentSpanId(spanRoot.spanId.spanId), spanName(spanRoot.spanName)) should have size (1)
     ()
   }
 
   protected def assertChildSpanRecorded(): Unit = {
-    val spanRoot = Span.root[Task](Span.Name("refresh-config")).unsafeRun
-    val buildEmmsSpanName = Span.Name("build-emms")
-    Task.delay(Thread.sleep(5L)).newSpan(buildEmmsSpanName).trace(TraceContext(spanRoot, terminalHandlerSystem)).unsafeRun
-    LogEmitterTestCache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(buildEmmsSpanName)) should have size (1)
+    val spanRoot = Span.root[Task](Span.Name("calculate-quarterly-sales")).unsafeRun
+    val retrieveExistingSalesSpanName = Span.Name("retrieve-existing-sales")
+    Task.delay(Thread.sleep(5L)).newSpan(retrieveExistingSalesSpanName).trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRun
+    LogEmitterTestCache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(retrieveExistingSalesSpanName)) should have size (1)
     LogEmitterTestCache.containingAll(spanId(spanRoot.spanId.spanId)) should have size (1)
     ()
   }
 
   protected def assertChildSpanRecordedWithNote(note: Note): Unit = {
-    val spanRoot = Span.root[Task](Span.Name("refresh-config")).unsafeRun
-    val buildEmmsSpanName = Span.Name("build-emms")
-    Task.delay(Thread.sleep(5L)).newSpan(buildEmmsSpanName, note).trace(TraceContext(spanRoot, terminalHandlerSystem)).unsafeRun
-    val entriesWithNote = LogEmitterTestCache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(buildEmmsSpanName), spanNote(note))
+    val spanRoot = Span.root[Task](Span.Name("calculate-quarterly-sales")).unsafeRun
+    val retrieveExistingSalesSpanName = Span.Name("retrieve-existing-sales")
+    Task.delay(Thread.sleep(5L)).newSpan(retrieveExistingSalesSpanName, note).trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRun
+    val entriesWithNote = LogEmitterTestCache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(retrieveExistingSalesSpanName), spanNote(note))
     val entriesWithSpanId = LogEmitterTestCache.containingAll(spanId(spanRoot.spanId.spanId))
     entriesWithNote should have size (1)
     entriesWithSpanId should have size (1)
@@ -76,24 +76,23 @@ trait RecordingTestSupport extends TestSupport with BeforeAndAfterEach {
   }
 
   protected def assertNestedSpansRecorded(): Unit = {
-    val spanRootName = Span.Name("refresh-config")
+    val spanRootName = Span.Name("calculate-quarterly-sales")
     val spanRoot = Span.root[Task](spanRootName).unsafeRun
-    val buildEmmsSpanName = Span.Name("build-emms")
-    val requestExistingEmmsSpanName = Span.Name("request-existing-emms")
-    val buildNewEmmsSpanName = Span.Name("build-emms")
-    def buildEmms: TraceTask[Unit] = for {
-      existing <- requestExistingEmms
-      _ <- if (existing) TraceTask.now(()) else buildNewEmms
+    val requestExistingSalesFiguresSpanName = Span.Name("request-existing-sales-figures")
+    val generateNewSalesFiguresSpanName = Span.Name("generate-new-sales-figures")
+    def calculateSales: TraceTask[Unit] = for {
+      existing <- requestExistingSalesFigures
+      _ <- if (existing) TraceTask.now(()) else generateNewSalesFigures
     } yield ()
-    def requestExistingEmms: TraceTask[Boolean] = Task.delay(false).newSpan(requestExistingEmmsSpanName)
-    def buildNewEmms: TraceTask[Unit] = Task.delay(Thread.sleep(5L)).newSpan(buildNewEmmsSpanName)
-    buildEmms.trace(TraceContext(spanRoot, terminalHandlerSystem)).unsafeRun
+    def requestExistingSalesFigures: TraceTask[Boolean] = Task.delay(false).newSpan(requestExistingSalesFiguresSpanName)
+    def generateNewSalesFigures: TraceTask[Unit] = Task.delay(Thread.sleep(5L)).newSpan(generateNewSalesFiguresSpanName)
+    calculateSales.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRun
     val entries = LogEmitterTestCache.containingAll(logEmitterId)
     entries should have size (3)
-    entries(0).msg should include(spanName(requestExistingEmmsSpanName))
+    entries(0).msg should include(spanName(requestExistingSalesFiguresSpanName))
     entries(0).msg should include(parentSpanId(spanRoot.spanId.spanId))
     entries(0).msg should not include (spanId(spanRoot.spanId.spanId))
-    entries(1).msg should include(spanName(buildNewEmmsSpanName))
+    entries(1).msg should include(spanName(generateNewSalesFiguresSpanName))
     entries(1).msg should include(parentSpanId(spanRoot.spanId.spanId))
     entries(1).msg should not include (spanId(spanRoot.spanId.spanId))
     entries(2).msg should include(spanName(spanRootName))

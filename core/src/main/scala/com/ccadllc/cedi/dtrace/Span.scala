@@ -24,6 +24,19 @@ import scala.language.higherKinds
 import fs2.util._
 import fs2.util.syntax._
 
+/**
+ * Represents a single span for a distributed trace.  A span is the traced execution of an effectful program `F`.
+ * @param spanId - the [[SpanId]] representing this span's identity and its place in a distributed trace's hiearchy
+ *   of spans.
+ * @param spanName - the human readable name of this span - it is the logical name of the effectful program whose execution
+ *   this span is recording.
+ * @param startTime - the `java.time.Instant` representing the timestamp at which the program started execution
+ * @param failure - the [[FailureDetail]] is present and provides a means to render the detail of a program execution failure
+ *   if the execution failed; otherwise is it not present.
+ * @param duration - the elapsed time of the execution of the program.
+ * @param notes - a `Vector` of [[Note]]s used to annotate the program's execution with metadata, which can be derived both from
+ *   the program's inputs as well as its results.
+ */
 case class Span(
     spanId: SpanId,
     spanName: Span.Name,
@@ -33,6 +46,9 @@ case class Span(
     notes: Vector[Note]
 ) {
 
+  /**
+   * This is this span the root of the trace?
+   */
   def root: Boolean = spanId.root
 
   private[dtrace] def newChild[F[_]: Suspendable](spanName: Span.Name): F[Span] = for {
@@ -64,8 +80,23 @@ case class Span(
 object Span {
   case class Name(value: String) { override def toString: String = value }
 
+  /**
+   * Create a root span by generating a root [[SpanId]].
+   * @param spanName - the name of this span.
+   * @param notes - a variable argument list of [[Note]]s, metadata to annotate this span.
+   * @param F - an instance of `fs2.util.Suspendable` in implicit scope.
+   * @return newSpan - an effectful program (with an instance of `fs2.util.Suspendable[F]` in implicit scope) which when run will result in a new root span.
+   */
   def root[F[_]: Suspendable](spanName: Name, notes: Note*): F[Span] = SpanId.root flatMap { newSpan(_, spanName, notes: _*) }
 
+  /**
+   * Create a new child of the passed-in [[SpanId]].
+   * @param spanId - the [[SpanId]] containing the identity for which a child span will be created.
+   * @param spanName - the name of this span.
+   * @param notes - a variable argument list of [[Note]]s, metadata to annotate this span.
+   * @param F - an instance of `fs2.util.Suspendable` in implicit scope.
+   * @return newSpan - an effectful program (with an instance of `fs2.util.Suspendable[F]` in implicit scope) which when run will result in a new child span.
+   */
   def newChild[F[_]: Suspendable](spanId: SpanId, spanName: Name, notes: Note*): F[Span] = spanId.newChild flatMap { newSpan(_, spanName, notes: _*) }
 
   private[dtrace] val empty: Span = Span(SpanId.empty, Span.Name("empty"), Instant.EPOCH, None, 0.seconds, Vector.empty)

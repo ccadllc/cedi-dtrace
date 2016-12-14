@@ -33,6 +33,7 @@ A Money-compliant *Distributed Trace* is a directed graph of *Span*s. A *Span* i
 
 ```tut:silent
 import fs2.{ Strategy, Task }
+import java.time.Instant
 import java.util.UUID
 import com.ccadllc.cedi.dtrace._
 import com.ccadllc.cedi.dtrace.logging.LogEmitter
@@ -42,9 +43,9 @@ import TraceSystem._
 /*
  * Some simple data types for our examples.
  */
-case class Result(message: String)
-case class Command(action: String)
-case class Host(hostName: String)
+case class Region(name: String)
+case class SalesReport(total: Double, message: String)
+case class SalesFigure(region: String, product: String, units: Int, total: Double)
 case class HttpHeader(name: String, value: String)
 
 /*
@@ -61,8 +62,8 @@ implicit val strategy: Strategy = Strategy.fromFixedDaemonPool(
  */
 val traceSystem = TraceSystem(
   identity = Identity(
-    Identity.Application("terminal-manager", UUID.randomUUID),
-    Identity.Node("terminal-manager8d3w3.mydomain.com", UUID.randomUUID),
+    Identity.Application("sales-management-system", UUID.randomUUID),
+    Identity.Node("crm.widgetsforsale.com", UUID.randomUUID),
     Identity.Process(UUID.randomUUID),
     Identity.Deployment("Ashburn-DC-East"),
     Identity.Environment("production")
@@ -78,58 +79,59 @@ val traceSystem = TraceSystem(
   emitter = LogEmitter[Task]
 )
 
-val cmd = Command("action")
-val host = Host("localhost")
+val region = Region("Philly")
 val httpHeader = HttpHeader("content-type", "application/json")
 
-def encodeInitCommand(cmd: Command): Task[Array[Byte]] = Task.now(Array(20.toByte, 10.toByte, 10.toByte))
+def retrieveSalesFigures(region: Region): Task[Vector[SalesFigure]] = Task.now(
+  Vector(SalesFigure("PA", "widget2000", 200000, 850000.0), SalesFigure("NJ", "widget1000", 100000, 550003.50))
+)
 
-def transmitInitCommand(bytes: Array[Byte], host: Host): Task[Result] = Task.now(Result("success!"))
+def calculateSalesReport(figures: Vector[SalesFigure]): Task[SalesReport] = Task.now(SalesReport(figures.map(_.total).sum, "success!"))
 
-def writeInitializeCommandToSettop(cmd: Command, host: Host): TraceT[Task, Result] = for {
+def generateSalesReport(region: Region): TraceT[Task, SalesReport] = for {
  /*
-  * Encode the command to a byte vector and then transmit it.  Note that the import of
+  * Calculate the new quarterly sales figure and generate the report.  Note that the import of
   * `com.ccadllc.cedi.dtrace.syntax._` enriches the `fs2.Task` type by adding a `newSpan`
   * method to it using an implicit class.  The two lines that follow this comment would,
   * without the syntax enrichment, be written as:
-  *  bytes <- TraceT.toTraceT(encodeInitCommand(cmd)).newSpan(Span.Name("encode-init-command"), Note.string("cmd", cmd.toString))
-  *  result <- TraceT.toTraceT(transmitInitCommand(bytes, host)).newSpan(
-  *    Span.Name("transmit-init-command"), Note.string("settop-host", host.toString), Note.long("payload-size", bytes.size.toLong)
+  *  figures <- TraceT.toTraceT(retrieveSalesFigures(region).newSpan(Span.Name("retrieve-sales-figures"), Note.string("region", region.name))
+  *  result <- TraceT.toTraceT(calculateSalesReport(figures)).newSpan(
+  *    Span.Name("calculate-sales-report"), Note.string("region", region.name), Note.long("total-figures", figures.size.toLong)
   *  )
   */
-  bytes <- encodeInitCommand(cmd).newSpan(Span.Name("encode-init-command"), Note.string("cmd", cmd.toString))
-  result <- transmitInitCommand(bytes, host).newSpan(
-    Span.Name("transmit-init-command"), Note.string("settop-host", host.toString), Note.long("payload-size", bytes.size.toLong)
+  figures <- retrieveSalesFigures(region).newSpan(Span.Name("retrieve-sales-figures"), Note.string("region", region.name))
+  report <- calculateSalesReport(figures).newSpan(
+    Span.Name("calculate-sales-report"), Note.string("region", region.name), Note.long("total-figures", figures.size.toLong)
   )
-} yield result
+} yield report
 
 /*
  * Retrieve the span, in this example, in the HTTP header from the originating business system, if it exists.
  * This logic may be included an an `akka-http` directive, for example.
  */
 val rootSpanEither = SpanId.fromHeader(httpHeader.name, httpHeader.value).right.map {
-  spanId => Span.newChild[Task](spanId, Span.Name("business-system-init"))
+  spanId => Span.newChild[Task](spanId, Span.Name("sales-management-system-root"))
 }
 
 /*
- * We add a Span to the overall `writeInitializeCommandToSettop` action,
+ * We add a Span to the overall `generateSalesReport` action,
  * showing the ability to create Span notes from the traced action result
  * with `newAnnotatedSpan`.
  */
-val tracedTask: TraceT[Task, Result] = writeInitializeCommandToSettop(cmd, host).newAnnotatedSpan(
-  Span.Name("write-initialize-command"), Note.string("command", cmd.toString), Note.string("host", host.toString)
-) { case Right(result) => Vector(Note.string("result", result.toString)) }
+val tracedTask: TraceT[Task, SalesReport] = generateSalesReport(region).newAnnotatedSpan(
+  Span.Name("generate-sales-report"), Note.string("region", region.name)
+) { case Right(report) => Vector(Note.string("sales-report", report.toString)) }
 
 /*
  * We convert our traced task to a task.
  */
-val task: Task[Result] = for {
+val task: Task[SalesReport] = for {
   /* If there was no Span originating from another system found in the HTTP Header, we create a local root Span */
-  rootSpan <- rootSpanEither.right.getOrElse(Span.root[Task](Span.Name("locally-initiated-init")))
+  rootSpan <- rootSpanEither.right.getOrElse(Span.root[Task](Span.Name("locally-initiated-report")))
   /*
-   * The tracedTask we've derived earlier around `writeInitialCommandToSettop` (which includes
-   * the encode and transmit nested actions, each with their own Spans) is an instance of `TraceT[Task, A]`,
-   * which is a data structure associating a Span (like "write-initialize-command") with its underlying `Task`
+   * The tracedTask we've derived earlier around `generateSalesReport` (which includes
+   * the retrieval and calculate sales figures nested actions, each with their own Spans) is an instance of `TraceT[Task, A]`,
+   * which is a data structure associating a Span (like "calculate-sales-figures") with its underlying `Task`
    * (reiterating that we're using `fs2.Task` in this example, but again, `Task` can be substituted with any
    * `F`).  When we are done building up these annotated `TraceT` instances, we need to "tie the knot" by
    * converting the top-level instance back into a plain `Task` again before we can actually run it. This is
@@ -144,24 +146,25 @@ val task: Task[Result] = for {
  * Now, at the end of the universe, we run the task.  This will result, in this example using the supplied logging
  * framework Emitter, in the following items logged via the `distributed-trace.txt` logger:
  *   Span: [ span-id=-4268861818882462019 ] [ trace-id=2a71fb7b-f38d-4f6a-a4d1-229c6c5bc963 ] [ parent-id=-6262761813211462065 ]
- *     [ span-name=encode-init-command] [ app-name=terminal-manager ] [ start-time=2016-09-26T00:29:14.802Z ]
- *     [ span-duration=2500 microseconds ] [ span-success=true ] [ failure-detail=N/A ][ notes=[name=command,value=INIT] ]
- *     [ node-name=terminal-manager8d3w3.mydomain.com ]
+ *     [ span-name=retrieve-sales-figures] [ app-name=sales-management-system ] [ start-time=2016-09-26T00:29:14.802Z ]
+ *     [ span-duration=2500 microseconds ] [ span-success=true ] [ failure-detail=N/A ][ notes=[name=region,value=Philly] ]
+ *     [ node-name=crm.widgetsforsale.com ]
  *
  *   Span: [ span-id=-2264899918881452036 ] [ trace-id=2a71fb7b-f38d-4f6a-a4d1-229c6c5bc963 ] [ parent-id=-6262761813211462065 ]
- *     [ span-name=transmit-init-command] [ app-name=terminal-manager ] [ start-time=2016-09-26T00:29:14.799Z ]
- *     [ span-duration=2500 microseconds ] [ span-success=true ] [ failure-detail=N/A ][ notes=[name=command,value=INIT] ]
- *     [ node-name=terminal-manager8d3w3.mydomain.com ]
+ *     [ span-name=calculate-sales-report] [ app-name=sales-management-system] [ start-time=2016-09-26T00:29:14.799Z ]
+ *     [ span-duration=2500 microseconds ] [ span-success=true ] [ failure-detail=N/A ]
+ *     [ notes=[name=region,value=Philly], [name=total-figures,value=2] ] [ node-name=crm.widgetsforsale.com ]
  *
  *   Span: [ span-id=-6262761813211462065 ] [ trace-id=2a71fb7b-f38d-4f6a-a4d1-229c6c5bc963 ] [ parent-id=-9466761813211462033 ]
- *     [ span-name=write-initialize-command] [ app-name=terminal-manager ] [ start-time=2016-09-26T00:29:14.797Z ]
- *     [ span-duration=5000 microseconds ] [ span-success=true ] [ failure-detail=N/A ][ notes=[name=command,value=INIT] ]
- *     [ node-name=terminal-manager8d3w3.mydomain.com ]
+ *     [ span-name=generate-sales-report] [ app-name=sales-management-system ] [ start-time=2016-09-26T00:29:14.797Z ]
+ *     [ span-duration=5000 microseconds ] [ span-success=true ] [failure-detail=N/A ]
+ *     [ notes=[name=region,value=Philly], [name=report,value=SalesReport(1400000.50, success!)] ]
+ *     [ node-name=crm.widgetsforsale.com ]
  *
  *   Span: [ span-id=-9466761813211462033 ] [ trace-id=2a71fb7b-f38d-4f6a-a4d1-229c6c5bc963 ] [ parent-id=2488084092502843745 ]
- *     [ span-name=business-system-init] [ app-name=terminal-manager ] [ start-time=2016-09-26T00:29:14.793Z ]
+ *     [ span-name=sales-management-root ] [ app-name=sales-management-system ] [ start-time=2016-09-26T00:29:14.793Z ]
  *     [ span-duration=5110 microseconds ] [ span-success=true ] [ failure-detail=N/A ][ notes=[] ]
- *     [ node-name=terminal-manager8d3w3.mydomain.com ]
+ *     [ node-name=crm.widgetsforsale.com ]
  */
 task.unsafeRun()
 ```

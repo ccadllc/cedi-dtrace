@@ -138,15 +138,53 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
     } yield r
   }
 
+  /**
+   * Given the (usually) root [[TraceContext]], convert this `TraceT[A]` to its underlying effectful program `F[A]`.
+   * @param tc - the [[TraceContext]] to use in generating the trace -- usually this contains the root [[Span]] (or at least the root
+   *   span of trace for the VM it is running in).
+   * @param notes - a variable argument list of [[Note]]s used to annotate the current [[Span]].
+   * @return effectfulProgram - the underlying effectful program `F[A]` that, when run, will calculate information for and record the associated [[Span]].
+   */
   def trace(tc: TraceContext[F], notes: Note*)(implicit F: Catchable[F] with Suspendable[F]): F[A] =
     annotatedTrace(tc, notes: _*)(PartialFunction.empty)
 
+  /**
+   * Given the (usually) root [[TraceContext]], convert this `TraceT[A]` to its underlying effectful program `F[A]`. In addition, when the effectful program
+   * is run, further annotate the associated [[Span]] with [[Note]]s derived from the result of its run, using the passed-in function.
+   * @param tc - the [[TraceContext]] to use in generating the trace -- usually this contains the root [[Span]] (or at least the root
+   *   span of trace for the VM it is running in).
+   * @param notes - a variable argument list of [[Note]]s used to annotate the current [[Span]].
+   * @param resultAnnotator - a partial function which is passed an `Either[Throwable, A]` as the result of the underlying program's run and which
+   *   returns a `Vector` of zero or more [[Note]]s, possibly derived from the input result.
+   * @return effectfulProgram - the underlying effectful program `F[A]` that, when run, will calculate information for and record the associated [[Span]].
+   */
   def annotatedTrace(tc: TraceContext[F], notes: Note*)(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Catchable[F] with Suspendable[F]): F[A] =
     annotatedTrace(tc, Evaluator.default[A], notes: _*)(resultAnnotator)
 
+  /**
+   * Given the (usually) root [[TraceContext]], convert this `TraceT[A]` to its underlying effectful program `F[A]`, using the passed-in [[Evaluator]]
+   * to determine the program's success/failure status.
+   * @param tc - the [[TraceContext]] to use in generating the trace -- usually this contains the root [[Span]] (or at least the root
+   *   span of trace for the VM it is running in).
+   * @param evaluator - an [[Evaluator]] which converts either a `Throwable` or `A` to an optional [[FailureDetail]]
+   * @param notes - a variable argument list of [[Note]]s used to annotate the current [[Span]].
+   * @return effectfulProgram - the underlying effectful program `F[A]` that, when run, will calculate information for and record the associated [[Span]].
+   */
   def trace(tc: TraceContext[F], evaluator: Evaluator[A], notes: Note*)(implicit F: Catchable[F] with Suspendable[F]): F[A] =
     annotatedTrace(tc, evaluator, notes: _*)(PartialFunction.empty)
 
+  /**
+   * Given the (usually) root [[TraceContext]], convert this `TraceT[A]` to its underlying effectful program `F[A]`, using the passed-in [[Evaluator]]
+   * to determine the program's success/failure status. In addition, when the effectful program
+   * is run, further annotate the associated [[Span]] with [[Note]]s derived from the result of its run, using the passed-in function.
+   * @param tc - the [[TraceContext]] to use in generating the trace -- usually this contains the root [[Span]] (or at least the root
+   *   span of trace for the VM it is running in).
+   * @param evaluator - an [[Evaluator]] which converts either a `Throwable` or `A` to an optional [[FailureDetail]]
+   * @param notes - a variable argument list of [[Note]]s used to annotate the current [[Span]].
+   * @param resultAnnotator - a partial function which is passed an `Either[Throwable, A]` as the result of the underlying program's run and which
+   *   returns a `Vector` of zero or more [[Note]]s, possibly derived from the input result.
+   * @return effectfulProgram - the underlying effectful program `F[A]` that, when run, will calculate information for and record the associated [[Span]].
+   */
   def annotatedTrace(
     tc: TraceContext[F],
     evaluator: Evaluator[A],
@@ -162,8 +200,23 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
       }
     }
 
+  /**
+   * Transforms this `TraceT[F, A]` to a `TraceT[F, Either[Throwable, A]]` where the left-hand side of the
+   * `Either` represents a failure of the underlying program `F` as captured by the `fs2.util.Catchable[F]`
+   * in implicit scope and the right-hand side represents the successful result.
+   */
   def attempt(implicit F: Catchable[F]): TraceT[F, Either[Throwable, A]] = TraceT { tie(_).attempt }
 
+  /**
+   * Transforms this `TraceT[F, A]` to an equivalent `TraceT[F, A]` where a best-effort will be made
+   * to execute the passed-in function on the finish of the underlying effectful program.  The function can't
+   * be guaranteed to run in the face of interrupts, etc.  It depends on the nature of the effectful program
+   * itself.
+   * @param f - a function which is passed an optional `Throwable` - defined if the program failed and
+   *   returns a `TraceT[F, Unit]`, a program run only for its effect.
+   * @return effectfulProgram - the underlying effectful program `F[A]` that, when run to completion or with an error, will
+   *   in turn execute the passed-in function prior to returning the original program result.
+   */
   def bestEffortOnFinish(f: Option[Throwable] => TraceT[F, Unit])(implicit F: Catchable[F]): TraceT[F, A] =
     TraceT { tc => tie(tc).bestEffortOnFinish(f(_).tie(tc)) }
 
@@ -178,17 +231,77 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
 
   def handleAllWith[B >: A](f: Throwable => TraceT[F, B])(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, B] = attempt.flatMap(_.fold(f, TraceT.pure[F, B]))
 
+  /**
+   * When passed a top-level [[TraceContext]], convert this `TraceT` into its underlying effectful
+   * program enhanced with the capability of tracing its execution.
+   * @param tc - the top-level [[TraceContext]] to apply to the `TraceT` in order to transform it
+   *   to an `F[A]`.
+   * @return effectfulProgram - the underlying `F[A]` enhanced to trace its execution.
+   */
   def apply(tc: TraceContext[F]): F[A] = tie(tc)
 }
 
+/**
+ * The `TraceT` companion provides smart constructors for desired `TraceT` instances and
+ * `fs2.util.Async` and `fs2.util.Effect` typeclasses.
+ */
 object TraceT extends TraceTPolyFunctions with TraceTInstances {
+
   private[dtrace] def apply[F[_], A](tie: TraceContext[F] => F[A]): TraceT[F, A] = new TraceT(tie)
+
+  /**
+   * Ask for the current `TraceContext[F]` in a `TraceT` given a `fs2.util.Applicative[F]` in implicit
+   * scope.
+   * @param F - the `fs2.util.Applicative[F]` in implicit scope.
+   * @return traceTOfTraceContext - a `TraceContext[F]` wrapped in a `TraceT`.
+   */
   def ask[F[_]](implicit F: Applicative[F]): TraceT[F, TraceContext[F]] = apply { F.pure }
+
+  /**
+   * Lifts a value `A` into a `TraceT[F, A]` context provided there is an instance of
+   * `fs2.util.Applicative[F]` in implicit scope.
+   * @param a - the pure value `A` to lift into a `TraceT` context.
+   * @param F - the `fs2.util.Applicative[F]` in implicit scope.
+   * @return traceTOfA - a pure value `A` wrapped in a `TraceT`.
+   */
   def pure[F[_], A](a: A)(implicit F: Applicative[F]): TraceT[F, A] = toTraceT(F.pure(a))
+
+  /**
+   * Lifts the non-strict, possibly impure expression computing `A` into a `TraceT[F, A]`
+   * context provided there is an instance of `fs2.util.Suspendable[F]` in implicit scope.
+   * @param a - the non-strict expression computing `A` to lift into a `TraceT` context.
+   * @param F - the `fs2.util.Suspendable[F]` in implicit scope.
+   * @return traceTOfA - a non-strict expression which computes `A` lifted into a `TraceT`.
+   */
   def delay[F[_], A](a: => A)(implicit F: Suspendable[F]): TraceT[F, A] = toTraceT(F.delay(a))
+
+  /**
+   * Lifts the non-strict, possibly impure expression computing a `TraceT[A]` into a `TraceT[F, A]`
+   * provided there is an instance of `fs2.util.Suspendable[F]` in implicit scope.  The expression is
+   * suspended until the outer [[TraceT]] returned is run.
+   * @param t - the non-strict expression computing `TraceT[A]` to lift into a `TraceT` context suspended
+   *   until the outer [[TraceT]] is run.
+   * @param F - the `fs2.util.Suspendable[F]` in implicit scope.
+   * @return traceTOfTA - a non-strict expression which computes `TraceT[A]` lifted into a `TraceT` in
+   *   a suspended state until the outer [[TraceT]] is run.
+   */
   def suspend[F[_], A](t: => TraceT[F, A])(implicit F: Suspendable[F]): TraceT[F, A] =
     toTraceT(F.delay(t)).flatMap(identity)
+
+  /**
+   * Creates a failed `TraceT, using the instance of `fs2.util.Catchable[F]` in implicit scope
+   * to create a failed underlying program, lifted to a [[TraceT]].
+   * @param t - the `Throwable` with which to fail the underlying program.
+   * @param F - the `fs2.util.Catchable[F]` in implicit scope used to create the failed program `F`.
+   * @return traceTOfA - the `TraceT[F, A]` in a failed state.
+   */
   def fail[F[_], A](t: Throwable)(implicit F: Catchable[F]): TraceT[F, A] = toTraceT(F.fail(t): F[A])
+
+  /**
+   * Lifts a program `F` which computes `A` into a `TraceT[F, A]` context.
+   * @param fa - a program `F` which computes a value `A`.
+   * @return traceTOfA - a `TraceT[F, A]`
+   */
   def toTraceT[F[_], A](fa: F[A]): TraceT[F, A] = TraceT { _ => fa }
 }
 

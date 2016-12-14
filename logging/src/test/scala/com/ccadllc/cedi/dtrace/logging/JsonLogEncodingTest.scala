@@ -34,30 +34,30 @@ import json.encoding._
 class JsonLogEncodingTests extends WordSpec with TestSupport {
 
   // format: OFF
-  val rfreshAuthsTraceContextJson = Json.obj(
+  val calculateQuarterlySalesTraceContextJson = Json.obj(
     "where" -> Json.obj(
-      "appId"           -> refreshAuthsTraceContext.system.identity.app.id.toString.asJson,
-      "productKey"      -> refreshAuthsTraceContext.system.identity.app.name.toString.asJson,
-      "processId"       -> refreshAuthsTraceContext.system.identity.process.id.toString.asJson,
-      "nodeId"          -> refreshAuthsTraceContext.system.identity.node.id.toString.asJson,
-      "nodeName"        -> refreshAuthsTraceContext.system.identity.node.name.asJson,
-      "deploymentName"  -> refreshAuthsTraceContext.system.identity.deployment.name.asJson,
-      "environmentName" -> refreshAuthsTraceContext.system.identity.environment.name.asJson
+      "appId"           -> calculateQuarterlySalesTraceContext.system.identity.app.id.toString.asJson,
+      "productKey"      -> calculateQuarterlySalesTraceContext.system.identity.app.name.toString.asJson,
+      "processId"       -> calculateQuarterlySalesTraceContext.system.identity.process.id.toString.asJson,
+      "nodeId"          -> calculateQuarterlySalesTraceContext.system.identity.node.id.toString.asJson,
+      "nodeName"        -> calculateQuarterlySalesTraceContext.system.identity.node.name.asJson,
+      "deploymentName"  -> calculateQuarterlySalesTraceContext.system.identity.deployment.name.asJson,
+      "environmentName" -> calculateQuarterlySalesTraceContext.system.identity.environment.name.asJson
     ),
-    "root"            -> refreshAuthsTraceContext.currentSpan.root.asJson,
-    "trace-id"        -> refreshAuthsTraceContext.currentSpan.spanId.traceId.asJson,
-    "span-id"         -> refreshAuthsTraceContext.currentSpan.spanId.spanId.asJson,
-    "parent-id"       -> refreshAuthsTraceContext.currentSpan.spanId.parentSpanId.asJson,
-    "span-name"       -> refreshAuthsTraceContext.currentSpan.spanName.value.asJson,
-    "start-time"      -> refreshAuthsTraceContext.currentSpan.startTime.asJson,
-    "span-success"    -> refreshAuthsTraceContext.currentSpan.failure.isEmpty.asJson,
-    "failure-detail"  -> refreshAuthsTraceContext.currentSpan.failure.map(_.render).asJson,
-    "span-duration"   -> refreshAuthsTraceContext.currentSpan.duration.toMicros.asJson,
+    "root"            -> calculateQuarterlySalesTraceContext.currentSpan.root.asJson,
+    "trace-id"        -> calculateQuarterlySalesTraceContext.currentSpan.spanId.traceId.asJson,
+    "span-id"         -> calculateQuarterlySalesTraceContext.currentSpan.spanId.spanId.asJson,
+    "parent-id"       -> calculateQuarterlySalesTraceContext.currentSpan.spanId.parentSpanId.asJson,
+    "span-name"       -> calculateQuarterlySalesTraceContext.currentSpan.spanName.value.asJson,
+    "start-time"      -> calculateQuarterlySalesTraceContext.currentSpan.startTime.asJson,
+    "span-success"    -> calculateQuarterlySalesTraceContext.currentSpan.failure.isEmpty.asJson,
+    "failure-detail"  -> calculateQuarterlySalesTraceContext.currentSpan.failure.map(_.render).asJson,
+    "span-duration"   -> calculateQuarterlySalesTraceContext.currentSpan.duration.toMicros.asJson,
     "notes"           -> Map(
-      updateEmmsLongNote.name.value     ->  updateEmmsLongNoteValue.value.toString,
-      updateEmmsBooleanNote.name.value  ->  updateEmmsBooleanNoteValue.value.toString,
-      updateEmmsStringNote.name.value   ->  updateEmmsStringNoteValue.value,
-      updateEmmsDoubleNote.name.value   ->  updateEmmsDoubleNoteValue.value.toString
+      quarterlySalesUnitsNote.name.value        ->  quarterlySalesUnitsNoteValue.value.toString,
+      quarterlySalesGoalReachedNote.name.value  ->  quarterlySalesGoalReachedNoteValue.value.toString,
+      salesRegionNote.name.value                ->  salesRegionNoteValue.value,
+      quarterlySalesTotalNote.name.value        ->  quarterlySalesTotalNoteValue.value.toString
     ).asJson
   )
   // format: ON
@@ -65,5 +65,5 @@ class JsonLogEncodingTests extends WordSpec with TestSupport {
   implicit def arbTrace[F[_]: Suspendable]: Arbitrary[TraceContext[F]] = Arbitrary(genTraceContext)
 
   "Trace" should { encodeArbitraryJson[TraceContext[Task]] }
-  "Trace" should { encodeSpecificJson(refreshAuthsTraceContext, rfreshAuthsTraceContextJson) }
+  "Trace" should { encodeSpecificJson(calculateQuarterlySalesTraceContext, calculateQuarterlySalesTraceContextJson) }
 }
