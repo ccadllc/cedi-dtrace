@@ -21,10 +21,24 @@ import fs2.util.syntax._
 
 import scala.language.higherKinds
 
+/**
+ * The distributed trace (dtrace) library provides the means to derive and record a `Comcast Money` compliant
+ * distributed trace across effectful programs given the appropriate typeclasses for that program in
+ * implicit scope.  The effectful programs are enhanced vai a `Kleisli`-like data type, [[TraceT]] which encodes
+ * the information to calculate and record a trace [[Span]] at the conclusion of the program execution.
+ */
 package object dtrace {
 
+  /**
+   * Type alias provided for convenience when using a `fs2.Task` as the type of effectful
+   * program being traced.
+   */
   type TraceTask[A] = TraceT[Task, A]
 
+  /**
+   * Companion to the `TraceTask[A]` type alias - provides the [[TraceT]] smart constructors with the effectful
+   * program `F` fixed as `fs2.Task`.
+   */
   object TraceTask {
     def ask: TraceTask[TraceContext[Task]] = TraceT { Task.now }
     def now[A](a: A): TraceTask[A] = toTraceTask(Task.now(a))
@@ -34,12 +48,23 @@ package object dtrace {
     def toTraceTask[A](task: Task[A]): TraceTask[A] = TraceT { _ => task }
   }
 
+  /**
+   * Provides syntax enrichment.
+   */
   object syntax {
+    /**
+     * Enriches an effectful program `F[A]` such that [[TraceT]] instance methods are made available on it, given
+     * the appropriate typeclasses in implicit scope.
+     */
     implicit class TraceEnrichedEffect[F[_], A](private val self: F[A]) extends AnyVal {
+
       def newSpan(spanName: Span.Name, notes: Note*)(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
         toTraceT.newSpan(spanName, notes: _*)
 
-      def newAnnotatedSpan(spanName: Span.Name, notes: Note*)(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
+      def newAnnotatedSpan(
+        spanName: Span.Name,
+        notes: Note*
+      )(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
         toTraceT.newAnnotatedSpan(spanName, notes: _*)(resultAnnotator)
 
       def newSpan(spanName: Span.Name, evaluator: Evaluator[A], notes: Note*)(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =

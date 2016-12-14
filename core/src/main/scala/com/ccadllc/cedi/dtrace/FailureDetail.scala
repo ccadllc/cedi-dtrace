@@ -18,17 +18,28 @@ package com.ccadllc.cedi.dtrace
 import java.io.{ PrintWriter, StringWriter }
 
 /**
- * This represents a failure of the underlying traced program, providing the
+ * This Alegraic Data Type (ADT) represents a failure of the underlying traced program, providing the
  * means to render the failure when the span is recorded.
  */
 sealed abstract class FailureDetail extends Product with Serializable { def render: String }
 
+/**
+ * The `FailureDetail` companion consists of the enumerated concrete `FailureDetail` data types.
+ */
 object FailureDetail {
 
+  /**
+   * A Failure Detail constructed from a human readable message.
+   * @param message - a string which consitutes the message to be used for the failure detail.
+   */
   final case class Message(message: String) extends FailureDetail {
     override def render: String = message
   }
 
+  /**
+   * A Failure Detail constructed from a `java.lang.Throwable`.
+   * @param cause - the `Throwable` whose stack trace is converted into a string and used as the failure detail.
+   */
   final case class Exception(cause: Throwable) extends FailureDetail {
     override def render: String = {
       val exceptionMessage = new StringWriter
@@ -37,7 +48,17 @@ object FailureDetail {
     }
   }
 
+  /**
+   * Constructs a [[Message]]-based [[FailureDetail]] failure detail from the passed-in `String`.
+   * @param m - the string used to generate the failure detail.
+   * @return messageFailureDetail - a [[FailureDetail]] generated from the passed-in `String`.
+   */
   def apply(m: String): FailureDetail = Message(m)
 
+  /**
+   * Constructs an `Exception` failure detail from the passed-in `Throwable`.
+   * @param cause - the `Throwable` used to generate the failure detail.
+   * @return exceptionFailureDetail - a [[FailureDetail]] generated from the passed-in `Throwable`.
+   */
   def apply(e: Throwable): FailureDetail = Exception(e)
 }

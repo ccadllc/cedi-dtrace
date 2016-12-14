@@ -55,53 +55,52 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
   "the distributed trace recording mechanism for emitting to a test string emitter" should {
     "support recording a successful current tracing span which is the root span containing same parent and current span IDs" in {
       val testEmitter = new TestEmitter[Task]
-      val terminalHandlerSystem = TraceSystem(testIdentity, testEmitter)
-      val spanRoot = Span.root[Task](Span.Name("refresh-config")).unsafeRun
-      Task.delay(Thread.sleep(5L)).toTraceT.trace(TraceContext(spanRoot, terminalHandlerSystem)).unsafeRun
+      val salesManagementSystem = TraceSystem(testIdentity, testEmitter)
+      val spanRoot = Span.root[Task](Span.Name("calculate-quarterly-sales")).unsafeRun
+      Task.delay(Thread.sleep(5L)).toTraceT.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRun
       testEmitter.cache.containingAll(spanId(spanRoot.spanId.spanId), parentSpanId(spanRoot.spanId.spanId), spanName(spanRoot.spanName)) should have size (1)
     }
     "support recording a successful new tracing span with new span ID and name" in {
       val testEmitter = new TestEmitter[Task]
-      val terminalHandlerSystem = TraceSystem(testIdentity, testEmitter)
-      val spanRoot = Span.root[Task](Span.Name("refresh-config")).unsafeRun
-      val buildEmmsSpanName = Span.Name("build-emms")
-      Task.delay(Thread.sleep(5L)).newSpan(buildEmmsSpanName).trace(TraceContext(spanRoot, terminalHandlerSystem)).unsafeRun
-      testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(buildEmmsSpanName)) should have size (1)
+      val salesManagementSystem = TraceSystem(testIdentity, testEmitter)
+      val spanRoot = Span.root[Task](Span.Name("calculate-quarterly-sales")).unsafeRun
+      val calcPhillySalesSpanName = Span.Name("calculate-sales-for-philadelphia")
+      Task.delay(Thread.sleep(5L)).newSpan(calcPhillySalesSpanName).trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRun
+      testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(calcPhillySalesSpanName)) should have size (1)
       testEmitter.cache.containingAll(spanId(spanRoot.spanId.spanId)) should have size (1)
     }
     "support recording a successful new tracing span with new span ID, name, and string note" in {
-      assertChildSpanRecordedWithNote(updateEmmsStringNote)
+      assertChildSpanRecordedWithNote(salesRegionNote)
     }
     "support recording a successful new tracing span with new span ID, name, and boolean note" in {
-      assertChildSpanRecordedWithNote(updateEmmsBooleanNote)
+      assertChildSpanRecordedWithNote(quarterlySalesGoalReachedNote)
     }
     "support recording a successful new tracing span with new span ID, name, and long note" in {
-      assertChildSpanRecordedWithNote(updateEmmsLongNote)
+      assertChildSpanRecordedWithNote(quarterlySalesUnitsNote)
     }
     "support recording a successful new tracing span with new span ID, name, and double note" in {
-      assertChildSpanRecordedWithNote(updateEmmsDoubleNote)
+      assertChildSpanRecordedWithNote(quarterlySalesTotalNote)
     }
     "support recording nested spans" in {
       val testEmitter = new TestEmitter[Task]
-      val terminalHandlerSystem = TraceSystem(testIdentity, testEmitter)
-      val spanRootName = Span.Name("refresh-config")
+      val salesManagementSystem = TraceSystem(testIdentity, testEmitter)
+      val spanRootName = Span.Name("calculate-quarterly-sales-update")
       val spanRoot = Span.root[Task](spanRootName).unsafeRun
-      val buildEmmsSpanName = Span.Name("build-emms")
-      val requestExistingEmmsSpanName = Span.Name("request-existing-emms")
-      val buildNewEmmsSpanName = Span.Name("build-emms")
-      def buildEmms: TraceTask[Unit] = for {
-        existing <- requestExistingEmms
-        _ <- if (existing) TraceTask.now(()) else buildNewEmms
+      val requestUpdatedSalesFiguresSpanName = Span.Name("request-updated-sales-figures")
+      val generateUpdatedSalesFiguresSpanName = Span.Name("generate-updated-sales-figures")
+      def generateSalesFigures: TraceTask[Unit] = for {
+        existing <- requestUpdatedSalesFigures
+        _ <- if (existing) TraceTask.now(()) else generateUpdatedSalesFigures
       } yield ()
-      def requestExistingEmms: TraceTask[Boolean] = Task.delay(false).newSpan(requestExistingEmmsSpanName)
-      def buildNewEmms: TraceTask[Unit] = Task.delay(Thread.sleep(5L)).newSpan(buildNewEmmsSpanName)
-      buildEmms.trace(TraceContext(spanRoot, terminalHandlerSystem)).unsafeRun
+      def requestUpdatedSalesFigures: TraceTask[Boolean] = Task.delay(false).newSpan(requestUpdatedSalesFiguresSpanName)
+      def generateUpdatedSalesFigures: TraceTask[Unit] = Task.delay(Thread.sleep(5L)).newSpan(generateUpdatedSalesFiguresSpanName)
+      generateSalesFigures.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRun
       val entries = testEmitter.cache.all
       entries should have size (3)
-      entries(0).msg should include(spanName(requestExistingEmmsSpanName))
+      entries(0).msg should include(spanName(requestUpdatedSalesFiguresSpanName))
       entries(0).msg should include(parentSpanId(spanRoot.spanId.spanId))
       entries(0).msg should not include (spanId(spanRoot.spanId.spanId))
-      entries(1).msg should include(spanName(buildNewEmmsSpanName))
+      entries(1).msg should include(spanName(generateUpdatedSalesFiguresSpanName))
       entries(1).msg should include(parentSpanId(spanRoot.spanId.spanId))
       entries(1).msg should not include (spanId(spanRoot.spanId.spanId))
       entries(2).msg should include(spanName(spanRootName))
@@ -112,14 +111,14 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
 
   private def assertChildSpanRecordedWithNote(note: Note): Unit = {
     val testEmitter = new TestEmitter[Task]
-    val terminalHandlerSystem = TraceSystem(testIdentity, testEmitter)
-    val spanRoot = Span.root[Task](Span.Name("refresh-config")).unsafeRun
-    val buildEmmsSpanName = Span.Name("build-emms")
+    val salesManagementSystem = TraceSystem(testIdentity, testEmitter)
+    val spanRoot = Span.root[Task](Span.Name("calculate-quarterly-sales-updates")).unsafeRun
+    val calcPhillySalesSpanName = Span.Name("calculate-updated-sales-for-philly")
     Task.delay {
       Thread.sleep(5L)
       note
-    }.newAnnotatedSpan(buildEmmsSpanName) { case Right(n) => Vector(n) }.trace(TraceContext(spanRoot, terminalHandlerSystem)).unsafeRun
-    val entriesWithNote = testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(buildEmmsSpanName), note.toString)
+    }.newAnnotatedSpan(calcPhillySalesSpanName) { case Right(n) => Vector(n) }.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRun
+    val entriesWithNote = testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(calcPhillySalesSpanName), note.toString)
     val entriesWithSpanId = testEmitter.cache.containingAll(spanId(spanRoot.spanId.spanId))
     entriesWithNote should have size (1)
     entriesWithSpanId should have size (1)

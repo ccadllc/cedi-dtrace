@@ -36,16 +36,16 @@ class JsonLogRecordingTest extends WordSpec with RecordingTestSupport {
       assertChildSpanRecorded()
     }
     "support recording a successful new tracing span with new span ID, name, and string note" in {
-      assertChildSpanRecordedWithNote(updateEmmsStringNote)
+      assertChildSpanRecordedWithNote(salesRegionNote)
     }
     "support recording a successful new tracing span with new span ID, name, and boolean note" in {
-      assertChildSpanRecordedWithNote(updateEmmsBooleanNote)
+      assertChildSpanRecordedWithNote(quarterlySalesGoalReachedNote)
     }
     "support recording a successful new tracing span with new span ID, name, and long note" in {
-      assertChildSpanRecordedWithNote(updateEmmsLongNote)
+      assertChildSpanRecordedWithNote(quarterlySalesUnitsNote)
     }
     "support recording a successful new tracing span with new span ID, name, and double note" in {
-      assertChildSpanRecordedWithNote(updateEmmsDoubleNote)
+      assertChildSpanRecordedWithNote(quarterlySalesTotalNote)
     }
     "support recording nested spans" in {
       assertNestedSpansRecorded()
