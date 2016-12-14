@@ -26,8 +26,6 @@ import java.util.UUID
 
 import org.scalatest.{ BeforeAndAfterEach, Suite }
 
-import syntax._
-
 trait RecordingTestSupport extends TestSupport with BeforeAndAfterEach {
   self: Suite =>
 
