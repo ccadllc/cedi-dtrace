@@ -49,40 +49,35 @@ package object dtrace {
   }
 
   /**
-   * Provides syntax enrichment.
+   * Enriches an effectful program `F[A]` such that [[TraceT]] instance methods are made available on it, given
+   * the appropriate typeclasses in implicit scope.
    */
-  object syntax {
-    /**
-     * Enriches an effectful program `F[A]` such that [[TraceT]] instance methods are made available on it, given
-     * the appropriate typeclasses in implicit scope.
-     */
-    implicit class TraceEnrichedEffect[F[_], A](private val self: F[A]) extends AnyVal {
+  implicit class TraceEnrichedEffect[F[_], A](private val self: F[A]) extends AnyVal {
 
-      def newSpan(spanName: Span.Name, notes: Note*)(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
-        toTraceT.newSpan(spanName, notes: _*)
+    def newSpan(spanName: Span.Name, notes: Note*)(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
+      toTraceT.newSpan(spanName, notes: _*)
 
-      def newAnnotatedSpan(
-        spanName: Span.Name,
-        notes: Note*
-      )(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
-        toTraceT.newAnnotatedSpan(spanName, notes: _*)(resultAnnotator)
+    def newAnnotatedSpan(
+      spanName: Span.Name,
+      notes: Note*
+    )(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
+      toTraceT.newAnnotatedSpan(spanName, notes: _*)(resultAnnotator)
 
-      def newSpan(spanName: Span.Name, evaluator: Evaluator[A], notes: Note*)(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
-        toTraceT.newSpan(spanName, evaluator, notes: _*)
+    def newSpan(spanName: Span.Name, evaluator: Evaluator[A], notes: Note*)(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
+      toTraceT.newSpan(spanName, evaluator, notes: _*)
 
-      def newAnnotatedSpan(
-        spanName: Span.Name,
-        evaluator: Evaluator[A],
-        notes: Note*
-      )(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
-        toTraceT.newAnnotatedSpan(spanName, evaluator, notes: _*)(resultAnnotator)
+    def newAnnotatedSpan(
+      spanName: Span.Name,
+      evaluator: Evaluator[A],
+      notes: Note*
+    )(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
+      toTraceT.newAnnotatedSpan(spanName, evaluator, notes: _*)(resultAnnotator)
 
-      def toTraceT: TraceT[F, A] = TraceT.toTraceT[F, A](self)
+    def toTraceT: TraceT[F, A] = TraceT.toTraceT[F, A](self)
 
-      def bestEffortOnFinish(f: Option[Throwable] => F[Unit])(implicit F: Catchable[F]): F[A] =
-        self.attempt flatMap { r =>
-          f(r.left.toOption).attempt flatMap { _ => r.fold(F.fail, F.pure) }
-        }
-    }
+    def bestEffortOnFinish(f: Option[Throwable] => F[Unit])(implicit F: Catchable[F]): F[A] =
+      self.attempt flatMap { r =>
+        f(r.left.toOption).attempt flatMap { _ => r.fold(F.fail, F.pure) }
+      }
   }
 }
