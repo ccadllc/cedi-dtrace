@@ -37,7 +37,6 @@ import java.time.Instant
 import java.util.UUID
 import com.ccadllc.cedi.dtrace._
 import com.ccadllc.cedi.dtrace.logging.LogEmitter
-import com.ccadllc.cedi.dtrace.syntax._
 import TraceSystem._
 
 /*
@@ -91,7 +90,7 @@ def calculateSalesReport(figures: Vector[SalesFigure]): Task[SalesReport] = Task
 def generateSalesReport(region: Region): TraceT[Task, SalesReport] = for {
  /*
   * Calculate the new quarterly sales figure and generate the report.  Note that the import of
-  * `com.ccadllc.cedi.dtrace.syntax._` enriches the `fs2.Task` type by adding a `newSpan`
+  * `com.ccadllc.cedi.dtrace._` enriches the `fs2.Task` type by adding a `newSpan`
   * method to it using an implicit class.  The two lines that follow this comment would,
   * without the syntax enrichment, be written as:
   *  figures <- TraceT.toTraceT(retrieveSalesFigures(region).newSpan(Span.Name("retrieve-sales-figures"), Note.string("region", region.name))
