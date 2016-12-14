@@ -35,15 +35,7 @@ class JsonLogEncodingTests extends WordSpec with TestSupport {
 
   // format: OFF
   val calculateQuarterlySalesTraceContextJson = Json.obj(
-    "where" -> Json.obj(
-      "appId"           -> calculateQuarterlySalesTraceContext.system.identity.app.id.toString.asJson,
-      "productKey"      -> calculateQuarterlySalesTraceContext.system.identity.app.name.toString.asJson,
-      "processId"       -> calculateQuarterlySalesTraceContext.system.identity.process.id.toString.asJson,
-      "nodeId"          -> calculateQuarterlySalesTraceContext.system.identity.node.id.toString.asJson,
-      "nodeName"        -> calculateQuarterlySalesTraceContext.system.identity.node.name.asJson,
-      "deploymentName"  -> calculateQuarterlySalesTraceContext.system.identity.deployment.name.asJson,
-      "environmentName" -> calculateQuarterlySalesTraceContext.system.identity.environment.name.asJson
-    ),
+    "where"           -> calculateQuarterlySalesTraceContext.system.metadata.asJson,
     "root"            -> calculateQuarterlySalesTraceContext.currentSpan.root.asJson,
     "trace-id"        -> calculateQuarterlySalesTraceContext.currentSpan.spanId.traceId.asJson,
     "span-id"         -> calculateQuarterlySalesTraceContext.currentSpan.spanId.spanId.asJson,

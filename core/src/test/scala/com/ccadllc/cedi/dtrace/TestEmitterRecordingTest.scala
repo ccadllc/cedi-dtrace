@@ -44,7 +44,7 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
     override def description: String = "Test Emitter"
     override def emit(tc: TraceContext[F]): F[Unit] = {
       def formatText(context: TraceContext[F]) = {
-        s"Span: [ span-id=${context.currentSpan.spanId.spanId} ] [ trace-id=${context.currentSpan.spanId.traceId} ] [ parent-id=${context.currentSpan.spanId.parentSpanId} ] [ span-name=${context.currentSpan.spanName} ] [ app-name=${context.system.identity.app} ] [ start-time=${context.currentSpan.startTime} ] [ span-duration=${context.currentSpan.duration} ] [ span-success=${context.currentSpan.failure.isEmpty} ] [ failure-detail=${context.currentSpan.failure.fold("N/A")(_.render)} ][ notes=[${context.currentSpan.notes.mkString("] [")}] ] [ node-name=${context.system.identity.node} ]"
+        s"Span: [ span-id=${context.currentSpan.spanId.spanId} ] [ trace-id=${context.currentSpan.spanId.traceId} ] [ parent-id=${context.currentSpan.spanId.parentSpanId} ] [ span-name=${context.currentSpan.spanName} ] [ system-metadata=${context.system.metadata.mkString(",")} ] [ start-time=${context.currentSpan.startTime} ] [ span-duration=${context.currentSpan.duration} ] [ span-success=${context.currentSpan.failure.isEmpty} ] [ failure-detail=${context.currentSpan.failure.fold("N/A")(_.render)} ][ notes=[${context.currentSpan.notes.mkString("] [")}] ]"
       }
       F.delay(cache.put(formatText(tc)))
     }
@@ -53,14 +53,14 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
   "the distributed trace recording mechanism for emitting to a test string emitter" should {
     "support recording a successful current tracing span which is the root span containing same parent and current span IDs" in {
       val testEmitter = new TestEmitter[Task]
-      val salesManagementSystem = TraceSystem(testIdentity, testEmitter)
+      val salesManagementSystem = TraceSystem(testSystemMetadata, testEmitter)
       val spanRoot = Span.root[Task](Span.Name("calculate-quarterly-sales")).unsafeRun
       Task.delay(Thread.sleep(5L)).toTraceT.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRun
       testEmitter.cache.containingAll(spanId(spanRoot.spanId.spanId), parentSpanId(spanRoot.spanId.spanId), spanName(spanRoot.spanName)) should have size (1)
     }
     "support recording a successful new tracing span with new span ID and name" in {
       val testEmitter = new TestEmitter[Task]
-      val salesManagementSystem = TraceSystem(testIdentity, testEmitter)
+      val salesManagementSystem = TraceSystem(testSystemMetadata, testEmitter)
       val spanRoot = Span.root[Task](Span.Name("calculate-quarterly-sales")).unsafeRun
       val calcPhillySalesSpanName = Span.Name("calculate-sales-for-philadelphia")
       Task.delay(Thread.sleep(5L)).newSpan(calcPhillySalesSpanName).trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRun
@@ -81,7 +81,7 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
     }
     "support recording nested spans" in {
       val testEmitter = new TestEmitter[Task]
-      val salesManagementSystem = TraceSystem(testIdentity, testEmitter)
+      val salesManagementSystem = TraceSystem(testSystemMetadata, testEmitter)
       val spanRootName = Span.Name("calculate-quarterly-sales-update")
       val spanRoot = Span.root[Task](spanRootName).unsafeRun
       val requestUpdatedSalesFiguresSpanName = Span.Name("request-updated-sales-figures")
@@ -109,7 +109,7 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
 
   private def assertChildSpanRecordedWithNote(note: Note): Unit = {
     val testEmitter = new TestEmitter[Task]
-    val salesManagementSystem = TraceSystem(testIdentity, testEmitter)
+    val salesManagementSystem = TraceSystem(testSystemMetadata, testEmitter)
     val spanRoot = Span.root[Task](Span.Name("calculate-quarterly-sales-updates")).unsafeRun
     val calcPhillySalesSpanName = Span.Name("calculate-updated-sales-for-philly")
     Task.delay {

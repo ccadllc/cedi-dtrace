@@ -44,31 +44,14 @@ trait TraceGenerators {
   def genVectorOfN[A](minimum: Int, maximum: Int, genElement: Gen[A]): Gen[Vector[A]] = Gen.chooseNum(minimum, maximum) flatMap { genVectorOfN(_, genElement) }
   def genStr: Gen[String] = Gen.listOf(Gen.alphaNumChar) map { _.mkString }
 
-  def genIdentityApplication: Gen[TraceSystem.Identity.Application] = for {
+  def genTraceSystemMetadataPair: Gen[(String, String)] = for {
     name <- genStr
-    id <- genUUID
-  } yield TraceSystem.Identity.Application(name, id)
+    value <- genStr
+  } yield name -> value
 
-  def genIdentityNode: Gen[TraceSystem.Identity.Node] = for {
-    name <- genStr
-    id <- genUUID
-  } yield TraceSystem.Identity.Node(name, id)
+  def genTraceSystemMetadata: Gen[Map[String, String]] = Gen.nonEmptyMap(genTraceSystemMetadataPair)
 
-  def genIdentityProcess: Gen[TraceSystem.Identity.Process] = genUUID map TraceSystem.Identity.Process.apply
-
-  def genIdentityDeployment: Gen[TraceSystem.Identity.Deployment] = genStr map TraceSystem.Identity.Deployment.apply
-
-  def genIdentityEnvironment: Gen[TraceSystem.Identity.Environment] = genStr map TraceSystem.Identity.Environment.apply
-
-  def genTraceSystemIdentity: Gen[TraceSystem.Identity] = for {
-    app <- genIdentityApplication
-    node <- genIdentityNode
-    process <- genIdentityProcess
-    deployment <- genIdentityDeployment
-    environment <- genIdentityEnvironment
-  } yield TraceSystem.Identity(app, node, process, deployment, environment)
-
-  def genTraceSystem[F[_]: Suspendable]: Gen[TraceSystem[F]] = genTraceSystemIdentity map { TraceSystem(_, new LogEmitter[F]) }
+  def genTraceSystem[F[_]: Suspendable]: Gen[TraceSystem[F]] = genTraceSystemMetadata map { TraceSystem(_, new LogEmitter[F]) }
 
   def genSpanId: Gen[SpanId] = for {
     traceId <- genUUID

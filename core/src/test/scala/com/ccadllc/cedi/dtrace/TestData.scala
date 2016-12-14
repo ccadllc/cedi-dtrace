@@ -29,12 +29,15 @@ trait TestData {
 
   protected implicit val testStrategy: Strategy = Strategy.fromExecutor(testExecutor)
 
-  protected val testApplication: TraceSystem.Identity.Application = TraceSystem.Identity.Application("widget sales manager", UUID.randomUUID)
-  protected val testNode: TraceSystem.Identity.Node = TraceSystem.Identity.Node("crm.widgetsales.com", UUID.randomUUID)
-  protected val testProcess: TraceSystem.Identity.Process = TraceSystem.Identity.Process(UUID.randomUUID)
-  protected val testDeployment: TraceSystem.Identity.Deployment = TraceSystem.Identity.Deployment("Ashburn VA DC")
-  protected val testEnvironment: TraceSystem.Identity.Environment = TraceSystem.Identity.Environment("production")
-  protected val testIdentity: TraceSystem.Identity = TraceSystem.Identity(testApplication, testNode, testProcess, testDeployment, testEnvironment)
+  // format: OFF
+  protected val testSystemMetadata: Map[String, String] = Map(
+    "application name" -> "widget sales manager",
+    "application ID"   -> UUID.randomUUID.toString,
+    "process GUID"     -> UUID.randomUUID.toString,
+    "deployment name"  -> "us-west-2",
+    "environment name" -> "production"
+  )
+  // format: ON
 
   protected val quarterlySalesCalculationSpanId: SpanId = SpanId(UUID.randomUUID, 20L, 30L)
   protected val quarterlySalesUnitsNoteValue: Note.LongValue = Note.LongValue(450000L)
