@@ -30,7 +30,6 @@ import scala.language.higherKinds
  * and companion object methods described below.
  */
 final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { self =>
-  import syntax._
 
   /**
    * Generates a new `TraceT[F, B]` from this instance using the supplied function `A => TraceT[F, B]`.
@@ -330,7 +329,6 @@ private[dtrace] sealed trait TraceTInstancesLowPriority {
 
 private[dtrace] sealed trait TraceTInstances extends TraceTInstancesLowPriority {
   implicit def asyncTraceTInstance[F[_]](implicit AF: Async[F]): Async[TraceT[F, ?]] = new EffectTraceT[F] with Async[TraceT[F, ?]] {
-    import syntax._
 
     def ref[A]: TraceT[F, Async.Ref[TraceT[F, ?], A]] =
       TraceT { _ => Async.ref[F, A](AF) map { new TraceTRef(_, this) } }
