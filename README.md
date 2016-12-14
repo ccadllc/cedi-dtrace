@@ -9,13 +9,11 @@ Quick links:
 
 ### <a id="about"></a>About the library
 
-Overview
-========
+#### Overview
 
 The Cedi Distributed Trace library provides the capability to instrument effectful programs such that logical traces can be derived and recorded across physical processes and machines.  This instrumentation is expressed in a format that is interoperable with [Comcast Money](https://github.com/Comcast/money).  This library consists of immutable data structures which represent the instrumentation and an interpreter - the `TraceT[F, A]` - which annotates the underlying action (represented as an `F[A]` where `F` is the effectful action and `A` is the result type).  The `TraceT[F, A]` can be thought of as a function from a `TraceContext` (the cursor into the active trace) to an effectful program whose execution you wish to trace (the effectful program can be any `F`, such as `fs2.Task`, though often you'll need implicit `fs2.util.Catchable[F]` or `fs2.util.Suspendable[F]` instances if you using something other than `Task`).  Because `fs2.Task` is often used as the effectful data type, this library provides a type alias `TraceTask[A]` for `TraceT[Task, A]` and convenience methods to work with this type alias a `TraceTask` object.
 
-Design Constraints
-==================
+#### Design Constraints
 
 This library is implemented using functional data structures and techniques and is best used by similarly constructed programs.
 It is non-blocking with a small footprint and incurs a reasonably low overhead.
@@ -23,8 +21,7 @@ No special thread pools or piggybacking on thread locals and the like are employ
 `dtrace` is built on Scala and its core constructs use the [Functional Streams for Scala / FS2](https://github.com/functional-streams-for-scala/fs2) library.
 It is interoperable with [Comcast Money](https://github.com/Comcast/money).  `Money` is a great library and `dtrace` was created to complement it, providing a purely functional model where `Money` has to make some consessions to Java interoperability (it is certainly conceivable that `dtrace` could at some point be incorporated into `Money`).
 
-Background
-==========
+#### Background
 
 A Money-compliant *Distributed Trace* is a directed graph of *Span*s. A *Span* identifies a branch of the overall *Trace* representing a logical step or action, executing within the local process.  All but the first *Span* in a *Trace* has a Parent *Span* indicating the upstream operation which triggered its child.  *Span*'s are identified by a unique *Span Identifier* (`SpanId`) along with a parent `SpanId` (and the overall *Distributed Trace* GUID).  A *Trace*'s first *Span* has a parent `SpanId` equal to its own.  Each *Span* also consists of metadata about the action, including whether its action executed successfully or failed (and if a failure, details on it), the duration of the action execution in microseconds, where the *Span* executed (in which application; on which node; in which process; within what environment, etc), and, optionally, individual `Note`s specific to the *Span* (e.g., the `Note` with the *Host Address* of a cable settop box for an action issuing an initialize command to the device).  A logical *Trace* (for example, "issue an initialize to a settop box") might originate from a business system with its transmission *Span* passed in an HTTP header to a microservice running in the cloud which executes *Span*s to query a persistent data store before making a binary RPC call (recorded in a *Span*) to a second microservice, passing the current trace information in the RPC context, before that second microservice finally issues the initialize command to the settop, ending the *Trace*.  The *dtrace library* provides a logging `Emitter` to record the *Span*s, as they are executed, to the configured logging system in both JSON and text formats but also provides the means by which custom emitters can be provided.
 
