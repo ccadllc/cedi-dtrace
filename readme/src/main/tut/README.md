@@ -6,6 +6,8 @@ Quick links:
 - [Examples of use](#usage)
 - [Configuration](#config)
 - [How to get latest version](#getit)
+- API Docs [Core](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-core_2.12/1.0.0/dtrace-core_2.12-1.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/index.html) [Logging](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logging_2.12/1.0.0/dtrace-logging_2.12-1.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logging/index.html)
+
 
 ### <a id="about"></a>About the library
 
