@@ -309,6 +309,11 @@ private[dtrace] sealed trait TraceTPolyFunctions {
     new (F ~> TraceT[F, ?]) {
       def apply[A](fa: F[A]): TraceT[F, A] = TraceT.toTraceT(fa)
     }
+
+  implicit def traceTIdentity[F[_]]: TraceT[F, ?] ~> TraceT[F, ?] =
+    new (TraceT[F, ?] ~> TraceT[F, ?]) {
+      def apply[A](tta: TraceT[F, A]): TraceT[F, A] = tta
+    }
 }
 
 private[dtrace] sealed trait TraceTInstancesLowPriority {
