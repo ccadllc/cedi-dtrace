@@ -22,8 +22,16 @@ import io.circe._
 import io.circe.java8.time._
 import io.circe.syntax._
 
+/**
+ * Provides the encoding of a `Span` - and associated `TraceSystem[F]` metadata - to JSON
+ * using the `io.circe` framework.
+ */
 object json {
   object encoding {
+    /**
+     * Provides an implicit `io.circe.Encoder[TraceContext[F]]`, used by the [[LogEmitter]] to render
+     * the `TraceCOntext[F]` as JSON.
+     */
     // format: OFF
     implicit def traceContextEncoderJson[F[_]]: Encoder[TraceContext[F]] = Encoder.instance { tc =>
       Json.obj(
