@@ -29,16 +29,16 @@ import fs2.util.syntax._
  * Represents the core identity of a [[Span]].
  * @param traceId - the globally unique identifier for the trace of which this span is a component.
  * @param parentSpanId - the parent identifier of this span.  If this span is the root of the trace,
- *   this identifier will equal the `spanId`.
+ *   this identifier will equal the `spanId` parameter.
  * @param spanId - the identifier of this span.  If this span is the root of the trace,
- *   this identifier will equal the `parentSpanId`.
+ *   this identifier will equal the `parentSpanId` parameter.
  */
 final case class SpanId(traceId: UUID, parentSpanId: Long, spanId: Long) {
 
   /**
-   * This is [[Span]] the root of the trace?
+   * Indicates whether or not this [[SpanId]] identifies the root span of the overall trace.
    */
-  def root: Boolean = parentSpanId == spanId
+  val root: Boolean = parentSpanId == spanId
 
   /**
    * Converts the span to a `Money`-compliant HTTP Header.
@@ -48,8 +48,10 @@ final case class SpanId(traceId: UUID, parentSpanId: Long, spanId: Long) {
   val toHeader: String = s"${SpanId.TraceIdHeader}=$traceId;${SpanId.ParentIdHeader}=$parentSpanId;${SpanId.SpanIdHeader}=$spanId"
 
   /**
-   * Creates a new Child span identifier from `this`, which the `parentSpanId` equal to `this.spanId` and a new value generated
-   * for the `spanId`.
+   * Creates a new child span identifier from this instance, with the new instance's `parentSpanId` equal to this instance's `spanId` and a new value generated
+   * for the new instance's `spanId`.
+   * @param F - an instance of `fs2.util.Suspendable[F]` in implicit scope.
+   * @return newSpanIdDescription - an effectful description of a new [[SpanId]].
    */
   def newChild[F[_]: Suspendable]: F[SpanId] = SpanId.nextSpanIdValue map { newSpanId => copy(parentSpanId = spanId, spanId = newSpanId) }
 
@@ -75,6 +77,7 @@ object SpanId {
   /**
    * Creates a root [[SpanId]] from stratch in an effectful program `F[A]`.
    *
+   * @param F - an instance of `fs2.util.Suspendable[F]` in implicit scope.
    * @return newSpanIdDescription - an effectful description of a new [[SpanId]].
    */
   def root[F[_]](implicit F: Suspendable[F]): F[SpanId] = for {

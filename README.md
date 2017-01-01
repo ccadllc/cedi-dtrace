@@ -13,7 +13,7 @@ Quick links:
 
 #### Overview
 
-The Cedi Distributed Trace library provides the capability to instrument effectful programs such that logical traces can be derived and recorded across physical processes and machines.  This instrumentation is expressed in a format that is interoperable with [Comcast Money](https://github.com/Comcast/money).  This library consists of immutable data structures which represent the instrumentation and an interpreter - the `TraceT[F, A]` - which annotates the underlying action (represented as an `F[A]` where `F` is the effectful action and `A` is the result type).  The `TraceT[F, A]` can be thought of as a function from a `TraceContext` (the cursor into the active trace) to an effectful program whose execution you wish to trace (the effectful program can be any `F`, such as `fs2.Task`, though often you'll need implicit `fs2.util.Catchable[F]` or `fs2.util.Suspendable[F]` instances if you using something other than `Task`).  Because `fs2.Task` is often used as the effectful data type, this library provides a type alias `TraceTask[A]` for `TraceT[Task, A]` and convenience methods to work with this type alias a `TraceTask` object.
+The Cedi Distributed Trace library provides the capability to instrument effectful programs such that logical traces can be derived and recorded across physical processes and machines.  This instrumentation is expressed in a format that is interoperable with [Comcast Money](https://github.com/Comcast/money).  This library consists of immutable data structures which represent the instrumentation and an interpreter - the `TraceT[F, A]` - which annotates the underlying action (represented as an `F[A]` where `F` is the effectful action and `A` is the result type).  The `TraceT[F, A]` can be thought of as a function from a `TraceContext` (the cursor into the active trace) to an effectful program whose execution you wish to trace (the effectful program can be any `F`, such as `fs2.Task`, though often you'll need implicit `fs2.util.Catchable[F]` or `fs2.util.Suspendable[F]` instances if you using something other than `Task`).  Because `fs2.Task` is often used as the effectful data type, this library provides a type alias `TraceTask[A]` for `TraceT[Task, A]` and convenience methods to work with this type alias (the latter included in a `TraceTask` object).
 
 #### Design Constraints
 
@@ -67,8 +67,8 @@ val traceSystem = TraceSystem(
     "deployment name" -> "us-west-2",
     "environment name" -> "production"
   ),
- /* This emitter will write a text entry for each span to "distributed-trace.txt"
-  * logger and a JSON entry for each span to "distributed-trace.json" logger; however,
+ /* This emitter will write a text entry for each span to the "distributed-trace.txt"
+  * logger and a JSON entry for each span to the "distributed-trace.json" logger; however,
   * it is easy to provide your own emitter by implementing the `TraceSystem.Emitter[F]`
   * trait, which requires providing implementations for two methods:
   *   `def description: String` to provide a description of your emitter and
@@ -105,8 +105,8 @@ def generateSalesReport(region: Region): TraceT[Task, SalesReport] = for {
 } yield report
 
 /*
- * Retrieve the span, in this example, in the HTTP header from the originating business system, if it exists.
- * This logic may be included an an `akka-http` directive, for example.
+ * Retrieve the span, in this example, contained in the HTTP header from the originating business system,
+ * if it exists.  This logic may be included an an `akka-http` directive, for example.
  */
 val rootSpanEither = SpanId.fromHeader(httpHeader.name, httpHeader.value).right.map {
   spanId => Span.newChild[Task](spanId, Span.Name("sales-management-system-root"))

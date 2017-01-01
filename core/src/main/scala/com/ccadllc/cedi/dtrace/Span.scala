@@ -47,9 +47,9 @@ case class Span(
 ) {
 
   /**
-   * This is this span the root of the trace?
+   * Indicates whether or not this span is the root span of the overall trace.
    */
-  def root: Boolean = spanId.root
+  val root: Boolean = spanId.root
 
   private[dtrace] def newChild[F[_]: Suspendable](spanName: Span.Name): F[Span] = for {
     startTime <- Span.nowInstant
@@ -81,10 +81,10 @@ object Span {
   case class Name(value: String) { override def toString: String = value }
 
   /**
-   * Create a root span by generating a root [[SpanId]].
-   * @param spanName - the name of this span.
+   * Creates a root span by generating a root [[SpanId]].
+   * @param spanName - the human readable name of this span.
    * @param notes - a variable argument list of [[Note]]s, metadata to annotate this span.
-   * @param F - an instance of `fs2.util.Suspendable` in implicit scope.
+   * @param F - an instance of `fs2.util.Suspendable[F]` in implicit scope.
    * @return newSpan - an effectful program (with an instance of `fs2.util.Suspendable[F]` in implicit scope) which when run will result in a new root span.
    */
   def root[F[_]: Suspendable](spanName: Name, notes: Note*): F[Span] = SpanId.root flatMap { newSpan(_, spanName, notes: _*) }
@@ -92,9 +92,9 @@ object Span {
   /**
    * Create a new child of the passed-in [[SpanId]].
    * @param spanId - the [[SpanId]] containing the identity for which a child span will be created.
-   * @param spanName - the name of this span.
+   * @param spanName - the human readable name of this span.
    * @param notes - a variable argument list of [[Note]]s, metadata to annotate this span.
-   * @param F - an instance of `fs2.util.Suspendable` in implicit scope.
+   * @param F - an instance of `fs2.util.Suspendable[F]` in implicit scope.
    * @return newSpan - an effectful program (with an instance of `fs2.util.Suspendable[F]` in implicit scope) which when run will result in a new child span.
    */
   def newChild[F[_]: Suspendable](spanId: SpanId, spanName: Name, notes: Note*): F[Span] = spanId.newChild flatMap { newSpan(_, spanName, notes: _*) }
