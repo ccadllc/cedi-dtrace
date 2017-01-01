@@ -19,11 +19,11 @@ package com.ccadllc.cedi.dtrace
  * Provides the hooks by which the result of a effectful program can be converted into a `FailureDetail` for use in
  * determining whether the program has failed for the purposes of the trace and how to render that failure.
  * If the traced program fails, the `exceptionToFailure` function is used to determine if this failure should be
- * recorded as such for the span and if the program itself is successful, the `resultToFailure` conversion is used to
+ * recorded as such for the span and if the program itself is successful, the `resultToFailure` function is used to
  * determine if there is an application level failure embedded in the result and if so, how it should be rendered.
  *
  * The default evaluator for a span, if a custom one is not specified, is to treat a failures and successes at
- * the effectful program-level as such for the span, converting the `Throwable` to a string with the stacktrace.
+ * the effectful program-level as such for the span, converting the `Throwable` to a string with the stack trace.
  */
 class Evaluator[A](
   val exceptionToFailure: Throwable => Option[FailureDetail],
@@ -31,13 +31,15 @@ class Evaluator[A](
 )
 
 /**
- * This companion for `Evaluator` instances provides smart constructors and a `default` value should no
+ * This companion object for `Evaluator` instances provides smart constructors and a `default` value should no
  * custom `Evaluator` be used when recording a span.
  */
 object Evaluator {
   /**
    * The default `Evaluator` instance, used if no custom `Evaluator` is passed to the `TraceT.newSpan` or `TraceT.newAnnotatedSpan`
    * functions. All program exceptions are converted to [[FailureDetail]] instances but otherwise no [[FailureDetail]]s are generated.
+   * @tparam A - the result type of the effectful program being traced.
+   * @return newEvaluator - a new Evaluator instance, compatible with the result type of the effectful program being traced.
    */
   def default[A]: Evaluator[A] = new Evaluator[A](e => Some(FailureDetail(e)), _ => None)
 
@@ -47,8 +49,8 @@ object Evaluator {
    *   span using this 'Evaluator' and possibly converts it to a [[FailureDetail]] which is used to determine that the span execution has
    *   succeeded or failed and how to render it.  Generally, if the program itself has failed with a `Throwable`, you'll
    *   want to return a [[FailureDetail]] with a human-readable rendering of that error but there may be corner cases where the span itself
-   *   should still be reported as having succeeded (if, for instance, a `fs2.Task` is failed with an exception meant to trigger some upstream
-   *   program logic rather than indicate an error - not recommended, of course).
+   *   should still be reported as having succeeded (if, for instance, an `fs2.Task` is failed with an exception meant to trigger some upstream
+   *   program logic rather than indicate an error - not recommended, usually, but there may be reasons why this is necessary).
    * @param resultToFailure - a function which takes the result of the program `F[A]` whose execution is being traced by the span using this
    *   `Evaluator` and possibly uses it to create a [[FailureDetail]].  Usually, if a program succeeds with a result, you won't want to
    *   generate a [[FailureDetail]] indicating that the span has failed; however, the program may be returning an application-specific data
@@ -67,8 +69,8 @@ object Evaluator {
    *   span using this 'Evaluator' and possibly converts it to a [[FailureDetail]] which is used to determine that the span execution has
    *   succeeded or failed and how to render it.  Generally, if the program itself has failed with a `Throwable`, you'll
    *   want to return a [[FailureDetail]] with a human-readable rendering of that error but there may be corner cases where the span itself
-   *   should still be reported as having succeeded (if, for instance, a `fs2.Task` is failed with an exception meant to trigger some upstream
-   *   program logic rather than indicate an error - not recommended, of course).
+   *   should still be reported as having succeeded (if, for instance, an `fs2.Task` is failed with an exception meant to trigger some upstream
+   *   program logic rather than indicate an error - not recommended, usually, but there may be reasons why this is necessary).
    * @return evaluator - a new instance of the `Evaluator`.
    */
   def exceptionToFailure[A](e2f: Throwable => Option[FailureDetail]): Evaluator[A] =
@@ -77,7 +79,7 @@ object Evaluator {
   /**
    * Constructs an `Evaluator` instance with the passed-in function used to convert a program `F[A]`'s result `A` to a possible [[FailureDetail]].  The
    * default value is used for the function which converts a program failure `Throwable` to a possible [[FailureDetail]] (the default
-   * function in this case always returns a [[FailureDetail]] using the `Throwable` to construct it.
+   * function in this case always returns a [[FailureDetail]] using the `Throwable` to construct it).
    * @param resultToFailure - a function which takes the result of the program `F[A]` whose execution is being traced by the span using this
    *   `Evaluator` and possibly uses it to create a [[FailureDetail]].  Usually, if a program succeeds with a result, you won't want to
    *   generate a [[FailureDetail]] indicating that the span has failed; however, the program may be returning an application-specific data

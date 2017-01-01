@@ -20,7 +20,7 @@ package com.ccadllc.cedi.dtrace
  * [[Span]].  Examples of `Note`s might be the input parameters to the program being executed
  * as part of the span, or it might be values derived from the result of that program.
  * @param name - the human readable name of the `Note`.
- * @param value - the possible value of the `Note` (or None if a note has no value when the [[Span]] is recorded.
+ * @param value - the possible value of the `Note` (or None if a note has no value when the [[Span]] is recorded).
  */
 case class Note(name: Note.Name, value: Option[Note.Value]) {
   override def toString: String = s"name=$name,value=${value.fold("")(_.toString)}"
@@ -34,7 +34,7 @@ case class Note(name: Note.Name, value: Option[Note.Value]) {
 object Note {
 
   /**
-   * This ADT represents a `Note` value - it has enumerated types to represent the primative values of `Long`, `Double`,
+   * This ADT represents a `Note` value - it has enumerated types to represent the primitive values of `Long`, `Double`,
    * `Boolean` and `String`.
    */
   sealed abstract class Value extends Product with Serializable

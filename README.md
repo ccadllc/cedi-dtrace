@@ -65,8 +65,8 @@ val traceSystem = TraceSystem(
     "deployment name" -> "us-west-2",
     "environment name" -> "production"
   ),
- /* This emitter will write a text entry for each span to "distributed-trace.txt"
-  * logger and a JSON entry for each span to "distributed-trace.json" logger; however,
+ /* This emitter will write a text entry for each span to the "distributed-trace.txt"
+  * logger and a JSON entry for each span to the "distributed-trace.json" logger; however,
   * it is easy to provide your own emitter by implementing the `TraceSystem.Emitter[F]`
   * trait, which requires providing implementations for two methods:
   *   `def description: String` to provide a description of your emitter and
@@ -103,8 +103,8 @@ def generateSalesReport(region: Region): TraceT[Task, SalesReport] = for {
 } yield report
 
 /*
- * Retrieve the span, in this example, in the HTTP header from the originating business system, if it exists.
- * This logic may be included an an `akka-http` directive, for example.
+ * Retrieve the span, in this example, contained in the HTTP header from the originating business system,
+ * if it exists.  This logic may be included an an `akka-http` directive, for example.
  */
 val rootSpanEither = SpanId.fromHeader(httpHeader.name, httpHeader.value).right.map {
   spanId => Span.newChild[Task](spanId, Span.Name("sales-management-system-root"))
@@ -168,7 +168,7 @@ task.unsafeRun()
 
 ### <a id="getit"></a>How to get latest Version
 
-Cedi Distributed Trace supports Scala 2.11 and 2.12. This distribution will be published to Maven Central soon and consists of two library components.
+Cedi Distributed Trace supports Scala 2.11 and 2.12. This distribution is published to Maven Central and consists of two library components.
 
 #### dtrace-core
 

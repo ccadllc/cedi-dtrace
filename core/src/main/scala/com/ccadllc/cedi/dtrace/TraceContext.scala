@@ -24,9 +24,11 @@ import scala.language.higherKinds
  * Represents a cursor into the "current" [[Span]] and associated system-level metadata and is associated with an
  * effectful program `F[A]` to realize a trace over that program.
  * @param currentSpan - the current [[Span]] associated with a particular effectful program.
- * @param system - system-level metadata which further annotates a [[Span]] when recording it.  The application, node,
- *  and deployment environment of the program being traced constitute the properties of this data type, along with the
- *  implementation of the `Emitter` used to perform the recording.
+ * @param system - a [[TraceSystem]] consisting of system-level metadata
+ *  which further annotates a [[Span]] when recording it along with an implementation of an
+ *  [[TraceSystem#Emitter]] used to perform the recording of the span.
+ * @tparam F - an effectful program type representing the program type of the [[TraceSystem]] (which in turn indicates
+ *   the program type of the `TraceSystem`'s `Emitter`).
  */
 case class TraceContext[F[_]](currentSpan: Span, system: TraceSystem[F]) {
 
