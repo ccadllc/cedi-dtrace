@@ -73,7 +73,7 @@ object SpanId {
   final val HeaderRegex: Regex = s"$TraceIdHeader=([0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-fA-F]{12});$ParentIdHeader=([\\-0-9]+);$SpanIdHeader=([\\-0-9]+)".r
 
   /**
-   * Creates a root [[SpanId]] from stratch in an effectful program `F[A]`.
+   * Creates a root [[SpanId]] from scratch in an effectful program `F[A]`.
    *
    * @return newSpanIdDescription - an effectful description of a new [[SpanId]].
    */

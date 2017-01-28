@@ -18,12 +18,12 @@ The Cedi Distributed Trace library provides the capability to instrument effectf
 This library is implemented using functional data structures and techniques and is best used by similarly constructed programs.
 It is non-blocking with a small footprint and incurs a reasonably low overhead.
 No special thread pools or piggybacking on thread locals and the like are employed.
-`dtrace` is built on Scala and its core constructs use the [Functional Streams for Scala / FS2](https://github.com/functional-streams-for-scala/fs2) library.
-It is interoperable with [Comcast Money](https://github.com/Comcast/money).  `Money` is a great library and `dtrace` was created to complement it, providing a purely functional model where `Money` has to make some consessions to Java interoperability (it is certainly conceivable that `dtrace` could at some point be incorporated into `Money`).
+dtrace is built on Scala and its core constructs use the [Functional Streams for Scala / FS2](https://github.com/functional-streams-for-scala/fs2) library.
+It is interoperable with [Comcast Money](https://github.com/Comcast/money).  Money is a great library and dtrace was created to complement it, providing a purely functional model where Money has to make some concessions to Java interoperability (it is certainly conceivable that dtrace could at some point be incorporated into Money).
 
 #### Background
 
-A Money-compliant *Distributed Trace* is a directed graph of *Span*s. A *Span* identifies a branch of the overall *Trace* representing a logical step or action, executing within the local process.  All but the first *Span* in a *Trace* has a Parent *Span* indicating the upstream operation which triggered its child.  *Span*'s are identified by a unique *Span Identifier* (`SpanId`) along with a parent `SpanId` (and the overall *Distributed Trace* GUID).  A *Trace*'s first *Span* has a parent `SpanId` equal to its own.  Each *Span* also consists of metadata about the action, including whether its action executed successfully or failed (and if a failure, details on it), the duration of the action execution in microseconds, where the *Span* executed (in which application; on which node; in which process; within what environment, etc), and, optionally, individual `Note`s specific to the *Span* (e.g., the `Note` with the *Host Address* of a cable settop box for an action issuing an initialize command to the device).  A logical *Trace* (for example, "issue an initialize to a settop box") might originate from a business system with its transmission *Span* passed in an HTTP header to a microservice running in the cloud which executes *Span*s to query a persistent data store before making a binary RPC call (recorded in a *Span*) to a second microservice, passing the current trace information in the RPC context, before that second microservice finally issues the initialize command to the settop, ending the *Trace*.  The *dtrace library* provides a logging `Emitter` to record the *Span*s, as they are executed, to the configured logging system in both JSON and text formats but also provides the means by which custom emitters can be provided.
+A Money-compliant Distributed Trace is a directed graph of Spans. A Span identifies a branch of the overall Trace representing a logical step or action, executing within the local process.  All but the first Span in a Trace has a Parent Span indicating the upstream operation which triggered its child.  Span's are identified by a unique Span Identifier (SpanId) along with a parent SpanId (and the overall Distributed Trace GUID).  A Trace's first Span has a parent SpanId equal to its own.  Each Span also consists of meta-data about the action, including whether its action executed successfully or failed (and if a failure, details on it), the duration of the action execution in microseconds, where the Span executed (in which application; on which node; in which process; within what environment, etc), and, optionally, individual Notes specific to the Span (e.g., the Note with the Host Address of a cable settop box for an action issuing an initialize command to the device).  A logical Trace (for example, "issue an initialize to a settop box") might originate from a business system with its transmission Span passed in an HTTP header to a microservice running in the cloud which executes Spans to query a persistent data store before making a binary RPC call (recorded in a Span) to a second microservice, passing the current trace information in the RPC context, before that second microservice finally issues the initialize command to the settop, ending the Trace.  The dtrace library provides a logging `Emitter` to record the Spans, as they are executed, to the configured logging system in both JSON and text formats but also provides the means by which custom emitters can be provided.
 
 
 ### <a id="usage"></a> Examples of Use
@@ -104,7 +104,7 @@ def generateSalesReport(region: Region): TraceT[Task, SalesReport] = for {
 
 /*
  * Retrieve the span, in this example, in the HTTP header from the originating business system, if it exists.
- * This logic may be included an an `akka-http` directive, for example.
+ * This logic may be included an an akka-http directive, for example.
  */
 val rootSpanEither = SpanId.fromHeader(httpHeader.name, httpHeader.value).right.map {
   spanId => Span.newChild[Task](spanId, Span.Name("sales-management-system-root"))
@@ -172,7 +172,7 @@ Cedi Distributed Trace supports Scala 2.11 and 2.12. This distribution is publis
 
 #### dtrace-core
 
-This is the core functionality, recording trace and span information over effectful programs, passing these recorded events to registred emitters for disposition.
+This is the core functionality, recording trace and span information over effectful programs, passing these recorded events to registered emitters for disposition.
 
 
 ```scala

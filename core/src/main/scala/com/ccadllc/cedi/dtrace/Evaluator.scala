@@ -23,7 +23,7 @@ package com.ccadllc.cedi.dtrace
  * determine if there is an application level failure embedded in the result and if so, how it should be rendered.
  *
  * The default evaluator for a span, if a custom one is not specified, is to treat a failures and successes at
- * the effectful program-level as such for the span, converting the `Throwable` to a string with the stacktrace.
+ * the effectful program-level as such for the span, converting the `Throwable` to a string with the stack-trace.
  */
 class Evaluator[A](
   val exceptionToFailure: Throwable => Option[FailureDetail],

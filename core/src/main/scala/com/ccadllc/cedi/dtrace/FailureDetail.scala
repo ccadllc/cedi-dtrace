@@ -18,7 +18,7 @@ package com.ccadllc.cedi.dtrace
 import java.io.{ PrintWriter, StringWriter }
 
 /**
- * This Alegraic Data Type (ADT) represents a failure of the underlying traced program, providing the
+ * This Algebraic Data Type (ADT) represents a failure of the underlying traced program, providing the
  * means to render the failure when the span is recorded.
  */
 sealed abstract class FailureDetail extends Product with Serializable { def render: String }
@@ -30,7 +30,7 @@ object FailureDetail {
 
   /**
    * A Failure Detail constructed from a human readable message.
-   * @param message - a string which consitutes the message to be used for the failure detail.
+   * @param message - a string which constitute the message to be used for the failure detail.
    */
   final case class Message(message: String) extends FailureDetail {
     override def render: String = message
