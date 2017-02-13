@@ -34,7 +34,7 @@ case class Note(name: Note.Name, value: Option[Note.Value]) {
 object Note {
 
   /**
-   * This ADT represents a `Note` value - it has enumerated types to represent the primative values of `Long`, `Double`,
+   * This ADT represents a `Note` value - it has enumerated types to represent the primitive values of `Long`, `Double`,
    * `Boolean` and `String`.
    */
   sealed abstract class Value extends Product with Serializable

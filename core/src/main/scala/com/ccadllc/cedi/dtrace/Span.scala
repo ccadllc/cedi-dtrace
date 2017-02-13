@@ -26,7 +26,7 @@ import fs2.util.syntax._
 
 /**
  * Represents a single span for a distributed trace.  A span is the traced execution of an effectful program `F`.
- * @param spanId - the [[SpanId]] representing this span's identity and its place in a distributed trace's hiearchy
+ * @param spanId - the [[SpanId]] representing this span's identity and its place in a distributed trace's hierarchy
  *   of spans.
  * @param spanName - the human readable name of this span - it is the logical name of the effectful program whose execution
  *   this span is recording.

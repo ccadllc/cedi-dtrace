@@ -24,7 +24,7 @@ import scala.language.higherKinds
 /**
  * The distributed trace (dtrace) library provides the means to derive and record a `Comcast Money` compliant
  * distributed trace across effectful programs given the appropriate typeclasses for that program in
- * implicit scope.  The effectful programs are enhanced vai a `Kleisli`-like data type, [[TraceT]] which encodes
+ * implicit scope.  The effectful programs are enhanced via a `Kleisli`-like data type, [[TraceT]] which encodes
  * the information to calculate and record a trace [[Span]] at the conclusion of the program execution.
  */
 package object dtrace {

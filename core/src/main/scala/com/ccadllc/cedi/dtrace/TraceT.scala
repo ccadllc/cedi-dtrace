@@ -22,7 +22,7 @@ import scala.language.higherKinds
 
 /**
  * This is the main construct of the library.  It represents a function `TraceContext => F[A]`
- * for an arbitrary `F[_]`, conceptually similiar to a `cats.data.Kleisli`.  The [[TraceContext]]
+ * for an arbitrary `F[_]`, conceptually similar to a `cats.data.Kleisli`.  The [[TraceContext]]
  * holds the "current" [[Span]] information for the program `F[A]` and this information, along
  * with timing and result data derived when `F[A]` is run, is recorded via the `Emitter`,
  * also included in the [[TraceContext]], when the `F[A]` execution is complete.  This class is never

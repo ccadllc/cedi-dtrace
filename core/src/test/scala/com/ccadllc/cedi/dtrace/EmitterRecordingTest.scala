@@ -24,7 +24,7 @@ import org.scalatest.{ BeforeAndAfterEach, Matchers, WordSpec }
 
 import scala.language.higherKinds
 
-class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Matchers with TestData {
+class EmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Matchers with TestData {
   private class TestEmitter[F[_]](implicit F: Suspendable[F]) extends TraceSystem.Emitter[F] {
     class EmitterTestCache {
       case class EmitterTestEntry(msg: String)
