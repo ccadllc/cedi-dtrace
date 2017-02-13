@@ -1,4 +1,4 @@
-lazy val circeVersion = "0.6.1"
+lazy val circeVersion = "0.7.0"
 
 lazy val logbackVersion = "1.1.7"
 
