@@ -9,7 +9,8 @@ lazy val commonSettings = Seq(
   ),
   libraryDependencies ++= Seq(
     "co.fs2" %% "fs2-core" % "0.9.2",
-    "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+    "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+    "org.scalacheck" %% "scalacheck" % "1.13.4" % "test"
   ),
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3")
 )
@@ -34,8 +35,7 @@ lazy val logging = project.in(file("logging")).enablePlugins(SbtOsgi).
       "io.circe" %% "circe-java8" % circeVersion,
       "org.slf4j" % "slf4j-api" % "1.7.21",
       "ch.qos.logback" % "logback-core" % logbackVersion % "test",
-      "ch.qos.logback" % "logback-classic" % logbackVersion % "test",
-      "org.scalacheck" %% "scalacheck" % "1.13.4" % "test"
+      "ch.qos.logback" % "logback-classic" % logbackVersion % "test"
     ),
     buildOsgiBundle("com.ccadllc.cedi.dtrace.logging")
   ).dependsOn(core % "compile->compile;test->test")
