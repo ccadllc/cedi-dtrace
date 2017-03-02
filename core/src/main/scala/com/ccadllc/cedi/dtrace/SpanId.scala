@@ -95,7 +95,7 @@ object SpanId {
     if (headerName == HeaderName) fromHeaderValue(headerValue) else Left(s"Header name $headerName is not a Money-compliant trace header")
 
   def fromHeaderValue(headerValue: String): Either[String, SpanId] = headerValue match {
-    case HeaderRegex(traceId, parentId, spanId) =>
+    case HeaderRegex(traceId, _, parentId, spanId) =>
       try Right(SpanId(UUID.fromString(traceId), parentId.toLong, spanId.toLong))
       catch {
         case NonFatal(t) => Left(s"Could not parse $headerValue into a SpanId: ${t.getMessage}")
