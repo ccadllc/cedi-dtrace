@@ -72,7 +72,7 @@ object SpanId {
   final val SpanIdHeader: String = "span-id"
 
   /* Used to validate / parse `Money` compliant HTTP header into a [[SpanId]] instance. */
-  final val HeaderRegex: Regex = s"$TraceIdHeader=([0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-fA-F]{12});$ParentIdHeader=([\\-0-9]+);$SpanIdHeader=([\\-0-9]+)".r
+  final val HeaderRegex: Regex = s"$TraceIdHeader=([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-fA-F]{12});$ParentIdHeader=([\\-0-9]+);$SpanIdHeader=([\\-0-9]+)".r
 
   /**
    * Creates a root [[SpanId]] from stratch in an effectful program `F[A]`.

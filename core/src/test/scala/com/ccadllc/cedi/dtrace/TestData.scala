@@ -39,6 +39,13 @@ trait TestData {
   )
   // format: ON
 
+  protected val xMoneyTraceHeader: String = {
+    val traceId = UUID.randomUUID.toString
+    val parentId = scala.util.Random.nextLong()
+    val spanId = scala.util.Random.nextLong()
+    s"trace-id=$traceId;parent-id=$parentId;span-id=$spanId"
+  }
+
   protected val quarterlySalesCalculationSpanId: SpanId = SpanId(UUID.randomUUID, 20L, 30L)
   protected val quarterlySalesUnitsNoteValue: Note.LongValue = Note.LongValue(450000L)
   protected val quarterlySalesUnitsNote: Note = Note(Note.Name("quarterlySalesUnits"), Some(quarterlySalesUnitsNoteValue))
