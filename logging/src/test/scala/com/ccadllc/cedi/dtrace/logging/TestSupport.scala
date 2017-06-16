@@ -16,7 +16,7 @@
 package com.ccadllc.cedi.dtrace
 package logging
 
-import fs2.Task
+import cats.effect.IO
 
 import io.circe._
 import io.circe.syntax._
@@ -32,7 +32,7 @@ trait TestSupport extends WordSpecLike with Matchers with GeneratorDrivenPropert
   self: Suite =>
 
   implicit override val generatorDrivenConfig: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful = 100)
-  val salesManagementSystem = TraceSystem(testSystemMetadata, new LogEmitter[Task])
+  val salesManagementSystem = TraceSystem(testSystemMetadata, new LogEmitter[IO])
   val calculateQuarterlySalesTraceContext = TraceContext(quarterlySalesCalculationSpan, salesManagementSystem)
 
   def encodeArbitraryJson[A: Arbitrary](implicit encoder: Lazy[Encoder[A]]): Unit = {

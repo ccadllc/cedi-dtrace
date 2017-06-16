@@ -5,10 +5,11 @@ lazy val logbackVersion = "1.1.7"
 lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
   contributors ++= Seq(
-    Contributor("sbuzzard", "Steve Buzzard")
+    Contributor("sbuzzard", "Steve Buzzard"),
+    Contributor("mpilquist", "Michael Pilquist")
   ),
   libraryDependencies ++= Seq(
-    "co.fs2" %% "fs2-core" % "0.9.2",
+    "org.typelevel" %% "cats-effect" % "0.3",
     "org.scalatest" %% "scalatest" % "3.0.1" % "test",
     "org.scalacheck" %% "scalacheck" % "1.13.4" % "test"
   ),
@@ -40,7 +41,6 @@ lazy val logging = project.in(file("logging")).enablePlugins(SbtOsgi).
     buildOsgiBundle("com.ccadllc.cedi.dtrace.logging")
   ).dependsOn(core % "compile->compile;test->test")
 
-lazy val readme = project.in(file("readme")).settings(commonSettings).settings(noPublish).settings(
-  tutSettings,
+lazy val readme = project.in(file("readme")).settings(commonSettings).settings(noPublish).enablePlugins(TutPlugin).settings(
   tutTargetDirectory := baseDirectory.value / ".."
 ).dependsOn(core, logging)

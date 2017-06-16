@@ -18,8 +18,7 @@ package logging
 
 import scala.language.higherKinds
 
-import fs2.Task
-import fs2.util.Suspendable
+import cats.effect.{ IO, Sync }
 
 import io.circe._
 import io.circe.java8.time._
@@ -54,8 +53,8 @@ class JsonLogEncodingTests extends WordSpec with TestSupport {
   )
   // format: ON
 
-  implicit def arbTrace[F[_]: Suspendable]: Arbitrary[TraceContext[F]] = Arbitrary(genTraceContext)
+  implicit def arbTrace[F[_]: Sync]: Arbitrary[TraceContext[F]] = Arbitrary(genTraceContext)
 
-  "Trace" should { encodeArbitraryJson[TraceContext[Task]] }
+  "Trace" should { encodeArbitraryJson[TraceContext[IO]] }
   "Trace" should { encodeSpecificJson(calculateQuarterlySalesTraceContext, calculateQuarterlySalesTraceContextJson) }
 }

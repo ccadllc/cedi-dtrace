@@ -15,17 +15,14 @@
  */
 package com.ccadllc.cedi.dtrace
 
-import fs2.Task
-import fs2.util.Suspendable
-
-import java.util.UUID
+import cats.effect.{ IO, Sync }
 
 import org.scalatest.{ BeforeAndAfterEach, Matchers, WordSpec }
 
 import scala.language.higherKinds
 
 class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Matchers with TestData {
-  private class TestEmitter[F[_]](implicit F: Suspendable[F]) extends TraceSystem.Emitter[F] {
+  private class TestEmitter[F[_]](implicit F: Sync[F]) extends TraceSystem.Emitter[F] {
     class EmitterTestCache {
       case class EmitterTestEntry(msg: String)
       private var emitterLogCache: Vector[EmitterTestEntry] = Vector.empty
@@ -52,18 +49,18 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
 
   "the distributed trace recording mechanism for emitting to a test string emitter" should {
     "support recording a successful current tracing span which is the root span containing same parent and current span IDs" in {
-      val testEmitter = new TestEmitter[Task]
+      val testEmitter = new TestEmitter[IO]
       val salesManagementSystem = TraceSystem(testSystemMetadata, testEmitter)
-      val spanRoot = Span.root[Task](Span.Name("calculate-quarterly-sales")).unsafeRun
-      Task.delay(Thread.sleep(5L)).toTraceT.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRun
+      val spanRoot = Span.root[IO](Span.Name("calculate-quarterly-sales")).unsafeRunSync
+      IO(Thread.sleep(5L)).toTraceT.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
       testEmitter.cache.containingAll(spanId(spanRoot.spanId.spanId), parentSpanId(spanRoot.spanId.spanId), spanName(spanRoot.spanName)) should have size (1)
     }
     "support recording a successful new tracing span with new span ID and name" in {
-      val testEmitter = new TestEmitter[Task]
+      val testEmitter = new TestEmitter[IO]
       val salesManagementSystem = TraceSystem(testSystemMetadata, testEmitter)
-      val spanRoot = Span.root[Task](Span.Name("calculate-quarterly-sales")).unsafeRun
+      val spanRoot = Span.root[IO](Span.Name("calculate-quarterly-sales")).unsafeRunSync
       val calcPhillySalesSpanName = Span.Name("calculate-sales-for-philadelphia")
-      Task.delay(Thread.sleep(5L)).newSpan(calcPhillySalesSpanName).trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRun
+      IO(Thread.sleep(5L)).newSpan(calcPhillySalesSpanName).trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
       testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(calcPhillySalesSpanName)) should have size (1)
       testEmitter.cache.containingAll(spanId(spanRoot.spanId.spanId)) should have size (1)
     }
@@ -80,19 +77,19 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
       assertChildSpanRecordedWithNote(quarterlySalesTotalNote)
     }
     "support recording nested spans" in {
-      val testEmitter = new TestEmitter[Task]
+      val testEmitter = new TestEmitter[IO]
       val salesManagementSystem = TraceSystem(testSystemMetadata, testEmitter)
       val spanRootName = Span.Name("calculate-quarterly-sales-update")
-      val spanRoot = Span.root[Task](spanRootName).unsafeRun
+      val spanRoot = Span.root[IO](spanRootName).unsafeRunSync
       val requestUpdatedSalesFiguresSpanName = Span.Name("request-updated-sales-figures")
       val generateUpdatedSalesFiguresSpanName = Span.Name("generate-updated-sales-figures")
-      def generateSalesFigures: TraceTask[Unit] = for {
+      def generateSalesFigures: TraceIO[Unit] = for {
         existing <- requestUpdatedSalesFigures
-        _ <- if (existing) TraceTask.now(()) else generateUpdatedSalesFigures
+        _ <- if (existing) TraceIO.pure(()) else generateUpdatedSalesFigures
       } yield ()
-      def requestUpdatedSalesFigures: TraceTask[Boolean] = Task.delay(false).newSpan(requestUpdatedSalesFiguresSpanName)
-      def generateUpdatedSalesFigures: TraceTask[Unit] = Task.delay(Thread.sleep(5L)).newSpan(generateUpdatedSalesFiguresSpanName)
-      generateSalesFigures.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRun
+      def requestUpdatedSalesFigures: TraceIO[Boolean] = IO(false).newSpan(requestUpdatedSalesFiguresSpanName)
+      def generateUpdatedSalesFigures: TraceIO[Unit] = IO(Thread.sleep(5L)).newSpan(generateUpdatedSalesFiguresSpanName)
+      generateSalesFigures.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
       val entries = testEmitter.cache.all
       entries should have size (3)
       entries(0).msg should include(spanName(requestUpdatedSalesFiguresSpanName))
@@ -108,14 +105,14 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
   }
 
   private def assertChildSpanRecordedWithNote(note: Note): Unit = {
-    val testEmitter = new TestEmitter[Task]
+    val testEmitter = new TestEmitter[IO]
     val salesManagementSystem = TraceSystem(testSystemMetadata, testEmitter)
-    val spanRoot = Span.root[Task](Span.Name("calculate-quarterly-sales-updates")).unsafeRun
+    val spanRoot = Span.root[IO](Span.Name("calculate-quarterly-sales-updates")).unsafeRunSync
     val calcPhillySalesSpanName = Span.Name("calculate-updated-sales-for-philly")
-    Task.delay {
+    IO {
       Thread.sleep(5L)
       note
-    }.newAnnotatedSpan(calcPhillySalesSpanName) { case Right(n) => Vector(n) }.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRun
+    }.newAnnotatedSpan(calcPhillySalesSpanName) { case Right(n) => Vector(n) }.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
     val entriesWithNote = testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(calcPhillySalesSpanName), note.toString)
     val entriesWithSpanId = testEmitter.cache.containingAll(spanId(spanRoot.spanId.spanId))
     entriesWithNote should have size (1)
@@ -125,5 +122,4 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
   private def spanName(name: Span.Name) = s"span-name=$name"
   private def spanId(id: Long) = s"span-id=$id"
   private def parentSpanId(id: Long) = s"parent-id=$id"
-  private def traceId(id: UUID) = s"trace-id=$id"
 }

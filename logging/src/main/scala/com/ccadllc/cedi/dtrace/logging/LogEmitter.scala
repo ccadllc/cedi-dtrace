@@ -16,8 +16,8 @@
 package com.ccadllc.cedi.dtrace
 package logging
 
-import fs2.util.Suspendable
-import fs2.util.syntax._
+import cats.effect.Sync
+import cats.implicits._
 
 import io.circe.syntax._
 
@@ -30,16 +30,15 @@ import scala.language.higherKinds
  * record a `Span` to an `slf4j` log appender in both text and JSON
  * formats, also logging the associated system properties provided in
  * the passed-in `TraceContext[F]`.  The recording is described in the
- * context of an effectful program `F` with an `fs2.util.Suspendable[F]`
+ * context of an effectful program `F` with an `Sync[F]`
  * instance in implicit scope and actual occurs when that program is
  * executed.  Whether the information is recorded to log files, some
  * other location, or not at all depends on the configuration of the
  * `distributed-trace.txt` and `distributed-trace.json` loggers.  Note that
  * the logging occurs only if `DEBUG` is enabled for the particular logger
  * in the underlying logging configuration.
- * @param F - an instance of `fs2.util.Suspendable[F]` in implicit scope.
  */
-class LogEmitter[F[_]](implicit F: Suspendable[F]) extends TraceSystem.Emitter[F] {
+class LogEmitter[F[_]](implicit F: Sync[F]) extends TraceSystem.Emitter[F] {
 
   private val textLogger = LoggerFactory.getLogger("distributed-trace.txt")
   private val jsonLogger = LoggerFactory.getLogger("distributed-trace.json")
@@ -51,8 +50,8 @@ class LogEmitter[F[_]](implicit F: Suspendable[F]) extends TraceSystem.Emitter[F
    * by the implicit `io.circe.Encoder[TraceContext[F]]` provided via the [[json.encoding]] object.
    * @param context - the `TraceContext[F]` containing the `Span` and `TraceSystem` containing
    *   system properties to include in the emission.
-   * @return loggingProgram - an effectful program `F[Unit]` with an `fs2.util.Suspendable[F]` in
-   *   implicit scope that when run will record the trace information to the sf4j logging system.
+   * @return loggingProgram - an effectful program `F[Unit]` that when run will record the trace
+   *   information to the sf4j logging system.
    */
   override def emit(context: TraceContext[F]): F[Unit] = {
     def emitText: F[Unit] = {
@@ -76,10 +75,9 @@ class LogEmitter[F[_]](implicit F: Suspendable[F]) extends TraceSystem.Emitter[F
  */
 object LogEmitter {
   /**
-   * Constructs an instance of `LogEmitter` if an instance of `fs2.util.Suspendable[F]` is
+   * Constructs an instance of `LogEmitter` if an instance of `Sync[F]` is
    * available in implicit scope.
-   * @param F - An instance of `fs2.util.Suspendable[F]` in implicit scope.
-   * @return newLogEmitter - a new instance of `LogEmitter[F]`.
+   * @return a new instance of `LogEmitter[F]`.
    */
-  def apply[F[_]: Suspendable]: LogEmitter[F] = new LogEmitter[F]
+  def apply[F[_]: Sync]: LogEmitter[F] = new LogEmitter[F]
 }

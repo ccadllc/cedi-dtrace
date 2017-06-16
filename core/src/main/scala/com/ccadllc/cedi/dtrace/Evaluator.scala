@@ -49,7 +49,7 @@ object Evaluator {
    *   span using this 'Evaluator' and possibly converts it to a [[FailureDetail]] which is used to determine that the span execution has
    *   succeeded or failed and how to render it.  Generally, if the program itself has failed with a `Throwable`, you'll
    *   want to return a [[FailureDetail]] with a human-readable rendering of that error but there may be corner cases where the span itself
-   *   should still be reported as having succeeded (if, for instance, an `fs2.Task` is failed with an exception meant to trigger some upstream
+   *   should still be reported as having succeeded (if, for instance, an `IO` is failed with an exception meant to trigger some upstream
    *   program logic rather than indicate an error - not recommended, usually, but there may be reasons why this is necessary).
    * @param resultToFailure - a function which takes the result of the program `F[A]` whose execution is being traced by the span using this
    *   `Evaluator` and possibly uses it to create a [[FailureDetail]].  Usually, if a program succeeds with a result, you won't want to
@@ -69,7 +69,7 @@ object Evaluator {
    *   span using this 'Evaluator' and possibly converts it to a [[FailureDetail]] which is used to determine that the span execution has
    *   succeeded or failed and how to render it.  Generally, if the program itself has failed with a `Throwable`, you'll
    *   want to return a [[FailureDetail]] with a human-readable rendering of that error but there may be corner cases where the span itself
-   *   should still be reported as having succeeded (if, for instance, an `fs2.Task` is failed with an exception meant to trigger some upstream
+   *   should still be reported as having succeeded (if, for instance, an `IO` is failed with an exception meant to trigger some upstream
    *   program logic rather than indicate an error - not recommended, usually, but there may be reasons why this is necessary).
    * @return evaluator - a new instance of the `Evaluator`.
    */
