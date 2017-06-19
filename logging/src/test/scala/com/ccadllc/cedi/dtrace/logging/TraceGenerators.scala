@@ -25,7 +25,7 @@ import java.util.UUID
 import org.scalacheck.{ Arbitrary, Gen }
 import Arbitrary.arbitrary
 
-import fs2.util.Suspendable
+import cats.effect.Sync
 
 trait TraceGenerators {
 
@@ -51,7 +51,7 @@ trait TraceGenerators {
 
   def genTraceSystemMetadata: Gen[Map[String, String]] = Gen.nonEmptyMap(genTraceSystemMetadataPair)
 
-  def genTraceSystem[F[_]: Suspendable]: Gen[TraceSystem[F]] = genTraceSystemMetadata map { TraceSystem(_, new LogEmitter[F]) }
+  def genTraceSystem[F[_]: Sync]: Gen[TraceSystem[F]] = genTraceSystemMetadata map { TraceSystem(_, new LogEmitter[F]) }
 
   def genSpanId: Gen[SpanId] = for {
     traceId <- genUUID
@@ -89,7 +89,7 @@ trait TraceGenerators {
     notes <- genNotes
   } yield Span(spanId, spanName, startTime, failure, duration, notes)
 
-  def genTraceContext[F[_]: Suspendable]: Gen[TraceContext[F]] = for {
+  def genTraceContext[F[_]: Sync]: Gen[TraceContext[F]] = for {
     span <- genSpan
     system <- genTraceSystem[F]
   } yield TraceContext(span, system)

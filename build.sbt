@@ -5,11 +5,13 @@ lazy val logbackVersion = "1.1.7"
 lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
   contributors ++= Seq(
-    Contributor("sbuzzard", "Steve Buzzard")
+    Contributor("sbuzzard", "Steve Buzzard"),
+    Contributor("mpilquist", "Michael Pilquist")
   ),
   libraryDependencies ++= Seq(
-    "co.fs2" %% "fs2-core" % "0.9.2",
-    "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+    "org.typelevel" %% "cats-effect" % "0.3",
+    "org.scalatest" %% "scalatest" % "3.0.1" % "test",
+    "org.scalacheck" %% "scalacheck" % "1.13.4" % "test"
   ),
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3")
 )
@@ -34,13 +36,11 @@ lazy val logging = project.in(file("logging")).enablePlugins(SbtOsgi).
       "io.circe" %% "circe-java8" % circeVersion,
       "org.slf4j" % "slf4j-api" % "1.7.21",
       "ch.qos.logback" % "logback-core" % logbackVersion % "test",
-      "ch.qos.logback" % "logback-classic" % logbackVersion % "test",
-      "org.scalacheck" %% "scalacheck" % "1.13.4" % "test"
+      "ch.qos.logback" % "logback-classic" % logbackVersion % "test"
     ),
     buildOsgiBundle("com.ccadllc.cedi.dtrace.logging")
   ).dependsOn(core % "compile->compile;test->test")
 
-lazy val readme = project.in(file("readme")).settings(commonSettings).settings(noPublish).settings(
-  tutSettings,
+lazy val readme = project.in(file("readme")).settings(commonSettings).settings(noPublish).enablePlugins(TutPlugin).settings(
   tutTargetDirectory := baseDirectory.value / ".."
 ).dependsOn(core, logging)

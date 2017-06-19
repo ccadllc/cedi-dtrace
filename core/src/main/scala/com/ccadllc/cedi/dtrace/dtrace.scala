@@ -15,9 +15,9 @@
  */
 package com.ccadllc.cedi
 
-import fs2.Task
-import fs2.util._
-import fs2.util.syntax._
+import cats.MonadError
+import cats.effect.{ IO, Sync }
+import cats.implicits._
 
 import scala.language.higherKinds
 
@@ -30,60 +30,60 @@ import scala.language.higherKinds
 package object dtrace {
 
   /**
-   * Type alias provided for convenience when using a `fs2.Task` as the type of effectful
+   * Type alias provided for convenience when using an `IO` as the type of effectful
    * program being traced.
    */
-  type TraceTask[A] = TraceT[Task, A]
+  type TraceIO[A] = TraceT[IO, A]
 
   /**
-   * Companion to the `TraceTask[A]` type alias - provides the [[TraceT]] smart constructors with the effectful
-   * program `F` fixed as `fs2.Task`.
+   * Companion to the `TraceIO[A]` type alias - provides the [[TraceT]] smart constructors with the effectful
+   * program `F` fixed as `IO`.
    */
-  object TraceTask {
+  object TraceIO {
     /**
-     * Ask for the current `TraceContext[Task]` in a `TraceTask`.
-     * @return traceTaskOfTraceContext - a `TraceContext[Task]` wrapped in a `TraceTask`.
+     * Ask for the current `TraceContext[IO]` in a `TraceIO`.
+     * @return a `TraceContext[IO]` wrapped in a `TraceIO`.
      */
-    def ask: TraceTask[TraceContext[Task]] = TraceT { Task.now }
+    def ask: TraceIO[TraceContext[IO]] = TraceT { IO.pure }
 
     /**
-     * Lifts a value `A` into a `TraceTask[A]` context.
-     * @param a - the pure value `A` to lift into a `TraceTask` context.
-     * @return traceTaskOfA - a pure value `A` wrapped in a `TraceTask`.
+     * Lifts a value `A` into a `TraceIO[A]` context.
+     * @param a - the pure value `A` to lift into a `TraceIO` context.
+     * @return a pure value `A` wrapped in a `TraceIO`.
      */
-    def now[A](a: A): TraceTask[A] = toTraceTask(Task.now(a))
+    def pure[A](a: A): TraceIO[A] = toTraceIO(IO.pure(a))
 
     /**
-     * Lifts the non-strict, possibly impure expression computing `A` into a `TraceTask[A]`
+     * Lifts the non-strict, possibly impure expression computing `A` into a `TraceIO[A]`
      * context.
-     * @param a - the non-strict expression computing `A` to lift into a `TraceTask` context.
-     * @return traceTaskOfA - a non-strict expression which computes `A` lifted into a `TraceTask`.
+     * @param a - the non-strict expression computing `A` to lift into a `TraceIO` context.
+     * @return a non-strict expression which computes `A` lifted into a `TraceIO`.
      */
-    def delay[A](a: => A): TraceTask[A] = toTraceTask(Task.delay(a))
+    def apply[A](a: => A): TraceIO[A] = toTraceIO(IO(a))
 
     /**
-     * Lifts the non-strict, possibly impure expression computing a `TraceTask[A]` into a `TraceTask[A]`
-     * The expression is suspended until the outer `TraceTask` returned is run.
-     * @param t - the non-strict expression computing `TraceTask[A]` to lift into a `TraceTask` context suspended
-     *   until the outer `TraceTask` is run.
-     * @return traceTaskOfTA - a non-strict expression which computes `TraceTask[A]` lifted into a `TraceTask` in
-     *   a suspended state until the outer `TraceTask` is run.
+     * Lifts the non-strict, possibly impure expression computing a `TraceIO[A]` into a `TraceIO[A]`
+     * The expression is suspended until the outer `TraceIO` returned is run.
+     * @param t - the non-strict expression computing `TraceIO[A]` to lift into a `TraceIO` context suspended
+     *   until the outer `TraceIO` is run.
+     * @return a non-strict expression which computes `TraceIO[A]` lifted into a `TraceIO` in
+     *   a suspended state until the outer `TraceIO` is run.
      */
-    def suspend[A](t: => Task[A]): TraceTask[A] = toTraceTask(Task.suspend(t))
+    def suspend[A](t: => IO[A]): TraceIO[A] = toTraceIO(IO.suspend(t))
 
     /**
-     * Creates a failed `TraceTask`.
+     * Creates a failed `TraceIO`.
      * @param t - the `Throwable` with which to fail the underlying program.
-     * @return traceTaskOfA - the `TraceTask[A]` in a failed state.
+     * @return the `TraceIO[A]` in a failed state.
      */
-    def fail[A](t: Throwable): TraceTask[A] = toTraceTask(Task.fail(t): Task[A])
+    def fail[A](t: Throwable): TraceIO[A] = toTraceIO(IO.raiseError(t): IO[A])
 
     /*
-     * Lifts an `fs2.Task` which computes `A` into a `TraceTask[A]` context.
-     * @param task - a `fs2.Task` which computes a value `A`.
-     * @return traceTaskOfA - a `TraceTask[A]`
+     * Lifts an `IO` which computes `A` into a `TraceIO[A]` context.
+     * @param io - an `IO` which computes a value `A`.
+     * @return a `TraceIO[A]`
      */
-    def toTraceTask[A](task: Task[A]): TraceTask[A] = TraceT { _ => task }
+    def toTraceIO[A](io: IO[A]): TraceIO[A] = TraceT { _ => io }
   }
 
   /**
@@ -96,8 +96,8 @@ package object dtrace {
      * default [[Evaluator]] to determine success/failure of the `F[A]` for the purposes of span recording.
      * For example:
      *   ```
-     *   val task = Task.delay(some computation)
-     *   task.newSpan(
+     *   val io = IO(some computation)
+     *   io.newSpan(
      *     Span.Name("query-products-for-sale",
      *     Note.string("sale-date", date.toString), Note.double("sale-max-price", 80.50)
      *   )
@@ -105,10 +105,9 @@ package object dtrace {
      * @param spanName - a descriptive name, emitted when the span is recorded.
      * @param notes - one or more [[Note]]s which annotate the span (often the input parameters to the `F[A]`
      *   execution).
-     * @param F - an instance of an `fs2.util.Catchable[F]` and `fs2.util.Suspendable[F]` in implicit scope.
-     * @return newTraceT - a new instance of `TraceT` representing a child span.
+     * @return a new instance of `TraceT` representing a child span.
      */
-    def newSpan(spanName: Span.Name, notes: Note*)(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
+    def newSpan(spanName: Span.Name, notes: Note*)(implicit F: Sync[F]): TraceT[F, A] =
       toTraceT.newSpan(spanName, notes: _*)
 
     /**
@@ -117,8 +116,8 @@ package object dtrace {
      * using the default [[Evaluator]] to determine success/failure of the `F[A]` for the purposes of span recording.
      * For example:
      *   ```
-     *   val task = Task.delay(some computation)
-     *   task.newAnnotatedSpan(
+     *   val io = IO(some computation)
+     *   io.newAnnotatedSpan(
      *     Span.Name("query-products-for-sale",
      *     Note.string("sale-date", date.toString), Note.double("sale-max-price", 80.50)
      *   ) {
@@ -131,13 +130,12 @@ package object dtrace {
      * @param resultsAnnotator - a partial function from an `Either[Throwable, A]` to a `Vector[Note]`, providing
      *   for the ability to add additional annotation of the [[Span]] based on the result of the underlying `F[A]`
      *   execution.
-     * @param F - an instance of an `fs2.util.Catchable[F]` and `fs2.util.Suspendable[F]` in implicit scope.
      * @return newTraceT - a new instance of `TraceT` representing a child span.
      */
     def newAnnotatedSpan(
       spanName: Span.Name,
       notes: Note*
-    )(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
+    )(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Sync[F]): TraceT[F, A] =
       toTraceT.newAnnotatedSpan(spanName, notes: _*)(resultAnnotator)
 
     /**
@@ -145,8 +143,8 @@ package object dtrace {
      * evaluation and rendering of the underlying `F[A]` when recording the [[Span]].
      * For example:
      *   ```
-     *   val task = Task.delay(some computation)
-     *   task.newSpan(
+     *   val io = IO(some computation)
+     *   io.newSpan(
      *     Span.Name("query-products-for-sale",
      *     Evaluator.resultToFailure[Vector[Product]
      *     Note.string("sale-date", date.toString), Note.double("sale-max-price", 80.50)
@@ -156,10 +154,9 @@ package object dtrace {
      * @param evaluator - an [[Evaluator]] which converts either a `Throwable` or `A` to an optional [[FailureDetail]].
      * @param notes - one or more [[Note]]s which annotate the span (often the input parameters to the `F[A]`
      *   execution).
-     * @param F - an instance of an `fs2.util.Catchable[F]` and `fs2.util.Suspendable[F]` in implicit scope.
      * @return newTraceT - a new instance of `TraceT` representing a child span.
      */
-    def newSpan(spanName: Span.Name, evaluator: Evaluator[A], notes: Note*)(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
+    def newSpan(spanName: Span.Name, evaluator: Evaluator[A], notes: Note*)(implicit F: Sync[F]): TraceT[F, A] =
       toTraceT.newSpan(spanName, evaluator, notes: _*)
 
     /**
@@ -168,8 +165,8 @@ package object dtrace {
      * a custom [[Evaluator]] to determine success/failure of the `F[A]` for the purposes of recording.
      * For example:
      *   ```
-     *   val task = Task.delay(some computation)
-     *   task.newAnnotatedSpan(
+     *   val io = IO(some computation)
+     *   io.newAnnotatedSpan(
      *     Span.Name("query-products-for-sale",
      *     Note.string("sale-date", date.toString), Note.double("sale-max-price", 80.50)
      *   ) {
@@ -181,14 +178,13 @@ package object dtrace {
      *   execution).
      * @param resultsAnnotator - a partial function from an `Either[Throwable, A]` to a `Vector[Note]`, providing
      *   for the ability to add additional annotation of the [[Span]] based on the result of the underlying `F[A]` run.
-     * @param F - an instance of an `fs2.util.Catchable[F]` and `fs2.util.Suspendable[F]` in implicit scope.
      * @return newTraceT - a new instance of `TraceT` representing a child span.
      */
     def newAnnotatedSpan(
       spanName: Span.Name,
       evaluator: Evaluator[A],
       notes: Note*
-    )(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Catchable[F] with Suspendable[F]): TraceT[F, A] =
+    )(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Sync[F]): TraceT[F, A] =
       toTraceT.newAnnotatedSpan(spanName, evaluator, notes: _*)(resultAnnotator)
 
     /**
@@ -204,13 +200,12 @@ package object dtrace {
      * itself.
      * @param f - a function which is passed an optional `Throwable` - defined if the program failed and
      *   returns a `TraceT[F, Unit]`, a program run only for its effect.
-     * @param F - an instance of `fs2.util.Catchable[F]` in implicit scope.
-     * @return traceTForFA - a new `TraceT[F, A]` with the error handling of the aforementioned `f` function
+     * @return a new `TraceT[F, A]` with the error handling of the aforementioned `f` function
      *   parameter.
      */
-    def bestEffortOnFinish(f: Option[Throwable] => F[Unit])(implicit F: Catchable[F]): F[A] =
+    def bestEffortOnFinish(f: Option[Throwable] => F[Unit])(implicit F: MonadError[F, Throwable]): F[A] =
       self.attempt flatMap { r =>
-        f(r.left.toOption).attempt flatMap { _ => r.fold(F.fail, F.pure) }
+        f(r.left.toOption).attempt flatMap { _ => r.fold(F.raiseError, F.pure) }
       }
   }
 }

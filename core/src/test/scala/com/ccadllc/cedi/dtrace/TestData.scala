@@ -15,19 +15,12 @@
  */
 package com.ccadllc.cedi.dtrace
 
-import fs2.Strategy
-
 import java.time.Instant
 import java.util.UUID
-import java.util.concurrent.{ Executors, ExecutorService }
 
 import scala.concurrent.duration._
 
 trait TestData {
-
-  protected implicit val testExecutor: ExecutorService = Executors.newCachedThreadPool
-
-  protected implicit val testStrategy: Strategy = Strategy.fromExecutor(testExecutor)
 
   // format: OFF
   protected val testSystemMetadata: Map[String, String] = Map(

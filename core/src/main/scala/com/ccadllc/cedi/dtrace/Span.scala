@@ -21,8 +21,8 @@ import java.time.temporal.ChronoUnit
 import scala.concurrent.duration._
 import scala.language.higherKinds
 
-import fs2.util._
-import fs2.util.syntax._
+import cats.effect.Sync
+import cats.implicits._
 
 /**
  * Represents a single span for a distributed trace.  A span is the traced execution of an effectful program `F`.
@@ -51,7 +51,7 @@ case class Span(
    */
   val root: Boolean = spanId.root
 
-  private[dtrace] def newChild[F[_]: Suspendable](spanName: Span.Name): F[Span] = for {
+  private[dtrace] def newChild[F[_]: Sync](spanName: Span.Name): F[Span] = for {
     startTime <- Span.nowInstant
     child <- spanId.newChild
   } yield Span(child, spanName, startTime, None, Duration.Zero, Vector.empty)
@@ -59,16 +59,16 @@ case class Span(
   private[dtrace] def setNotes(notes: Vector[Note]): Span =
     copy(notes = notes)
 
-  private[dtrace] def updateStartTime[F[_]: Suspendable]: F[Span] =
+  private[dtrace] def updateStartTime[F[_]: Sync]: F[Span] =
     Span.nowInstant map { t => copy(startTime = t) }
 
-  private[dtrace] def finishSuccess[F[_]: Suspendable]: F[Span] =
+  private[dtrace] def finishSuccess[F[_]: Sync]: F[Span] =
     finish(None)
 
-  private[dtrace] def finishFailure[F[_]: Suspendable](detail: FailureDetail): F[Span] =
+  private[dtrace] def finishFailure[F[_]: Sync](detail: FailureDetail): F[Span] =
     finish(Some(detail))
 
-  private def finish[F[_]: Suspendable](failure: Option[FailureDetail]): F[Span] =
+  private def finish[F[_]: Sync](failure: Option[FailureDetail]): F[Span] =
     Span.nowInstant map { endTime =>
       copy(failure = failure, duration = FiniteDuration(ChronoUnit.MICROS.between(startTime, endTime), MICROSECONDS))
     }
@@ -84,25 +84,23 @@ object Span {
    * Creates a root span by generating a root [[SpanId]].
    * @param spanName - the human readable name of this span.
    * @param notes - a variable argument list of [[Note]]s, metadata to annotate this span.
-   * @param F - an instance of `fs2.util.Suspendable[F]` in implicit scope.
-   * @return newSpan - an effectful program (with an instance of `fs2.util.Suspendable[F]` in implicit scope) which when run will result in a new root span.
+   * @return newSpan - an effectful program which when run will result in a new root span.
    */
-  def root[F[_]: Suspendable](spanName: Name, notes: Note*): F[Span] = SpanId.root flatMap { newSpan(_, spanName, notes: _*) }
+  def root[F[_]: Sync](spanName: Name, notes: Note*): F[Span] = SpanId.root flatMap { newSpan(_, spanName, notes: _*) }
 
   /**
    * Create a new child of the passed-in [[SpanId]].
    * @param spanId - the [[SpanId]] containing the identity for which a child span will be created.
    * @param spanName - the human readable name of this span.
    * @param notes - a variable argument list of [[Note]]s, metadata to annotate this span.
-   * @param F - an instance of `fs2.util.Suspendable[F]` in implicit scope.
-   * @return newSpan - an effectful program (with an instance of `fs2.util.Suspendable[F]` in implicit scope) which when run will result in a new child span.
+   * @return newSpan - an effectful program which when run will result in a new child span.
    */
-  def newChild[F[_]: Suspendable](spanId: SpanId, spanName: Name, notes: Note*): F[Span] = spanId.newChild flatMap { newSpan(_, spanName, notes: _*) }
+  def newChild[F[_]: Sync](spanId: SpanId, spanName: Name, notes: Note*): F[Span] = spanId.newChild flatMap { newSpan(_, spanName, notes: _*) }
 
   private[dtrace] val empty: Span = Span(SpanId.empty, Span.Name("empty"), Instant.EPOCH, None, 0.seconds, Vector.empty)
 
-  private def nowInstant[F[_]](implicit F: Suspendable[F]): F[Instant] = F.delay(Instant.now)
+  private def nowInstant[F[_]](implicit F: Sync[F]): F[Instant] = F.delay(Instant.now)
 
-  private def newSpan[F[_]: Suspendable](spanId: SpanId, spanName: Span.Name, notes: Note*): F[Span] =
+  private def newSpan[F[_]: Sync](spanId: SpanId, spanName: Span.Name, notes: Note*): F[Span] =
     nowInstant map { Span(spanId, spanName, _, None, Duration.Zero, notes.toVector) }
 }

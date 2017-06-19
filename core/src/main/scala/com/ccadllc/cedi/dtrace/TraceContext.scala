@@ -15,8 +15,9 @@
  */
 package com.ccadllc.cedi.dtrace
 
-import fs2.util._
-import fs2.util.syntax._
+import cats.Applicative
+import cats.effect.Sync
+import cats.implicits._
 
 import scala.language.higherKinds
 
@@ -32,25 +33,25 @@ import scala.language.higherKinds
  */
 case class TraceContext[F[_]](currentSpan: Span, system: TraceSystem[F]) {
 
-  private[dtrace] def childSpan(spanName: Span.Name)(implicit F: Suspendable[F]): F[TraceContext[F]] =
+  private[dtrace] def childSpan(spanName: Span.Name)(implicit F: Sync[F]): F[TraceContext[F]] =
     currentSpan.newChild(spanName) map { c => copy(currentSpan = c) }
 
   private[dtrace] def setNotes(notes: Vector[Note]): TraceContext[F] =
     copy(currentSpan = currentSpan.setNotes(notes))
 
-  private[dtrace] def updateStartTime(implicit F: Suspendable[F]): F[TraceContext[F]] =
+  private[dtrace] def updateStartTime(implicit F: Sync[F]): F[TraceContext[F]] =
     currentSpan.updateStartTime map { updated => copy(currentSpan = updated) }
 
-  private[dtrace] def emitSuccess(implicit F: Suspendable[F]): F[Unit] =
+  private[dtrace] def emitSuccess(implicit F: Sync[F]): F[Unit] =
     finishSuccess flatMap system.emitter.emit
 
-  private[dtrace] def emitFailure(detail: FailureDetail)(implicit F: Suspendable[F]): F[Unit] =
+  private[dtrace] def emitFailure(detail: FailureDetail)(implicit F: Sync[F]): F[Unit] =
     finishFailure(detail) flatMap system.emitter.emit
 
-  private def finishSuccess(implicit F: Suspendable[F]): F[TraceContext[F]] =
+  private def finishSuccess(implicit F: Sync[F]): F[TraceContext[F]] =
     currentSpan.finishSuccess map { ss => copy(currentSpan = ss) }
 
-  private def finishFailure(detail: FailureDetail)(implicit F: Suspendable[F]): F[TraceContext[F]] =
+  private def finishFailure(detail: FailureDetail)(implicit F: Sync[F]): F[TraceContext[F]] =
     currentSpan.finishFailure(detail) map { us => copy(currentSpan = us) }
 
   override def toString: String = s"[currentSpan=$currentSpan] [system=$system]"

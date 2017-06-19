@@ -22,8 +22,8 @@ import scala.util.Random
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
-import fs2.util.Suspendable
-import fs2.util.syntax._
+import cats.effect.Sync
+import cats.implicits._
 
 /**
  * Represents the core identity of a [[Span]].
@@ -50,10 +50,9 @@ final case class SpanId(traceId: UUID, parentSpanId: Long, spanId: Long) {
   /**
    * Creates a new child span identifier from this instance, with the new instance's `parentSpanId` equal to this instance's `spanId` and a new value generated
    * for the new instance's `spanId`.
-   * @param F - an instance of `fs2.util.Suspendable[F]` in implicit scope.
    * @return newSpanIdDescription - an effectful description of a new [[SpanId]].
    */
-  def newChild[F[_]: Suspendable]: F[SpanId] = SpanId.nextSpanIdValue map { newSpanId => copy(parentSpanId = spanId, spanId = newSpanId) }
+  def newChild[F[_]: Sync]: F[SpanId] = SpanId.nextSpanIdValue map { newSpanId => copy(parentSpanId = spanId, spanId = newSpanId) }
 
   override def toString: String = s"SpanId~$traceId~$parentSpanId~$spanId"
 }
@@ -77,10 +76,9 @@ object SpanId {
   /**
    * Creates a root [[SpanId]] from stratch in an effectful program `F[A]`.
    *
-   * @param F - an instance of `fs2.util.Suspendable[F]` in implicit scope.
    * @return newSpanIdDescription - an effectful description of a new [[SpanId]].
    */
-  def root[F[_]](implicit F: Suspendable[F]): F[SpanId] = for {
+  def root[F[_]](implicit F: Sync[F]): F[SpanId] = for {
     traceId <- F.delay(UUID.randomUUID)
     parentChildId <- nextSpanIdValue
   } yield SpanId(traceId, parentChildId, parentChildId)
@@ -95,7 +93,7 @@ object SpanId {
     if (headerName == HeaderName) fromHeaderValue(headerValue) else Left(s"Header name $headerName is not a Money-compliant trace header")
 
   def fromHeaderValue(headerValue: String): Either[String, SpanId] = headerValue match {
-    case HeaderRegex(traceId, parentId, spanId) =>
+    case HeaderRegex(traceId, _, parentId, spanId) =>
       try Right(SpanId(UUID.fromString(traceId), parentId.toLong, spanId.toLong))
       catch {
         case NonFatal(t) => Left(s"Could not parse $headerValue into a SpanId: ${t.getMessage}")
@@ -103,7 +101,7 @@ object SpanId {
     case _ => Left(s"Could not parse $headerValue into a SpanId")
   }
 
-  private[dtrace] def nextSpanIdValue[F[_]](implicit F: Suspendable[F]): F[Long] = F.delay(Random.nextLong)
+  private[dtrace] def nextSpanIdValue[F[_]](implicit F: Sync[F]): F[Long] = F.delay(Random.nextLong)
 
   private[dtrace] val empty: SpanId = SpanId(UUID.randomUUID, 0L, 0L)
 }

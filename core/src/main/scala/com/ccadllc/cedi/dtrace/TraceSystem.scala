@@ -15,7 +15,7 @@
  */
 package com.ccadllc.cedi.dtrace
 
-import fs2.util.Applicative
+import cats.Applicative
 
 import scala.language.higherKinds
 
