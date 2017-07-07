@@ -76,7 +76,7 @@ package object dtrace {
      * @param t - the `Throwable` with which to fail the underlying program.
      * @return the `TraceIO[A]` in a failed state.
      */
-    def fail[A](t: Throwable): TraceIO[A] = toTraceIO(IO.raiseError(t): IO[A])
+    def raiseError[A](t: Throwable): TraceIO[A] = toTraceIO(IO.raiseError(t): IO[A])
 
     /*
      * Lifts an `IO` which computes `A` into a `TraceIO[A]` context.
