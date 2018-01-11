@@ -1,4 +1,4 @@
-lazy val circeVersion = "0.9.0-M2"
+lazy val circeVersion = "0.9.0"
 
 lazy val logbackVersion = "1.1.7"
 
@@ -9,7 +9,7 @@ lazy val commonSettings = Seq(
     Contributor("mpilquist", "Michael Pilquist")
   ),
   libraryDependencies ++= Seq(
-    "org.typelevel" %% "cats-effect" % "0.5",
+    "org.typelevel" %% "cats-effect" % "0.7",
     "org.scalatest" %% "scalatest" % "3.0.4" % "test",
     "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
   ),
