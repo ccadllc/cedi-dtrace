@@ -1,4 +1,4 @@
-lazy val circeVersion = "0.9.0-M1"
+lazy val circeVersion = "0.9.0"
 
 lazy val logbackVersion = "1.1.7"
 
@@ -9,9 +9,9 @@ lazy val commonSettings = Seq(
     Contributor("mpilquist", "Michael Pilquist")
   ),
   libraryDependencies ++= Seq(
-    "org.typelevel" %% "cats-effect" % "0.4",
-    "org.scalatest" %% "scalatest" % "3.0.1" % "test",
-    "org.scalacheck" %% "scalacheck" % "1.13.4" % "test"
+    "org.typelevel" %% "cats-effect" % "0.7",
+    "org.scalatest" %% "scalatest" % "3.0.4" % "test",
+    "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
   ),
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3")
 )

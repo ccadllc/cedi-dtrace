@@ -6,7 +6,7 @@ Quick links:
 - [Examples of use](#usage)
 - [Configuration](#config)
 - [How to get latest version](#getit)
-- API Docs [Core](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-core_2.12/1.0.0/dtrace-core_2.12-1.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/index.html) [Logging](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logging_2.12/1.0.0/dtrace-logging_2.12-1.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logging/index.html)
+- API Docs [Core](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-core_2.12/1.2.0/dtrace-core_2.12-1.2.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/index.html) [Logging](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logging_2.12/1.2.0/dtrace-logging_2.12-1.2.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logging/index.html)
 
 
 ### <a id="about"></a>About the library
@@ -171,7 +171,7 @@ This is the core functionality, recording trace and span information over effect
 
 
 ```scala
-libraryDependencies += "com.ccadllc.cedi" %% "dtrace-core" % "1.2.0-SNAPSHOT"
+libraryDependencies += "com.ccadllc.cedi" %% "dtrace-core" % "1.2.0"
 ```
 
 #### dtrace-logging
@@ -179,7 +179,7 @@ libraryDependencies += "com.ccadllc.cedi" %% "dtrace-core" % "1.2.0-SNAPSHOT"
 This component provides emitters for logging the trace spans in text and/or JSON format using the `sf4j` logging framework.  It uses the `circe` library for formatting the trace span information as JSON.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logging" % "1.2.0-SNAPSHOT"
+libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logging" % "1.2.0"
 ```
 
 ## Copyright and License
