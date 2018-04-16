@@ -15,7 +15,6 @@
  */
 package com.ccadllc.cedi.dtrace
 
-import cats.Applicative
 import cats.effect.Sync
 import cats.implicits._
 
@@ -55,9 +54,4 @@ case class TraceContext[F[_]](currentSpan: Span, system: TraceSystem[F]) {
     currentSpan.finishFailure(detail) map { us => copy(currentSpan = us) }
 
   override def toString: String = s"[currentSpan=$currentSpan] [system=$system]"
-}
-
-object TraceContext {
-  private[dtrace] def empty[F[_]: Applicative]: TraceContext[F] =
-    TraceContext(Span.empty, TraceSystem.empty[F])
 }

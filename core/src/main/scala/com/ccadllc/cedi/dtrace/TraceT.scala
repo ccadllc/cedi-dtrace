@@ -16,7 +16,7 @@
 package com.ccadllc.cedi.dtrace
 
 import cats.{ Applicative, Functor, Monad, MonadError, ~> }
-import cats.effect.{ Effect, IO, Sync }
+import cats.effect._
 import cats.implicits._
 
 import scala.language.higherKinds
@@ -290,6 +290,34 @@ object TraceT extends TraceTPolyFunctions with TraceTInstances {
   def raiseError[F[_], A](t: Throwable)(implicit F: MonadError[F, Throwable]): TraceT[F, A] = toTraceT(F.raiseError(t): F[A])
 
   /**
+   * Creates a simple, noncancelable `TraceT[F, A]` instance that
+   * executes an asynchronous process on evaluation.
+   *
+   * The given function is being injected with a side-effectful
+   * callback for signaling the final result of an asynchronous
+   * process.
+   *
+   * @param k is a function that should be called with a
+   *       callback for signaling the result once it is ready
+   */
+  def async[F[_], A](cb: (Either[Throwable, A] => Unit) => Unit)(implicit F: Async[F]): TraceT[F, A] = toTraceT(F.async(cb))
+
+  /**
+   * Creates a cancelable `TraceT[F, A]` instance that executes an
+   * asynchronous process on evaluation.
+   *
+   * This builder accepts a registration function that is
+   * being injected with a side-effectful callback, to be called
+   * when the asynchronous process is complete with a final result.
+   */
+  def cancelable[F[_], A](k: (Either[Throwable, A] => Unit) => IO[Unit])(implicit F: Concurrent[F]): TraceT[F, A] = toTraceT(F.cancelable(k))
+
+  /**
+   * Defines a conversion from [[IO]] in terms of the `Concurrent` type class.
+   */
+  def liftIO[F[_], A](ioa: IO[A])(implicit F: Concurrent[F]): TraceT[F, A] = toTraceT(F.liftIO(ioa))
+
+  /**
    * Lifts a program `F` which computes `A` into a `TraceT[F, A]` context.
    * @param fa a program `F` which computes a value `A`.
    * @return a `TraceT[F, A]`
@@ -309,24 +337,61 @@ private[dtrace] sealed trait TraceTPolyFunctions {
 }
 
 private[dtrace] sealed trait TraceTInstances {
-  implicit def effectTraceTInstance[F[_]](implicit F: Effect[F]): Effect[TraceT[F, ?]] = new EffectTraceT[F]
+  implicit def concurrentEffectTraceTInstance[F[_]: ConcurrentEffect: TraceContext]: ConcurrentEffect[TraceT[F, ?]] = new ConcurrentEffectTraceT[F]
 
-  /** An `Effect[TraceT[F, ?]]` typeclass instance given an instance of `Effect[F]`. */
-  protected class EffectTraceT[F[_]](implicit F: Effect[F]) extends Effect[TraceT[F, ?]] {
-    def pure[A](a: A): TraceT[F, A] = TraceT.pure(a)
-    def flatMap[A, B](a: TraceT[F, A])(f: A => TraceT[F, B]): TraceT[F, B] = a flatMap f
-    def tailRecM[A, B](a: A)(f: A => TraceT[F, Either[A, B]]): TraceT[F, B] =
+  /** A `ConcurrentEffect[TraceT[F, ?]]` typeclass instance given an instance of `ConcurrentEffect[F] and an instance of `TraceContext[F]`. */
+  protected class ConcurrentEffectTraceT[F[_]](implicit F: ConcurrentEffect[F], TC: TraceContext[F]) extends ConcurrentEffect[TraceT[F, ?]] {
+    override def pure[A](a: A): TraceT[F, A] = TraceT.pure(a)
+    override def flatMap[A, B](a: TraceT[F, A])(f: A => TraceT[F, B]): TraceT[F, B] = a flatMap f
+    override def delay[A](a: => A): TraceT[F, A] = TraceT.delay(a)
+    override def map[A, B](ta: TraceT[F, A])(f: A => B): TraceT[F, B] = ta.map(f)
+    override val unit: TraceT[F, Unit] = pure(())
+    override def attempt[A](ta: TraceT[F, A]): TraceT[F, Either[Throwable, A]] = ta.attempt
+    override def suspend[A](ta: => TraceT[F, A]): TraceT[F, A] = TraceT.suspend(ta)
+    override def raiseError[A](err: Throwable): TraceT[F, A] = TraceT.raiseError(err)
+    override def handleErrorWith[A](ta: TraceT[F, A])(f: Throwable => TraceT[F, A]): TraceT[F, A] = ta.handleErrorWith(f)
+
+    override def start[A](ta: TraceT[F, A]): TraceT[F, Fiber[TraceT[F, ?], A]] =
+      TraceT.toTraceT(F.start(ta.tie(TC)) map toTraceTFiber)
+
+    override def uncancelable[A](ta: TraceT[F, A]): TraceT[F, A] =
+      TraceT.toTraceT(F.uncancelable(ta.tie(TC)))
+
+    override def onCancelRaiseError[A](ta: TraceT[F, A], e: Throwable): TraceT[F, A] =
+      TraceT.toTraceT(F.onCancelRaiseError(ta.tie(TC), e))
+
+    override def async[A](cb: (Either[Throwable, A] => Unit) => Unit): TraceT[F, A] = TraceT.async(cb)
+
+    override def race[A, B](ta: TraceT[F, A], tb: TraceT[F, B]): TraceT[F, Either[A, B]] =
+      TraceT.toTraceT(F.race(ta.tie(TC), tb.tie(TC)))
+
+    override def racePair[A, B](ta: TraceT[F, A], tb: TraceT[F, B]): TraceT[F, Either[(A, Fiber[TraceT[F, ?], B]), (Fiber[TraceT[F, ?], A], B)]] =
+      TraceT.toTraceT(F.racePair(ta.tie(TC), tb.tie(TC)) map {
+        case Right(((fiba, b))) => Right(toTraceTFiber(fiba) -> b)
+        case Left(((a, fibb))) => Left(a -> toTraceTFiber(fibb))
+      })
+
+    override def cancelable[A](k: (Either[Throwable, A] => Unit) => IO[Unit]): TraceT[F, A] = TraceT.cancelable(k)
+
+    override def runCancelable[A](ta: TraceT[F, A])(cb: Either[Throwable, A] => IO[Unit]): IO[IO[Unit]] =
+      F.runCancelable(ta.tie(TC))(cb)
+
+    override def runAsync[A](ta: TraceT[F, A])(cb: Either[Throwable, A] => IO[Unit]): IO[Unit] =
+      F.runAsync(ta.tie(TC))(cb)
+
+    override def liftIO[A](ioa: IO[A]): TraceT[F, A] = TraceT.liftIO(ioa)
+
+    override def tailRecM[A, B](a: A)(f: A => TraceT[F, Either[A, B]]): TraceT[F, B] =
       f(a).flatMap {
         case Left(a) => tailRecM(a)(f)
         case Right(b) => pure(b)
       }
-    override def delay[A](a: => A): TraceT[F, A] = TraceT.delay(a)
-    def suspend[A](fa: => TraceT[F, A]): TraceT[F, A] = TraceT.suspend(fa)
-    def raiseError[A](err: Throwable): TraceT[F, A] = TraceT.raiseError(err)
-    def handleErrorWith[A](fa: TraceT[F, A])(f: Throwable => TraceT[F, A]): TraceT[F, A] = fa.handleErrorWith(f)
-    def async[A](cb: (Either[Throwable, A] => Unit) => Unit): TraceT[F, A] = TraceT(_ => F.async(cb))
-    def runAsync[A](t: TraceT[F, A])(cb: Either[Throwable, A] => IO[Unit]): IO[Unit] =
-      F.runAsync(t.tie(TraceContext.empty))(cb)
-    override def toString: String = "Effect[TraceT[F, ?]]"
+
+    override def toString: String = "ConcurrentEffect[TraceT[F, ?]]"
+
+    private def toTraceTFiber[A](faf: Fiber[F, A]): Fiber[TraceT[F, ?], A] = new Fiber[TraceT[F, ?], A] {
+      def cancel: TraceT[F, Unit] = TraceT.toTraceT(faf.cancel)
+      def join: TraceT[F, A] = TraceT.toTraceT(faf.join)
+    }
   }
 }
