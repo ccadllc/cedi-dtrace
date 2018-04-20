@@ -19,6 +19,9 @@ import cats.{ Applicative, Functor, Monad, MonadError, ~> }
 import cats.effect._
 import cats.implicits._
 
+import java.util.concurrent.TimeUnit
+
+import scala.concurrent.duration.FiniteDuration
 import scala.language.higherKinds
 
 /**
@@ -337,7 +340,9 @@ private[dtrace] sealed trait TraceTPolyFunctions {
 }
 
 private[dtrace] sealed trait TraceTInstances {
+
   implicit def concurrentEffectTraceTInstance[F[_]: ConcurrentEffect: TraceContext]: ConcurrentEffect[TraceT[F, ?]] = new ConcurrentEffectTraceT[F]
+  implicit def timerTraceTInstance[F[_]: Timer]: Timer[TraceT[F, ?]] = new TraceTTimer[F]
 
   /** A `ConcurrentEffect[TraceT[F, ?]]` typeclass instance given an instance of `ConcurrentEffect[F] and an instance of `TraceContext[F]`. */
   protected class ConcurrentEffectTraceT[F[_]](implicit F: ConcurrentEffect[F], TC: TraceContext[F]) extends ConcurrentEffect[TraceT[F, ?]] {
@@ -393,5 +398,13 @@ private[dtrace] sealed trait TraceTInstances {
       def cancel: TraceT[F, Unit] = TraceT.toTraceT(faf.cancel)
       def join: TraceT[F, A] = TraceT.toTraceT(faf.join)
     }
+  }
+
+  /** A `Timer[TraceT[F, ?]]` typeclass instance given an instance of `Timer[F]. */
+  protected class TraceTTimer[F[_]](implicit F: Timer[F]) extends Timer[TraceT[F, ?]] {
+    override def clockRealTime(unit: TimeUnit): TraceT[F, Long] = TraceT.toTraceT(F.clockRealTime(unit))
+    override def clockMonotonic(unit: TimeUnit): TraceT[F, Long] = TraceT.toTraceT(F.clockMonotonic(unit))
+    override def sleep(duration: FiniteDuration): TraceT[F, Unit] = TraceT.toTraceT(F.sleep(duration))
+    override def shift: TraceT[F, Unit] = TraceT.toTraceT(F.shift)
   }
 }
