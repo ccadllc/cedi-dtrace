@@ -1,6 +1,7 @@
 lazy val circeVersion = "0.9.0"
 
-lazy val logbackVersion = "1.1.7"
+lazy val logbackVersion = "1.2.3"
+lazy val slf4jVersion = "1.7.25"
 
 lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
@@ -16,7 +17,7 @@ lazy val commonSettings = Seq(
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3")
 )
 
-lazy val root = project.in(file(".")).aggregate(core, logging).settings(commonSettings).settings(noPublish)
+lazy val root = project.in(file(".")).aggregate(core, logging, logstash).settings(commonSettings).settings(noPublish)
 
 lazy val core = project.in(file("core")).enablePlugins(SbtOsgi).
   settings(commonSettings).
@@ -34,11 +35,26 @@ lazy val logging = project.in(file("logging")).enablePlugins(SbtOsgi).
       "io.circe" %% "circe-core" % circeVersion,
       "io.circe" %% "circe-generic" % circeVersion,
       "io.circe" %% "circe-java8" % circeVersion,
-      "org.slf4j" % "slf4j-api" % "1.7.21",
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
+      "ch.qos.logback" % "logback-core" % logbackVersion % "test",
+      "ch.qos.logback" % "logback-classic" % logbackVersion % "test",
+      "net.logstash.logback" % "logstash-logback-encoder" % "5.1" % "optional"
+    ),
+    buildOsgiBundle("com.ccadllc.cedi.dtrace.logging")
+  ).dependsOn(core % "compile->compile;test->test")
+
+lazy val logstash = project.in(file("logstash")).enablePlugins(SbtOsgi).
+  settings(commonSettings).
+  settings(
+    name := "dtrace-logstash",
+    parallelExecution in Test := false,
+    libraryDependencies ++= Seq(
+      "org.slf4j" % "slf4j-api" % slf4jVersion,
+      "net.logstash.logback" % "logstash-logback-encoder" % "5.1",
       "ch.qos.logback" % "logback-core" % logbackVersion % "test",
       "ch.qos.logback" % "logback-classic" % logbackVersion % "test"
     ),
-    buildOsgiBundle("com.ccadllc.cedi.dtrace.logging")
+    buildOsgiBundle("com.ccadllc.cedi.dtrace.logstash")
   ).dependsOn(core % "compile->compile;test->test")
 
 lazy val readme = project.in(file("readme")).settings(commonSettings).settings(noPublish).enablePlugins(TutPlugin).settings(
