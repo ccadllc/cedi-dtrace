@@ -15,38 +15,11 @@
  */
 package com.ccadllc.cedi.dtrace
 
-import cats.effect.{ IO, Sync }
+import cats.effect.IO
 
 import org.scalatest.{ BeforeAndAfterEach, Matchers, WordSpec }
 
-import scala.language.higherKinds
-
 class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Matchers with TestData {
-  private class TestEmitter[F[_]](implicit F: Sync[F]) extends TraceSystem.Emitter[F] {
-    class EmitterTestCache {
-      case class EmitterTestEntry(msg: String)
-      private var emitterLogCache: Vector[EmitterTestEntry] = Vector.empty
-      def put(msg: String): Unit = synchronized { emitterLogCache = emitterLogCache :+ EmitterTestEntry(msg.toLowerCase) }
-      def all: Vector[EmitterTestEntry] = emitterLogCache
-      def containingAll(substrings: String*): Vector[EmitterTestEntry] = {
-        def containing(substrings: Seq[String])(predicate: (EmitterTestEntry, Seq[String]) => Boolean): Vector[EmitterTestEntry] = {
-          require(!substrings.isEmpty)
-          val lowerSubstrings = substrings map { _.toLowerCase }
-          emitterLogCache filter { predicate(_, lowerSubstrings) }
-        }
-        containing(substrings) { (e, strings) => strings forall { e.msg.contains } }
-      }
-    }
-    val cache = new EmitterTestCache
-    override def description: String = "Test Emitter"
-    override def emit(tc: TraceContext[F]): F[Unit] = {
-      def formatText(context: TraceContext[F]) = {
-        s"Span: [ span-id=${context.currentSpan.spanId.spanId} ] [ trace-id=${context.currentSpan.spanId.traceId} ] [ parent-id=${context.currentSpan.spanId.parentSpanId} ] [ span-name=${context.currentSpan.spanName} ] [ system-metadata=${context.system.metadata.mkString(",")} ] [ start-time=${context.currentSpan.startTime} ] [ span-duration=${context.currentSpan.duration} ] [ span-success=${context.currentSpan.failure.isEmpty} ] [ failure-detail=${context.currentSpan.failure.fold("N/A")(_.render)} ][ notes=[${context.currentSpan.notes.mkString("] [")}] ]"
-      }
-      F.delay(cache.put(formatText(tc)))
-    }
-  }
-
   "the distributed trace recording mechanism for emitting to a test string emitter" should {
     "support recording a successful current tracing span which is the root span containing same parent and current span IDs" in {
       val testEmitter = new TestEmitter[IO]

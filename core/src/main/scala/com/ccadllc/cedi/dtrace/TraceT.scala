@@ -32,6 +32,8 @@ import scala.language.higherKinds
  * also included in the [[TraceContext]], when the `F[A]` execution is complete.  This class is never
  * instantiated by API users; rather, instances are created via as needed via the public instance
  * and companion object methods described below.
+ * @tparam F - a type constructor representing the effect which is traced.
+ * @tparam A - the result of the effect which is traced.
  */
 final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { self =>
 
@@ -53,12 +55,12 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
    * Creates a new child [[Span]] from the current span represented by this instance, using the
    * default [[Evaluator]] to determine success/failure of the `F[A]` for the purposes of span recording.
    * For example:
-   *   ```
+   *   {{{
    *   queryProductsTraceT.newSpan(
    *     Span.Name("query-products-for-sale",
    *     Note.string("sale-date", date.toString), Note.double("sale-max-price", 80.50)
    *   )
-   *   ```
+   *   }}}
    * @param spanName a descriptive name, emitted when the span is recorded.
    * @param notes one or more [[Note]]s which annotate the span (often the input parameters to the `F[A]`
    *   execution).
@@ -72,14 +74,14 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
    * of annotating the span with notes based on the execution result of the `F[A]`, using the
    * default [[Evaluator]] to determine success/failure of the `F[A]` for the purposes of recording.
    * For example:
-   *   ```
+   *   {{{
    *   queryProductsTraceT.newAnnotatedSpan(
    *     Span.Name("query-products-for-sale",
    *     Note.string("sale-date", date.toString), Note.double("sale-max-price", 80.50)
    *   ) {
    *     case Right(saleProducts) => Vector(Note.string("sale-products", saleProducts.mkString(",")))
    *   }
-   *   ```
+   *   }}}
    * @param spanName a descriptive name, emitted when the span is recorded.
    * @param notes one or more [[Note]]s which annotate the span (often the input parameters to the `F[A]`
    *   execution).
@@ -96,13 +98,13 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
   /**
    * Creates a new child span from the current span represented by this instance, providing for custom
    * evaluation and rendering of the underlying `F[A]` when recording the [[Span]].
-   *   ```
+   *   {{{
    *   queryProductsTraceT.newSpan(
    *     Span.Name("query-products-for-sale",
    *     Evaluator.resultToFailure[Vector[Product]
    *     Note.string("sale-date", date.toString), Note.double("sale-max-price", 80.50)
    *   )
-   *   ```
+   *   }}}
    * @param spanName a descriptive name, emitted when the span is recorded.
    * @param evaluator an [[Evaluator]] which converts either a `Throwable` or `A` to an optional [[FailureDetail]].
    * @param notes one or more [[Note]]s which annotate the span (often the input parameters to the `F[A]`
@@ -117,14 +119,14 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
    * of annotating the span with notes based on the execution result of the `F[A]`, using the
    * a custom [[Evaluator]] to determine success/failure of the `F[A]` for the purposes of recording.
    * For example:
-   *   ```
+   *   {{{
    *   queryProductsTraceT.newAnnotatedSpan(
    *     Span.Name("query-products-for-sale",
    *     Note.string("sale-date", date.toString), Note.double("sale-max-price", 80.50)
    *   ) {
    *     case Right(saleProducts) => Vector(Note.string("sale-products", saleProducts.mkString(",")))
    *   }
-   *   ```
+   *   }}}
    * @param spanName a descriptive name, emitted when the span is recorded.
    * @param notes one or more [[Note]]s which annotate the span (often the input parameters to the `F[A]`
    *   execution).

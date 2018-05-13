@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Combined Conditional Access Development, LLC.
+ * Copyright 2018 Combined Conditional Access Development, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,22 @@
  * limitations under the License.
  */
 package com.ccadllc.cedi.dtrace
-package logging
 
-import scala.language.higherKinds
-import scala.concurrent.duration._
+import cats.effect.Sync
 
 import java.time.Instant
 import java.util.UUID
 
 import org.scalacheck.{ Arbitrary, Gen }
+
+import scala.concurrent.duration._
+import scala.language.higherKinds
+
 import Arbitrary.arbitrary
 
-import cats.effect.Sync
-
 trait TraceGenerators {
+
+  def testEmitter[F[_]: Sync]: TraceSystem.Emitter[F] = new TestEmitter[F]
 
   def genOption[A](g: Gen[A]): Gen[Option[A]] = Gen.oneOf(Gen.const(Option.empty[A]), g map Option.apply)
 
@@ -51,7 +53,7 @@ trait TraceGenerators {
 
   def genTraceSystemMetadata: Gen[Map[String, String]] = Gen.nonEmptyMap(genTraceSystemMetadataPair)
 
-  def genTraceSystem[F[_]: Sync]: Gen[TraceSystem[F]] = genTraceSystemMetadata map { TraceSystem(_, new LogEmitter[F]) }
+  def genTraceSystem[F[_]: Sync]: Gen[TraceSystem[F]] = genTraceSystemMetadata map { TraceSystem(_, testEmitter[F]) }
 
   def genSpanId: Gen[SpanId] = for {
     traceId <- genUUID

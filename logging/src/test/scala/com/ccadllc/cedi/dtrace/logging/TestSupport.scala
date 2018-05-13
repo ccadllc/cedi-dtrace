@@ -16,7 +16,7 @@
 package com.ccadllc.cedi.dtrace
 package logging
 
-import cats.effect.IO
+import cats.effect.{ IO, Sync }
 
 import io.circe._
 import io.circe.syntax._
@@ -26,13 +26,17 @@ import org.scalacheck.Arbitrary
 import org.scalatest.{ Matchers, Suite, WordSpecLike }
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
 
+import scala.language.higherKinds
+
 import shapeless.Lazy
 
 trait TestSupport extends WordSpecLike with Matchers with GeneratorDrivenPropertyChecks with TraceGenerators with TestData {
   self: Suite =>
 
+  override def testEmitter[F[_]: Sync]: TraceSystem.Emitter[F] = new LogEmitter[F]
+
   implicit override val generatorDrivenConfig: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful = 100)
-  val salesManagementSystem = TraceSystem(testSystemMetadata, new LogEmitter[IO])
+  val salesManagementSystem = TraceSystem(testSystemMetadata, testEmitter[IO])
   val calculateQuarterlySalesTraceContext = TraceContext(quarterlySalesCalculationSpan, salesManagementSystem)
 
   def encodeArbitraryJson[A: Arbitrary](implicit encoder: Lazy[Encoder[A]]): Unit = {
