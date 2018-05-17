@@ -13,7 +13,7 @@ Quick links:
 
 #### Overview
 
-The Cedi Distributed Trace library provides the capability to instrument effectful programs such that logical traces can be derived and recorded across physical processes and machines.  This instrumentation is expressed in a format that is interoperable with [Comcast Money](https://github.com/Comcast/money).  This library consists of immutable data structures which represent the instrumentation and an interpreter - the `TraceT[F, A]` - which annotates the underlying action (represented as an `F[A]` where `F` is the effectful action and `A` is the result type).  The `TraceT[F, A]` can be thought of as a function from a `TraceContext` (the cursor into the active trace) to an effectful program whose execution you wish to trace (the effectful program can be any `F`, such as `cats.effect.IO`, though often you'll need an implicit `cats.effect.SYnc[F]` instance if you using something other than `IO`).  Because `IO` is often used as the effectful data type, this library provides a type alias `TraceIO[A]` for `TraceT[IO, A]` and convenience methods to work with this type alias (the latter included in a `TraceIO` object).
+The Cedi Distributed Trace library provides the capability to instrument effectful programs such that logical traces can be derived and recorded across physical processes and machines.  This instrumentation is expressed in a format that is interoperable with [Comcast Money](https://github.com/Comcast/money) and [X-B3/Zipkin](https://istio.io/docs/tasks/telemetry/distributed-tracing.html), providing modules for generating and parsing compliant HTTP headers from/into `TraceContext`s.  Additionally, a module for the use of these headers within [http4s](https://http4s.org) clients and servers is also provided.  The library core consists of immutable data structures which represent the instrumentation and an interpreter - the `TraceT[F, A]` - which annotates the underlying action (represented as an `F[A]` where `F` is the effectful action and `A` is the result type).  The `TraceT[F, A]` can be thought of as a function from a `TraceContext` (the cursor into the active trace) to an effectful program whose execution you wish to trace (the effectful program can be any `F`, such as `cats.effect.IO`, though often you'll need an implicit `cats.effect.Sync[F]` instance if you using something other than `IO`).  Because `IO` is often used as the effectful data type, this library provides a type alias `TraceIO[A]` for `TraceT[IO, A]` and convenience methods to work with this type alias (the latter included in a `TraceIO` object).
 
 #### Design Constraints
 
@@ -21,21 +21,28 @@ This library is implemented using functional data structures and techniques and 
 It is non-blocking with a small footprint and incurs a reasonably low overhead.
 No special thread pools or piggybacking on thread locals and the like are employed.
 `dtrace` is built on Scala and its core constructs use the [Cats Effect](https://github.com/typelevel/cats-effect) library.
-It is interoperable with [Comcast Money](https://github.com/Comcast/money).  `Money` is a great library and `dtrace` was created to complement it, providing a purely functional model where `Money` has to make some concessions to Java interoperability (it is certainly conceivable that `dtrace` could at some point be incorporated into `Money`).
+It is interoperable with [Comcast Money](https://github.com/Comcast/money) and [Zipkin/X-B3](https://istio.io/docs/tasks/telemetry/distributed-tracing.html).
 
 #### Background
 
-A Money-compliant *Distributed Trace* is a directed graph of *Span*s. A *Span* identifies a branch of the overall *Trace* representing a logical step or action, executing within the local process.  All but the first *Span* in a *Trace* has a Parent *Span* indicating the upstream operation which triggered its child.  *Span*'s are identified by a unique *Span Identifier* (`SpanId`) along with a parent `SpanId` (and the overall *Distributed Trace* GUID).  A *Trace*'s first *Span* has a parent `SpanId` equal to its own.  Each *Span* also consists of metadata about the action, including whether its action executed successfully or failed (and if a failure, details on it), the duration of the action execution in microseconds, where the *Span* executed (in which application; on which node; in which process; within what environment, etc), and, optionally, individual `Note`s specific to the *Span* (e.g., the `Note` with the *Host Address* of a cable settop box for an action issuing an initialize command to the device).  A logical *Trace* (for example, "issue an initialize to a settop box") might originate from a business system with its transmission *Span* passed in an HTTP header to a microservice running in the cloud which executes *Span*s to query a persistent data store before making a binary RPC call (recorded in a *Span*) to a second microservice, passing the current trace information in the RPC context, before that second microservice finally issues the initialize command to the settop, ending the *Trace*.  The *dtrace library* provides a logging `Emitter` to record the *Span*s, as they are executed, to the configured logging system in both JSON and text formats but also provides the means by which custom emitters can be provided.
+A *Distributed Trace* is a directed graph of *Span*s. A *Span* identifies a branch of the overall *Trace* representing a logical step or action, executing within the local process.  All but the first *Span* in a *Trace* has a Parent *Span* indicating the upstream operation which triggered its child.  *Span*'s are identified by a unique *Span Identifier* (`SpanId`) along with a parent `SpanId` (and the overall *Distributed Trace* GUID).  A *Trace*'s first *Span* has a parent `SpanId` equal to its own.  Each *Span* also consists of metadata about the action, including whether its action executed successfully or failed (and if a failure, details on it), the duration of the action execution in microseconds, where the *Span* executed (in which application; on which node; in which process; within what environment, etc), and, optionally, individual `Note`s specific to the *Span* (e.g., the `Note` with the *Host Address* of a cable settop box for an action issuing an initialize command to the device).  A logical *Trace* (for example, "issue an initialize to a settop box") might originate from a business system with its transmission *Span* passed in an HTTP header to a microservice running in the cloud which executes *Span*s to query a persistent data store before making a binary RPC call (recorded in a *Span*) to a second microservice, passing the current trace information in the RPC context, before that second microservice finally issues the initialize command to the settop, ending the *Trace*.  The *dtrace library* provides a logging `Emitter` to record the *Span*s, as they are executed, to the configured logging system in both JSON and text formats but also provides the means by which custom emitters can be provided.
 
 
 ### <a id="usage"></a> Examples of Use
 
 ```tut:silent
 import cats.effect.IO
+
 import java.time.Instant
 import java.util.UUID
+
+import org.http4s._
+import org.http4s.dsl.io._
+
 import com.ccadllc.cedi.dtrace._
+import com.ccadllc.cedi.dtrace.interop.htt4s._
 import com.ccadllc.cedi.dtrace.logging.LogEmitter
+
 import TraceSystem._
 
 /*
@@ -44,7 +51,6 @@ import TraceSystem._
 case class Region(name: String)
 case class SalesReport(total: Double, message: String)
 case class SalesFigure(region: String, product: String, units: Int, total: Double)
-case class HttpHeader(name: String, value: String)
 
 /*
  * Near the beginning of the universe, create a `TraceSystem` object to
@@ -71,8 +77,10 @@ val traceSystem = TraceSystem(
   emitter = LogEmitter[IO]
 )
 
+/* Compose the Money and X-B3 HTTP Trace Header encoder/decoder into an aggregate (generating both on encoded and preferring X-B3 on decode) */
+implicit val headerCodec: HeaderCodec = interop.xb3.headerCodec.andThen(interop.money.headerCodec)
+
 val region = Region("Philly")
-val httpHeader = HttpHeader("content-type", "application/json")
 
 def retrieveSalesFigures(region: Region): IO[Vector[SalesFigure]] = IO(
   Vector(SalesFigure("PA", "widget2000", 200000, 850000.0), SalesFigure("NJ", "widget1000", 100000, 550003.50))
@@ -98,14 +106,6 @@ def generateSalesReport(region: Region): TraceT[IO, SalesReport] = for {
 } yield report
 
 /*
- * Retrieve the span, in this example, contained in the HTTP header from the originating business system,
- * if it exists.  This logic may be included an an `akka-http` directive, for example.
- */
-val rootSpanEither = SpanId.fromHeader(httpHeader.name, httpHeader.value).right.map {
-  spanId => Span.newChild[IO](spanId, Span.Name("sales-management-system-root"))
-}
-
-/*
  * We add a Span to the overall `generateSalesReport` action,
  * showing the ability to create Span notes from the traced action result
  * with `newAnnotatedSpan`.
@@ -115,11 +115,11 @@ val tracedIO: TraceT[IO, SalesReport] = generateSalesReport(region).newAnnotated
 ) { case Right(report) => Vector(Note.string("sales-report", report.toString)) }
 
 /*
- * We convert our traced io to an IO.
+ * We convert our traced io to an IO for a non-HTTP app (generating a new root trace)
  */
 val io: IO[SalesReport] = for {
-  /* If there was no Span originating from another system found in the HTTP Header, we create a local root Span */
-  rootSpan <- rootSpanEither.right.getOrElse(Span.root[IO](Span.Name("locally-initiated-report")))
+  /* We create a local root Span (we could also extract it from an HTTP header using the `money`, `xb3` and `http4s` modules - see alternate example below) */
+  rootSpan <- Span.root[IO](Span.Name("locally-initiated-report"))
   /*
    * The tracedIO we've derived earlier around `generateSalesReport` (which includes
    * the retrieval and calculate sales figures nested actions, each with their own Spans) is an instance of `TraceT[IO, A]`,
@@ -127,15 +127,26 @@ val io: IO[SalesReport] = for {
    * (reiterating that we're using `IO` in this example, but again, `IO` can be substituted with any
    * `F`).  When we are done building up these annotated `TraceT` instances, we need to "tie the knot" by
    * converting the top-level instance back into a plain `IO` again before we can actually run it. This is
-   * accomplished by applying the root `Span` for this process (in this example, the one we extracted from an
-   * HTTP header) using the `trace` method on on our top-level `TraceT` instance (represented here by the
-   * `tracedIO` value).
+   * accomplished by applying the root `Span` for this process using the `trace` method on on our top-level
+   * `TraceT` instance (represented here by the `tracedIO` value).
    */
   result <- tracedIO.trace(TraceContext(rootSpan, traceSystem))
 } yield result
 
 /*
- * Now, at the end of the universe, we run the io program.  This will result, in this example using the supplied logging
+ * Alternate flow: We convert our traced io to an IO for a htt4s app, possibly continuing an existing trace, if we found
+ * either X-B3 or Money HTTP headers in the request; otherwise, a new root trace is generated.
+ * We could compose this server action or pass it directly to an http4s blaze server for execution.
+ */
+val http4sServerAction = HttpService[IO] {
+  case request @ GET -> Root / "salesreport" / accountRep =>
+    tracedAction(request, Span.Name("sales-report"), Note.string("account-rep", accountRep))(tracedIO).flatMap {
+      salesReport => Response[IO](status = Status.Ok).withBody(salesReport.asJson)
+    }
+}
+
+/*
+ * Main flow: Now, at the end of the universe, we run the io program.  This will result, in this example using the supplied logging
  * framework Emitter, in the following items logged via the `distributed-trace.txt` logger:
  *   Span: [ span-id=-4268861818882462019 ] [ trace-id=2a71fb7b-f38d-4f6a-a4d1-229c6c5bc963 ] [ parent-id=-6262761813211462065 ]
  *     [ span-name=retrieve-sales-figures] [ app-name=sales-management-system ] [ start-time=2016-09-26T00:29:14.802Z ]
@@ -169,7 +180,6 @@ Cedi Distributed Trace supports Scala 2.11 and 2.12. This distribution is publis
 
 This is the core functionality, recording trace and span information over effectful programs, passing these recorded events to registred emitters for disposition.
 
-
 ```scala
 libraryDependencies += "com.ccadllc.cedi" %% "dtrace-core" % "1.3.0-SNAPSHOT"
 ```
@@ -180,6 +190,38 @@ This component provides emitters for logging the trace spans in text and/or JSON
 
 ```scala
 libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logging" % "1.3.0-SNAPSHOT"
+```
+
+#### dtrace-logstash
+
+This component provides emitters for logging in logstash-compliant format.
+
+```scala
+libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logstash" % "1.3.0-SNAPSHOT"
+```
+
+#### dtrace-money interoperability
+
+This component provides an instance of the core HeaderCodec in order to encode and decode Money-compliant HTTP headers.
+
+```scala
+libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-money" % "1.3.0-SNAPSHOT"
+```
+
+#### dtrace-xb3 interoperability
+
+This component provides an insance of the core HeaderCodec in order to encode and decode X-B3/Zipkin-compliant HTTP headers.
+
+```scala
+libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-xb3" % "1.3.0-SNAPSHOT"
+```
+
+#### dtrace-http4s interoperability
+
+This component provides convenience functions to ingest trace-related HTTP headers (such as Money or X-B3) in an http4s server-side service and to propagate trace-related HTTP headers within an http4s client-side request to a remote entity.  This module is used in combination with either or both the dtrace-xb3 and dtrace-money modules.  If you have another protocol you wish to use instead, it will likewise interoperate with any implementation of the core HeaderCodec trait in implicit scope.
+
+```scala
+libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-http4s" % "1.3.0-SNAPSHOT"
 ```
 
 ## Copyright and License

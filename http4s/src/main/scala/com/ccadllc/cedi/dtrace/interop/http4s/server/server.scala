@@ -1,0 +1,89 @@
+/*
+ * Copyright 2018 Combined Conditional Access Development, LLC.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.ccadllc.cedi.dtrace
+package interop
+package http4s
+
+import cats.effect.Sync
+import cats.implicits._
+
+import org.http4s.{ Header => H4sHeader, _ }
+import org.http4s.parser.HttpHeaderParser
+import org.http4s.util.CaseInsensitiveString
+
+import scala.language.higherKinds
+
+package object server {
+  /**
+   * This function drops the parser for the built-in `http4s` `X-B3-Trace-Id` header since it only successfully parses 64 bit
+   * values, failing on 128 bit values and with cedi dtrace, the 128 bit value will be produced and are preferred
+   * to consume in order to represent traces uniquely in a distributed environment.  Once `http4s` updates the parser to handle
+   * 128 bit values, this can be removed.  This should be invoked in your initialization code.
+   * Once [[https://github.com/http4s/http4s/issues/1859 this issue]] is resolved, this can be removed.
+   *
+   * @param F - an instance of `cats.effect.Sync` for the effect type `F`, used to delay the side effecting action.
+   * @tparam F - a type constructor representing the effect in which to execute the side-effecting action to drop the
+   *   X-B3 Trace ID header from the global header parser registry.
+   */
+  def dropBuiltInXb3Headers[F[_]](implicit F: Sync[F]): F[Unit] =
+    F.delay(HttpHeaderParser.dropParser(CaseInsensitiveString("X-B3-TRACEID"))).void
+
+  /**
+   * This function can be used to execute a traced action within an `HttpService[F]` with
+   * the [[TraceContext]] of `F` possibly derived from HTTP headers, given instances of `cats.effect.Sync[F]`, [[HeaderCodec]],
+   * and [[TraceSystem]] of `F` in implicit scope. The [[HeaderCodec]] is usually imported from either
+   * `com.ccadllc.cedi.dtrace.money._`, or `com.ccadllc.cedi.dtrace.xb3._` for Money or X-B3 trace headers, respectively.
+   * You can also provide your own [[HeaderCodec]] if, for instance, you wish to compose these into an aggregate
+   * or there are other types of trace headers you wish to extract.  This function also requires that you
+   * provide the initial `Span.Name` along with any [[Note]]s you wish to include in the initial [[Span]], both dependent
+   * on the particular action.
+   * {{{
+   *  import com.ccadllc.cedi.dtrace._
+   *  import com.ccadllc.cedi.dtrace.http4s._
+   *  import com.ccadllc.cedi.dtrace.xb3._
+   *  ...
+   *  type Json = ???
+   *  def myTracedAction: TraceIO[Json] = ???
+   *  ...
+   *  val serverAction = HttpService[IO] {
+   *    case request @ GET -> Root / "mypersonaljson" / user =>
+   *      tracedAction(request, Span.Name("user-action"), Note.string("user", user)) {
+   *        myTracedAction
+   *      }.flatMap { resultJson => Response[IO](status = Status.Ok).withBody(resultJson) }
+   *  }
+   * }}}
+   *
+   * @param req the `Request[F]` representing the HTTP request.  Used to examine the headers (and potentially other parts of the
+   *   request) in order to derive a trace [[Span]], if present (a new root [[Span]] will be created if not).
+   * @param spanName the name of the [[Span]] which will be either the child of any [[Span]] found within the `Request[F]` or the
+   *   root if no existing [[Span]] was found.
+   *   request) in order to derive a trace [[Span]], if present (a new root [[Span]] will be created if not).
+   * @param notes any additional metadata to include with the [[Span]].
+   * @tparam F - a type constructor representing the effect in which to execute the traced action.
+   * @tparam A - the result of the traced action to be executed.
+   * @return the traced action, unwrapped to its underlying effect, the tracing having been applied (once the effect is run).
+   */
+  def tracedAction[F[_], A](req: Request[F], spanName: Span.Name, notes: Note*)(action: TraceT[F, A])(implicit codec: HeaderCodec, F: Sync[F], ts: TraceSystem[F]): F[A] = codec.decode(fromHttp4s(req.headers.toList)) match {
+    case Right(spanIdMaybe) =>
+      spanIdMaybe.fold(Span.root[F](spanName, notes: _*)) { Span.newChild[F](_, spanName, notes: _*) }.flatMap { span =>
+        action.trace(TraceContext(span, ts))
+      }
+    case Left(errDetail) => F.raiseError[A](errDetail)
+  }
+
+  private def fromHttp4s(h4sHeaders: List[H4sHeader]): List[Header] =
+    h4sHeaders map { h => Header(Header.CaseInsensitiveName(h.name.value), Header.Value(h.value)) }
+}

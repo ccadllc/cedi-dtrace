@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Combined Conditional Access Development, LLC.
+ * Copyright 2018 Combined Conditional Access Development, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,13 +95,13 @@ package object dtrace {
      * Creates a new child [[Span]] in the `TraceT[F, A]` created by lifting this `F[A]`, using the
      * default [[Evaluator]] to determine success/failure of the `F[A]` for the purposes of span recording.
      * For example:
-     *   ```
+     *   {{{
      *   val io = IO(some computation)
      *   io.newSpan(
      *     Span.Name("query-products-for-sale",
      *     Note.string("sale-date", date.toString), Note.double("sale-max-price", 80.50)
      *   )
-     *   ```
+     *   }}}
      * @param spanName - a descriptive name, emitted when the span is recorded.
      * @param notes - one or more [[Note]]s which annotate the span (often the input parameters to the `F[A]`
      *   execution).
@@ -115,7 +115,7 @@ package object dtrace {
      * providing the capability of annotating the span with notes based on the execution result of the `F[A]`,
      * using the default [[Evaluator]] to determine success/failure of the `F[A]` for the purposes of span recording.
      * For example:
-     *   ```
+     *   {{{
      *   val io = IO(some computation)
      *   io.newAnnotatedSpan(
      *     Span.Name("query-products-for-sale",
@@ -123,7 +123,7 @@ package object dtrace {
      *   ) {
      *     case Right(saleProducts) => Vector(Note.string("sale-products", saleProducts.mkString(",")))
      *   }
-     *   ```
+     *   }}}
      * @param spanName - a descriptive name, emitted when the span is recorded.
      * @param notes - one or more [[Note]]s which annotate the span (often the input parameters to the `F[A]`
      *   execution).
@@ -142,14 +142,14 @@ package object dtrace {
      * Creates a new child [[Span]] in the `TraceT[F, A]` created by lifting this `F[A]`, providing for custom
      * evaluation and rendering of the underlying `F[A]` when recording the [[Span]].
      * For example:
-     *   ```
+     *   {{{
      *   val io = IO(some computation)
      *   io.newSpan(
      *     Span.Name("query-products-for-sale",
      *     Evaluator.resultToFailure[Vector[Product]
      *     Note.string("sale-date", date.toString), Note.double("sale-max-price", 80.50)
      *   )
-     *   ```
+     *   }}}
      * @param spanName - a descriptive name, emitted when the span is recorded.
      * @param evaluator - an [[Evaluator]] which converts either a `Throwable` or `A` to an optional [[FailureDetail]].
      * @param notes - one or more [[Note]]s which annotate the span (often the input parameters to the `F[A]`
@@ -164,7 +164,7 @@ package object dtrace {
      * of annotating the span with notes based on the execution result of the `F[A]`, using the
      * a custom [[Evaluator]] to determine success/failure of the `F[A]` for the purposes of recording.
      * For example:
-     *   ```
+     *   {{{
      *   val io = IO(some computation)
      *   io.newAnnotatedSpan(
      *     Span.Name("query-products-for-sale",
@@ -172,7 +172,7 @@ package object dtrace {
      *   ) {
      *     case Right(saleProducts) => Vector(Note.string("sale-products", saleProducts.mkString(",")))
      *   }
-     *   ```
+     *   }}}
      * @param spanName - a descriptive name, emitted when the span is recorded.
      * @param notes - one or more [[Note]]s which annotate the span (often the input parameters to the `F[A]`
      *   execution).
