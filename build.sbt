@@ -65,14 +65,14 @@ lazy val xb3 = project.in(file("xb3")).enablePlugins(SbtOsgi).
   settings(
     name := "dtrace-xb3",
     libraryDependencies += "org.scodec" %% "scodec-bits" % "1.1.5",
-    buildOsgiBundle("com.ccadllc.cedi.dtrace.xb3")
+    buildOsgiBundle("com.ccadllc.cedi.dtrace.interop.xb3")
   ).dependsOn(core % "compile->compile;test->test")
 
 lazy val money = project.in(file("money")).enablePlugins(SbtOsgi).
   settings(commonSettings).
   settings(
     name := "dtrace-money",
-    buildOsgiBundle("com.ccadllc.cedi.dtrace.money")
+    buildOsgiBundle("com.ccadllc.cedi.dtrace.interop.money")
   ).dependsOn(core % "compile->compile;test->test")
 
 lazy val http4s = project.in(file("http4s")).enablePlugins(SbtOsgi).
@@ -84,7 +84,7 @@ lazy val http4s = project.in(file("http4s")).enablePlugins(SbtOsgi).
       "org.http4s" %% "http4s-core" % http4sVersion,
       "org.http4s" %% "http4s-dsl" % http4sVersion % "test"
     ),
-    buildOsgiBundle("com.ccadllc.cedi.dtrace.http4s")
+    buildOsgiBundle("com.ccadllc.cedi.dtrace.interop.http4s")
   ).dependsOn(core % "compile->compile;test->test", money % "compile->test", xb3 % "compile->test")
 
 lazy val readme = project.in(file("readme")).settings(commonSettings).settings(noPublish).enablePlugins(TutPlugin).settings(
