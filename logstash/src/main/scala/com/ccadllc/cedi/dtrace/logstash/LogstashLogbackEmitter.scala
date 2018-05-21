@@ -29,23 +29,25 @@ final class LogstashLogbackEmitter[F[_]](implicit F: Sync[F]) extends TraceSyste
 
   final val description: String = "Logstash Logback Emitter"
   final def emit(tc: TraceContext[F]): F[Unit] = F.delay {
-    val s = tc.currentSpan
-    val marker: LogstashMarker =
-      append("where", tc.system.metadata.asJava).
-        and[LogstashMarker](append("root", s.root)).
-        and[LogstashMarker](append("trace-id", s.spanId.traceId.toString)).
-        and[LogstashMarker](append("span-id", s.spanId.spanId)).
-        and[LogstashMarker](append("parent-id", s.spanId.parentSpanId)).
-        and[LogstashMarker](append("span-name", s.spanName.value)).
-        and[LogstashMarker](append("start-time", DateTimeFormatter.ISO_INSTANT.format(s.startTime))).
-        and[LogstashMarker](append("span-success", s.failure.isEmpty)).
-        and[LogstashMarker](append("failure-detail", s.failure.map(_.render).orNull)).
-        and[LogstashMarker](append("span-duration", s.duration.toMicros)).
-        and[LogstashMarker](append("notes", s.notes.map(n => n.name.value -> n.value).collect { case (name, Some(value)) => name -> value.toString }.toMap.asJava))
-    logger.debug(marker, "Span {} {} after {} microseconds",
-      s.spanName.value,
-      if (s.failure.isEmpty) "succeeded" else "failed",
-      s.duration.toMicros.toString)
+    if (logger.isDebugEnabled) {
+      val s = tc.currentSpan
+      val marker: LogstashMarker =
+        append("where", tc.system.metadata.asJava).
+          and[LogstashMarker](append("root", s.root)).
+          and[LogstashMarker](append("trace-id", s.spanId.traceId.toString)).
+          and[LogstashMarker](append("span-id", s.spanId.spanId)).
+          and[LogstashMarker](append("parent-id", s.spanId.parentSpanId)).
+          and[LogstashMarker](append("span-name", s.spanName.value)).
+          and[LogstashMarker](append("start-time", DateTimeFormatter.ISO_INSTANT.format(s.startTime))).
+          and[LogstashMarker](append("span-success", s.failure.isEmpty)).
+          and[LogstashMarker](append("failure-detail", s.failure.map(_.render).orNull)).
+          and[LogstashMarker](append("span-duration", s.duration.toMicros)).
+          and[LogstashMarker](append("notes", s.notes.map(n => n.name.value -> n.value).collect { case (name, Some(value)) => name -> value.toString }.toMap.asJava))
+      logger.debug(marker, "Span {} {} after {} microseconds",
+        s.spanName.value,
+        if (s.failure.isEmpty) "succeeded" else "failed",
+        s.duration.toMicros.toString)
+    }
   }
 }
 
