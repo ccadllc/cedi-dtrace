@@ -88,5 +88,8 @@ lazy val http4s = project.in(file("http4s")).enablePlugins(SbtOsgi).
   ).dependsOn(core % "compile->compile;test->test", money % "compile->test", xb3 % "compile->test")
 
 lazy val readme = project.in(file("readme")).settings(commonSettings).settings(noPublish).enablePlugins(TutPlugin).settings(
-  tutTargetDirectory := baseDirectory.value / ".."
-).dependsOn(core, logging)
+  tutTargetDirectory := baseDirectory.value / "..",
+  libraryDependencies ++= Seq(
+    "org.http4s" %% "http4s-dsl" % http4sVersion,
+    "org.http4s" %% "http4s-circe" % http4sVersion)
+).dependsOn(core, logging, money, xb3, http4s)
