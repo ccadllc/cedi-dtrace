@@ -364,27 +364,29 @@ private[dtrace] sealed trait TraceTConcurrentEffectInstance extends TraceTConcur
 
 private[dtrace] sealed trait TraceTConcurrentInstance extends TraceTAsyncInstance {
 
-  implicit def concurrentTraceTInstance[F[_]: Concurrent: TraceContext]: Concurrent[TraceT[F, ?]] = new ConcurrentTraceT[F]
+  implicit def concurrentTraceTInstance[F[_]: Concurrent]: Concurrent[TraceT[F, ?]] = new ConcurrentTraceT[F]
 
-  /** A `Concurrent[TraceT[F, ?]]` typeclass instance given an instance of `Concurrent[F]` and an instance of `TraceContext[F]`. */
-  protected class ConcurrentTraceT[F[_]](implicit F: Concurrent[F], TC: TraceContext[F]) extends AsyncTraceT[F] with Concurrent[TraceT[F, ?]] {
+  /** A `Concurrent[TraceT[F, ?]]` typeclass instance given an instance of `Concurrent[F]`. */
+  protected class ConcurrentTraceT[F[_]](implicit F: Concurrent[F]) extends AsyncTraceT[F] with Concurrent[TraceT[F, ?]] {
     override def cancelable[A](k: (Either[Throwable, A] => Unit) => IO[Unit]): TraceT[F, A] = TraceT.toTraceT(F.cancelable(k))
     override def uncancelable[A](ta: TraceT[F, A]): TraceT[F, A] =
-      TraceT.toTraceT(F.uncancelable(ta.tie(TC)))
+      TraceT.ask[F].flatMap { tc => TraceT.toTraceT(F.uncancelable(ta.tie(tc))) }
     override def onCancelRaiseError[A](ta: TraceT[F, A], e: Throwable): TraceT[F, A] =
-      TraceT.toTraceT(F.onCancelRaiseError(ta.tie(TC), e))
+      TraceT.ask[F].flatMap { tc => TraceT.toTraceT(F.onCancelRaiseError(ta.tie(tc), e)) }
 
     override def start[A](ta: TraceT[F, A]): TraceT[F, Fiber[TraceT[F, ?], A]] =
-      TraceT.toTraceT(F.start(ta.tie(TC)) map toTraceTFiber)
+      TraceT.ask[F].flatMap { tc => TraceT.toTraceT(F.start(ta.tie(tc)) map toTraceTFiber) }
 
     override def racePair[A, B](ta: TraceT[F, A], tb: TraceT[F, B]): TraceT[F, Either[(A, Fiber[TraceT[F, ?], B]), (Fiber[TraceT[F, ?], A], B)]] =
-      TraceT.toTraceT(F.racePair(ta.tie(TC), tb.tie(TC)) map {
-        case Right(((fiba, b))) => Right(toTraceTFiber(fiba) -> b)
-        case Left(((a, fibb))) => Left(a -> toTraceTFiber(fibb))
-      })
+      TraceT.ask[F].flatMap { tc =>
+        TraceT.toTraceT(F.racePair(ta.tie(tc), tb.tie(tc)) map {
+          case Right(((fiba, b))) => Right(toTraceTFiber(fiba) -> b)
+          case Left(((a, fibb))) => Left(a -> toTraceTFiber(fibb))
+        })
+      }
 
     override def race[A, B](ta: TraceT[F, A], tb: TraceT[F, B]): TraceT[F, Either[A, B]] =
-      TraceT.toTraceT(F.race(ta.tie(TC), tb.tie(TC)))
+      TraceT.ask[F].flatMap { tc => TraceT.toTraceT(F.race(ta.tie(tc), tb.tie(tc))) }
 
     override def liftIO[A](ioa: IO[A]): TraceT[F, A] = Concurrent.liftIO(ioa)(this)
 
