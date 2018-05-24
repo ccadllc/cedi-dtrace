@@ -41,14 +41,15 @@ class XB3HeaderCodec extends HeaderCodec {
 
   override def decode(headers: List[Header]): Either[Header.DecodeFailure, Option[SpanId]] = (for {
     traceId <- OptionT(headers.collectFirst { case Header(TraceIdHeaderName, value) => value }.traverse { decodeTraceId })
-    parentIdMaybe <- OptionT.liftF(headers.collectFirst { case Header(ParentIdHeaderName, value) => value }.traverse { decodeSpanId })
-    spanId <- OptionT(headers.collectFirst { case Header(SpanIdHeaderName, value) => value }.traverse { decodeSpanId })
+    parentIdMaybe <- OptionT.liftF(headers.collectFirst { case Header(ParentIdHeaderName, value) => value }.traverse { decodeSpanId(ParentIdHeaderName, _) })
+    spanId <- OptionT(headers.collectFirst { case Header(SpanIdHeaderName, value) => value }.traverse { decodeSpanId(SpanIdHeaderName, _) })
   } yield SpanId(traceId, parentIdMaybe getOrElse spanId, spanId)).value
 
   private def encodeSpanId(spanId: Long): Header.Value = Header.Value(ByteVector.fromLong(spanId).toHex)
   private def encodeTraceId(traceId: UUID): Header.Value = Header.Value(ByteVector.fromUUID(traceId).toHex)
-  private def decodeSpanId(encoded: Header.Value): Either[Header.DecodeFailure, Long] =
+  private def decodeSpanId(name: Header.CaseInsensitiveName, encoded: Header.Value): Either[Header.DecodeFailure, Long] = if (encoded.value.size === SpanIdMaxCharSize) {
     ByteVector.fromHexDescriptive(encoded.value).map { _.toLong() }.leftMap { Header.DecodeFailure(_, None) }
+  } else Either.left(Header.DecodeFailure(s"The $name must be a hexidecimal value $SpanIdMaxCharSize characters in length but was ${encoded.value}", None))
 
   private def decodeTraceId(encoded: Header.Value): Either[Header.DecodeFailure, UUID] = for {
     bv <- ByteVector.fromHexDescriptive(encoded.value).leftMap { Header.DecodeFailure(_, None) }
@@ -61,7 +62,7 @@ class XB3HeaderCodec extends HeaderCodec {
     case TraceIdShortFormByteSize =>
       Either.right(new UUID(bv.toLong(), 0L))
     case other =>
-      Either.left(Header.DecodeFailure(s"The $TraceIdHeaderName must be either $TraceIdShortFormByteSize or $TraceIdLongFormByteSize but was ${bv.toHex}", None))
+      Either.left(Header.DecodeFailure(s"The $TraceIdHeaderName must be a hexidecimal value either $TraceIdShortFormByteSize bytes ($TraceIdShortFormCharSize chars) or $TraceIdLongFormByteSize bytes ($TraceIdLongFormCharSize) in length but was ${bv.toHex}", None))
   }
 }
 
@@ -75,10 +76,15 @@ object XB3HeaderCodec {
   /** The `X-B3` compliant Span ID HTTP header name. */
   final val SpanIdHeaderName: Header.CaseInsensitiveName = Header.CaseInsensitiveName("X-B3-SpanId")
 
+  /** The Span ID / Parent Span ID max char length */
+  final val SpanIdMaxCharSize: Int = 16
+
   /** The number of bytes (long form) of the Trace ID */
   final val TraceIdLongFormByteSize: Long = 16L
+  final val TraceIdLongFormCharSize: Long = TraceIdLongFormByteSize * 2L
 
   /** The number of bytes (short form) of the Trace ID.  Note that the short form is not optimal if you want to ensure unique trace IDs */
   final val TraceIdShortFormByteSize: Long = 8L
+  final val TraceIdShortFormCharSize: Long = TraceIdShortFormByteSize * 2L
 }
 
