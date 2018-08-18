@@ -33,8 +33,7 @@ class MoneyHeaderCodec extends HeaderCodec {
 
   override def encode(spanId: SpanId): List[Header] = {
     val headerValue = Header.Value(
-      s"$TraceIdHeader=${spanId.traceId};$ParentIdHeader=${spanId.parentSpanId};$SpanIdHeader=${spanId.spanId}"
-    )
+      s"$TraceIdHeader=${spanId.traceId};$ParentIdHeader=${spanId.parentSpanId};$SpanIdHeader=${spanId.spanId}")
     List(Header(HeaderName, headerValue))
   }
 

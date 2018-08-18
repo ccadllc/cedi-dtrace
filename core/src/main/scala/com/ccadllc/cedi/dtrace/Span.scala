@@ -38,13 +38,12 @@ import cats.implicits._
  *   the program's inputs as well as its results.
  */
 case class Span(
-    spanId: SpanId,
-    spanName: Span.Name,
-    startTime: Instant,
-    failure: Option[FailureDetail],
-    duration: FiniteDuration,
-    notes: Vector[Note]
-) {
+  spanId: SpanId,
+  spanName: Span.Name,
+  startTime: Instant,
+  failure: Option[FailureDetail],
+  duration: FiniteDuration,
+  notes: Vector[Note]) {
 
   /**
    * Indicates whether or not this span is the root span of the overall trace.

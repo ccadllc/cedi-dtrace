@@ -1,6 +1,8 @@
-lazy val circeVersion = "0.9.3"
+lazy val catsEffectVersion = "1.0.0-RC3"
 
-lazy val http4sVersion = "0.18.11"
+lazy val circeVersion = "0.10.0-M1"
+
+lazy val http4sVersion = "0.19.0-M1"
 
 lazy val logbackVersion = "1.2.3"
 
@@ -13,11 +15,11 @@ lazy val commonSettings = Seq(
     Contributor("mpilquist", "Michael Pilquist")
   ),
   libraryDependencies ++= Seq(
-    "org.typelevel" %% "cats-effect" % "0.10",
-    "org.scalatest" %% "scalatest" % "3.0.4" % "test",
+    "org.typelevel" %% "cats-effect" % catsEffectVersion,
+    "org.scalatest" %% "scalatest" % "3.0.5" % "test",
     "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
   ),
-  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3")
+  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.6")
 )
 
 lazy val root = project.in(file(".")).aggregate(core, logging, logstash, xb3, money, http4s).settings(commonSettings).settings(noPublish)
@@ -26,6 +28,7 @@ lazy val core = project.in(file("core")).enablePlugins(SbtOsgi).
   settings(commonSettings).
   settings(
     name := "dtrace-core",
+    libraryDependencies += "org.typelevel" %% "cats-effect-laws" % catsEffectVersion % "test",
     buildOsgiBundle("com.ccadllc.cedi.dtrace")
   )
 

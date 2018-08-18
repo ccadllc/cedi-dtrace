@@ -60,6 +60,5 @@ object TraceSystem {
     new Emitter[F] {
       override def emit(tc: TraceContext[F]): F[Unit] = F.pure(())
       override val description: String = "Empty Emitter"
-    }
-  )
+    })
 }

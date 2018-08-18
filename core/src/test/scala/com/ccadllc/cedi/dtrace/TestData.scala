@@ -42,14 +42,12 @@ trait TestData {
   protected val quarterlySalesTotalNoteValue: Note.DoubleValue = Note.DoubleValue(95.6)
   protected val quarterlySalesTotalNote: Note = Note(Note.Name("quarterlySalesTotal"), Some(quarterlySalesTotalNoteValue))
   protected val quarterlySalesCalculationSpanNotes: Vector[Note] = Vector[Note](
-    quarterlySalesUnitsNote, quarterlySalesGoalReachedNote, salesRegionNote, quarterlySalesTotalNote
-  )
+    quarterlySalesUnitsNote, quarterlySalesGoalReachedNote, salesRegionNote, quarterlySalesTotalNote)
   protected val quarterlySalesCalculationSpan: Span = Span(
     quarterlySalesCalculationSpanId,
     Span.Name("Calculate Quarterly Sales"),
     Instant.now,
     None,
     15000.microseconds,
-    quarterlySalesCalculationSpanNotes
-  )
+    quarterlySalesCalculationSpanNotes)
 }
