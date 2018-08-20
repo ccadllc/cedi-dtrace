@@ -34,7 +34,7 @@ import scala.language.higherKinds
  * @tparam F - a type constructor representing the effect which is traced.
  * @tparam A - the result of the effect which is traced.
  */
-final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { self =>
+final class TraceT[F[_], A](private[dtrace] val toEffect: TraceContext[F] => F[A]) { self =>
 
   /**
    * Given the (usually) root [[TraceContext]], convert this `TraceT[A]` to its underlying effectful program `F[A]`. In addition, when the effectful program
@@ -66,7 +66,7 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
     evaluator: Evaluator[A],
     notes: Note*)(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Sync[F]): F[A] =
     tc.updateStartTime flatMap { updated =>
-      tie(updated).attempt.flatMap { eOrR =>
+      toEffect(updated).attempt.flatMap { eOrR =>
         val annotatedTc = updated.setNotes(notes.toVector ++ resultAnnotator.applyOrElse(eOrR, (_: Either[Throwable, A]) => Vector.empty))
         eOrR match {
           case Right(r) => evaluator.resultToFailure(r).fold(annotatedTc.emitSuccess)(updated.emitFailure) map { _ => r }
@@ -82,7 +82,7 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
    *   to an `F[A]`.
    * @return the underlying `F[A]` enhanced to trace its execution.
    */
-  def apply(tc: TraceContext[F]): F[A] = tie(tc)
+  def apply(tc: TraceContext[F]): F[A] = toEffect(tc)
 
   /**
    * Transforms this `TraceT[F, A]` to a `TraceT[F, Either[Throwable, A]]` where the left-hand side of the
@@ -93,7 +93,7 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
    *   `Either[Throwable, A]` result type.
    */
   def attempt(implicit F: MonadError[F, Throwable]): TraceT[F, Either[Throwable, A]] =
-    TraceT.shiftStack(tie(_).attempt)
+    TraceT.suspendEffect(toEffect(_).attempt)
 
   /**
    * Transforms this `TraceT[F, A]` to an equivalent `TraceT[F, A]` where a best-effort will be made
@@ -106,7 +106,7 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
    */
   @deprecated("Use bracketCase instead", "1.4.0")
   def bestEffortOnFinish(f: Option[Throwable] => TraceT[F, Unit])(implicit F: MonadError[F, Throwable]): TraceT[F, A] =
-    TraceT.shiftStack(tc => tie(tc).bestEffortOnFinish(f(_).tie(tc)))
+    TraceT.suspendEffect(tc => toEffect(tc).bestEffortOnFinish(f(_).toEffect(tc)))
 
   /**
    * Returns a `TraceT[F, ?]` action that treats the source task as the
@@ -175,14 +175,14 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
    *        (cancellation, error or successful result)
    */
   def bracketCase[B](use: A => TraceT[F, B])(release: (A, ExitCase[Throwable]) => TraceT[F, Unit])(implicit F: Bracket[F, Throwable]): TraceT[F, B] =
-    TraceT.shiftStack(tc => F.bracketCase(tie(tc))(use(_).tie(tc))(release(_, _).tie(tc)))
+    TraceT.suspendEffect(tc => F.bracketCase(toEffect(tc))(use(_).toEffect(tc))(release(_, _).toEffect(tc)))
 
   /**
    * Generates a new `TraceT[F, B]` from this instance using the supplied function `A => TraceT[F, B]`.
    * @param f function from `A` => `TraceT[F, B]`
    */
   def flatMap[B](f: A => TraceT[F, B])(implicit F: FlatMap[F]): TraceT[F, B] =
-    TraceT.shiftStack(tc => tie(tc).flatMap(f(_).tie(tc)))
+    TraceT.suspendEffect(tc => toEffect(tc).flatMap(f(_).toEffect(tc)))
 
   /**
    * Handles an error by mapping it to a new `TraceT`.
@@ -190,14 +190,14 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
    * @return new `TraceT[F, A]` with error handling of the aforementioned `f` function
    */
   def handleErrorWith(f: Throwable => TraceT[F, A])(implicit F: MonadError[F, Throwable]): TraceT[F, A] =
-    TraceT.shiftStack(tc => tie(tc).handleErrorWith(t => f(t).tie(tc)))
+    TraceT.suspendEffect(tc => toEffect(tc).handleErrorWith(t => f(t).toEffect(tc)))
 
   /**
    * Generates a new `TraceT[F, B]` from this instance using the supplied function `A => B`.
    * @param f function from `A` => `B`
    */
   def map[B](f: A => B)(implicit F: Functor[F]): TraceT[F, B] =
-    TraceT.shiftStack(tie(_).map(f))
+    TraceT.suspendEffect(toEffect(_).map(f))
 
   /**
    * Creates a new child [[Span]] from the current span represented by this instance, using the
@@ -284,7 +284,7 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
   def newAnnotatedSpan(
     spanName: Span.Name,
     evaluator: Evaluator[A],
-    notes: Note*)(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Sync[F]): TraceT[F, A] = TraceT.shiftStack { tc =>
+    notes: Note*)(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Sync[F]): TraceT[F, A] = TraceT.suspendEffect { tc =>
     tc.childSpan(spanName).flatMap { annotatedTrace(_, evaluator, notes: _*)(resultAnnotator) }
   }
 
@@ -317,7 +317,7 @@ final class TraceT[F[_], A](private[dtrace] val tie: TraceContext[F] => F[A]) { 
  */
 object TraceT extends TraceTPolyFunctions with TraceTInstances {
 
-  private[dtrace] def apply[F[_], A](tie: TraceContext[F] => F[A]): TraceT[F, A] = new TraceT(tie)
+  private[dtrace] def apply[F[_], A](toEffect: TraceContext[F] => F[A]): TraceT[F, A] = new TraceT(toEffect)
 
   /**
    * Ask for the current `TraceContext[F]` in a `TraceT`.
@@ -351,7 +351,7 @@ object TraceT extends TraceTPolyFunctions with TraceTInstances {
    *       callback for signaling the result once it is ready
    */
   def asyncF[F[_], A](cb: (Either[Throwable, A] => Unit) => TraceT[F, Unit])(implicit F: Async[F]): TraceT[F, A] =
-    TraceT.shiftStack { tc => F.asyncF(cb(_).tie(tc)) }
+    TraceT.suspendEffect { tc => F.asyncF(cb(_).toEffect(tc)) }
 
   /**
    * Creates a cancelable `TraceT[F, A]` instance that executes an
@@ -362,7 +362,7 @@ object TraceT extends TraceTPolyFunctions with TraceTInstances {
    * when the asynchronous process is complete with a final result.
    */
   def cancelable[F[_], A](k: (Either[Throwable, A] => Unit) => CancelToken[TraceT[F, ?]])(implicit F: Concurrent[F]): TraceT[F, A] =
-    TraceT.shiftStack { tc => F.cancelable(k(_).tie(tc)) }
+    TraceT.suspendEffect { tc => F.cancelable(k(_).toEffect(tc)) }
 
   /**
    * Generate a `ContextShift[TraceT[F, ?]` given a `ContextShift[F] and `Monad[F]` in implicit scope.
@@ -423,12 +423,24 @@ object TraceT extends TraceTPolyFunctions with TraceTInstances {
    */
   def toTraceT[F[_], A](fa: F[A]): TraceT[F, A] = TraceT { _ => fa }
 
-  /*
-   * Used for stack safety.
+  /**
+   * Internal API — suspends the execution of `toEffect` in the `F` context.
+   *
+   * Used to build `TraceT[F, ?]` values for `F[_]` data types that implement `Monad`,
+   * in which case it is safer to trigger the `F[_]` context earlier.
+   *
+   * The basic requirement of `F` for callers of this function is `Functor`; however we are
+   * doing discrimination based on inheritance and if we detect a
+   * `Monad`, then we use it to trigger the `F[_]` context earlier.
+   *
+   * Triggering the `F[_]` context earlier is important to avoid stack
+   * safety issues for `F` monads that have stack safe implementations.
+   * For example `Eval` or `IO`. Without this the `Monad`
+   * instance is stack unsafe, even if the underlying `F` is stack safe.
    */
-  private[dtrace] def shiftStack[F[_], A](f: TraceContext[F] => F[A])(implicit F: Functor[F]): TraceT[F, A] = F match {
-    case m: Monad[F] @unchecked => TraceT { tc => m.flatMap(m.pure(tc))(f) }
-    case _ => TraceT(f)
+  private[dtrace] def suspendEffect[F[_], A](toEffect: TraceContext[F] => F[A])(implicit F: Functor[F]): TraceT[F, A] = F match {
+    case m: Monad[F] @unchecked => TraceT { tc => m.flatMap(m.pure(tc))(toEffect) }
+    case _ => TraceT(toEffect)
   }
 }
 
@@ -477,21 +489,21 @@ private[dtrace] sealed trait TraceTConcurrentInstance extends TraceTAsyncInstanc
   /** A `Concurrent[TraceT[F, ?]]` typeclass instance given an instance of `Concurrent[F]`. */
   protected class ConcurrentTraceT[F[_]](implicit F: Concurrent[F]) extends AsyncTraceT[F] with Concurrent[TraceT[F, ?]] {
     override def cancelable[A](k: (Either[Throwable, A] => Unit) => CancelToken[TraceT[F, ?]]): TraceT[F, A] =
-      TraceT.shiftStack { tc => F.cancelable(k(_).tie(tc)) }
+      TraceT.suspendEffect { tc => F.cancelable(k(_).toEffect(tc)) }
 
     override def start[A](ta: TraceT[F, A]): TraceT[F, Fiber[TraceT[F, ?], A]] =
-      TraceT.shiftStack { tc => F.start(ta.tie(tc)) map toTraceTFiber }
+      TraceT.suspendEffect { tc => F.start(ta.toEffect(tc)) map toTraceTFiber }
 
     override def racePair[A, B](ta: TraceT[F, A], tb: TraceT[F, B]): TraceT[F, Either[(A, Fiber[TraceT[F, ?], B]), (Fiber[TraceT[F, ?], A], B)]] =
-      TraceT.shiftStack { tc =>
-        F.racePair(ta.tie(tc), tb.tie(tc)) map {
+      TraceT.suspendEffect { tc =>
+        F.racePair(ta.toEffect(tc), tb.toEffect(tc)) map {
           case Right(((fiba, b))) => Right(toTraceTFiber(fiba) -> b)
           case Left(((a, fibb))) => Left(a -> toTraceTFiber(fibb))
         }
       }
 
     override def race[A, B](ta: TraceT[F, A], tb: TraceT[F, B]): TraceT[F, Either[A, B]] =
-      TraceT.shiftStack { tc => F.race(ta.tie(tc), tb.tie(tc)) }
+      TraceT.suspendEffect { tc => F.race(ta.toEffect(tc), tb.toEffect(tc)) }
 
     override def liftIO[A](ioa: IO[A]): TraceT[F, A] = Concurrent.liftIO(ioa)(this)
 
@@ -599,7 +611,7 @@ private[dtrace] sealed trait TraceTMonadInstance {
     override def flatMap[A, B](a: TraceT[F, A])(f: A => TraceT[F, B]): TraceT[F, B] = a flatMap f
 
     override def tailRecM[A, B](a: A)(f: A => TraceT[F, Either[A, B]]): TraceT[F, B] =
-      TraceT.shiftStack { tc => F.tailRecM(a)(f(_).tie(tc)) }
+      TraceT.suspendEffect { tc => F.tailRecM(a)(f(_).toEffect(tc)) }
 
     override def toString: String = "Monad[TraceT[F, ?]]"
   }
@@ -629,6 +641,6 @@ private[dtrace] sealed trait TraceTContextShiftInstance {
   implicit def contextShiftInstance[F[_]: Monad](implicit cs: ContextShift[F]): ContextShift[TraceT[F, ?]] = new ContextShift[TraceT[F, ?]] {
     def shift: TraceT[F, Unit] = TraceT.toTraceT(cs.shift)
     def evalOn[A](ec: ExecutionContext)(f: TraceT[F, A]): TraceT[F, A] =
-      TraceT.shiftStack { tc => cs.evalOn(ec)(f.tie(tc)) }
+      TraceT.suspendEffect { tc => cs.evalOn(ec)(f.toEffect(tc)) }
   }
 }

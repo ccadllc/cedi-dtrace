@@ -50,7 +50,7 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
   private implicit def eqTraceIO[A](implicit A: Eq[A], testC: TestContext): Eq[TraceIO[A]] =
     new Eq[TraceIO[A]] {
       def eqv(x: TraceIO[A], y: TraceIO[A]): Boolean =
-        eqIO[A].eqv(x.tie(tc), y.tie(tc))
+        eqIO[A].eqv(x.toEffect(tc), y.toEffect(tc))
     }
 
   private implicit def catsEffectLawsArbitraryForTraceIO[A: Arbitrary: Cogen]: Arbitrary[TraceIO[A]] =
