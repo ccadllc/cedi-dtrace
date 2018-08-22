@@ -378,7 +378,7 @@ object TraceT extends TraceTPolyFunctions with TraceTInstances {
   def delay[F[_], A](a: => A)(implicit F: Sync[F]): TraceT[F, A] = toTraceT(F.delay(a))
 
   /**
-   * Defines a conversion from [[IO]] in terms of the `Concurrent` type class.
+   * Defines a conversion from `IO` in terms of the `Concurrent` type class.
    */
   def liftIO[F[_], A](ioa: IO[A])(implicit F: Concurrent[F]): TraceT[F, A] = toTraceT(F.liftIO(ioa))
 

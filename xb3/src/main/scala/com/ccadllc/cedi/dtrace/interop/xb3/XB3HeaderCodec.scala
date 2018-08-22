@@ -27,8 +27,8 @@ import scodec.bits.ByteVector
 import XB3HeaderCodec._
 
 /**
- * Implements the [[HeaderCodec]] trait, providing for the encoding and decoding of
- * `X-B3`-style tracing HTTP headers into and from a [[SpanId]] respectively.
+ * Implements the `HeaderCodec` trait, providing for the encoding and decoding of
+ * `X-B3`-style tracing HTTP headers into and from a `SpanId` respectively.
  */
 class XB3HeaderCodec extends HeaderCodec {
 

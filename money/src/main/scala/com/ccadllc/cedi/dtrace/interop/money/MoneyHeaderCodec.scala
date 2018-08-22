@@ -26,8 +26,8 @@ import scala.util.matching.Regex
 import MoneyHeaderCodec._
 
 /**
- * Implements the [[HeaderCodec]] trait, providing for the encoding and decoding of
- * `Money`-style tracing HTTP headers into and from a [[SpanId]] respectively.
+ * Implements the `HeaderCodec` trait, providing for the encoding and decoding of
+ * `Money`-style tracing HTTP headers into and from a `SpanId` respectively.
  */
 class MoneyHeaderCodec extends HeaderCodec {
 
