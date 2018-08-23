@@ -60,24 +60,11 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
     Span.root[IO](Span.Name("calculate-quarterly-sales")).unsafeRunSync,
     TraceSystem(testSystemMetadata, new TestEmitter[IO]))
 
-  checkAllAsync("TraceIO", implicit ec => AsyncTests[TraceIO].async[Int, Int, Int])
-  checkAllAsync("TraceIO", implicit ec => BracketTests[TraceIO, Throwable].bracket[Int, Int, Int])
-  checkAllAsync("TraceIO", implicit ec => {
-    implicit val csIo = ec.contextShift[IO]
-    ConcurrentTests[TraceIO].concurrent[Int, Int, Int]
-  })
   checkAllAsync("TraceIO", implicit ec => {
     implicit val csIo = ec.contextShift[IO]
     implicit val tcInstance = tc
     ConcurrentEffectTests[TraceIO].concurrentEffect[Int, Int, Int]
   })
-  checkAllAsync("TraceIO", implicit ec => {
-    implicit val tcInstance = tc
-    EffectTests[TraceIO].effect[Int, Int, Int]
-  })
-  checkAllAsync("TraceIO", implicit ec => MonadTests[TraceIO].monad[Int, Int, Int])
-  checkAllAsync("TraceIO", implicit ec => MonadErrorTests[TraceIO, Throwable].monadError[Int, Int, Int])
-  checkAllAsync("TraceIO", implicit ec => SyncTests[TraceIO].sync[Int, Int, Int])
 
   test("Timer[TraceIO].clock.realTime") {
     implicit val ec = ExecutionContext.global
