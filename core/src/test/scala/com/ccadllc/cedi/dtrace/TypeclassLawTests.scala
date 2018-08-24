@@ -26,7 +26,6 @@ import cats.implicits._
 
 import cats.kernel.Eq
 
-import cats.laws.discipline._
 import cats.laws.discipline.arbitrary._
 
 import java.io.{ ByteArrayOutputStream, PrintStream }

@@ -37,15 +37,6 @@ lazy val logging = project.in(file("logging")).enablePlugins(SbtOsgi).
   settings(
     name := "dtrace-logging",
     parallelExecution in Test := false,
-    Compile / unmanagedSourceDirectories ++= {
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, minor)) if minor <= 11 =>
-          val r = List(file(s"${baseDirectory.value}/src/main/scala-no-circe-instant"))
-          println(s"extra dir: $r")
-          r
-        case _ => Nil
-      }
-    },
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core" % circeVersion,
       "io.circe" %% "circe-generic" % circeVersion,
