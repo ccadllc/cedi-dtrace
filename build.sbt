@@ -91,7 +91,7 @@ lazy val http4s = project.in(file("http4s")).enablePlugins(SbtOsgi).
     parallelExecution in Test := false,
     // TODO: This is only temporary until http4s publishes for 2.13
     // Replace this libDependencies and the two skips with just a
-    libDeps for the two http4s libs
+    // libDeps for the two http4s libs
     libraryDependencies := (CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, v)) if v >= 13 => Seq.empty
       case _ => libraryDependencies.value ++ Seq(
