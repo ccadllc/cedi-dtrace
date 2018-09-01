@@ -27,6 +27,7 @@ import cats.implicits._
 import cats.kernel.Eq
 
 import cats.laws.discipline.arbitrary._
+import cats.laws.discipline._
 
 import java.io.{ ByteArrayOutputStream, PrintStream }
 import java.nio.charset.Charset
@@ -52,8 +53,19 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
         eqIO[A].eqv(x.toEffect(tc), y.toEffect(tc))
     }
 
-  private implicit def catsEffectLawsArbitraryForTraceIO[A: Arbitrary: Cogen]: Arbitrary[TraceIO[A]] =
-    Arbitrary(Gen.delay(genIO[A] map TraceIO.toTraceIO))
+  private implicit def eqTraceIOPar[A](implicit A: Eq[A], testC: TestContext): Eq[TraceIO.Par[A]] = {
+    implicit val cs = IO.contextShift(ExecutionContext.global)
+    new Eq[TraceIO.Par[A]] {
+      def eqv(x: TraceIO.Par[A], y: TraceIO.Par[A]): Boolean =
+        eqTraceIO[A].eqv(TraceIO.Par.unwrap(x), TraceIO.Par.unwrap(y))
+    }
+  }
+
+  private implicit def catsConcurrentEffectLawsArbitraryForTraceIO[A: Arbitrary: Cogen]: Arbitrary[TraceIO[A]] =
+    Arbitrary(catsEffectLawsArbitraryForIO[A].arbitrary map TraceIO.toTraceIO)
+
+  private implicit def catsEffectLawsArbitraryForTraceIOParallel[A: Arbitrary: Cogen]: Arbitrary[TraceIO.Par[A]] =
+    Arbitrary(catsEffectLawsArbitraryForIOParallel[A].arbitrary map TraceIO.Par.apply)
 
   private val tc: TraceContext[IO] = TraceContext(
     Span.root[IO](Span.Name("calculate-quarterly-sales")).unsafeRunSync,
@@ -64,6 +76,22 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
     implicit val tcInstance = tc
     ConcurrentEffectTests[TraceIO].concurrentEffect[Int, Int, Int]
   })
+
+  checkAllAsync("TraceIO.Par", implicit ec => {
+    implicit val cs = ec.contextShift[IO]
+    ApplicativeTests[TraceIO.Par].applicative[Int, Int, Int]
+  })
+
+  checkAllAsync("TraceIO", implicit ec => {
+    implicit val cs = ec.contextShift[IO]
+    ParallelTests[TraceIO, TraceIO.Par].parallel[Int, Int]
+  })
+
+  testAsync("TraceIO.Par's applicative instance is different") { implicit ec =>
+    implicit val cs = ec.contextShift[IO]
+    implicitly[Applicative[TraceIO]] shouldNot be(implicitly[Applicative[TraceIO.Par]])
+    ()
+  }
 
   test("Timer[TraceIO].clock.realTime") {
     implicit val ec = ExecutionContext.global

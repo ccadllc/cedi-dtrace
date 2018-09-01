@@ -15,7 +15,7 @@
  */
 package com.ccadllc.cedi
 
-import cats.{ Monad, MonadError }
+import cats._
 import cats.effect._
 import cats.implicits._
 
@@ -41,6 +41,19 @@ package object dtrace {
    * program `F` fixed as `IO`.
    */
   object TraceIO {
+    /**
+     * Type alias provided for convenience when using an `IO.Par` as the type of paralleleffectful
+     * program being traced.
+     */
+    type Par[A] = TraceT[IO.Par, A]
+
+    object Par {
+      def apply[A](iop: IO.Par[A]): Par[A] = TraceT.toTraceT(iop)
+      def unwrap[A](tiop: TraceIO.Par[A])(implicit P: NonEmptyParallel[IO, IO.Par]): TraceIO[A] = TraceT { tc =>
+        IO.Par.unwrap(tiop.toEffect(translate(tc, P.parallel)))
+      }
+    }
+
     /**
      * Ask for the current `TraceContext[IO]` in a `TraceIO`.
      * @return a `TraceContext[IO]` wrapped in a `TraceIO`.
@@ -226,5 +239,14 @@ package object dtrace {
      * @return traceTOfA - a `TraceT[F, A]`
      */
     def toTraceT: TraceT[F, A] = TraceT.toTraceT[F, A](self)
+  }
+
+  private[dtrace] def translate[F[_], G[_]](tc: TraceContext[F], trans: F ~> G): TraceContext[G] = {
+    val emitter: TraceSystem.Emitter[G] = new TraceSystem.Emitter[G] {
+      def emit(tcg: TraceContext[G]): G[Unit] = trans(tc.system.emitter.emit(tc))
+      def description: String = tc.system.emitter.description
+
+    }
+    TraceContext(tc.currentSpan, TraceSystem(tc.system.metadata, emitter))
   }
 }

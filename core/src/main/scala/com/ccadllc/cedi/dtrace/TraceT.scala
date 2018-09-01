@@ -15,7 +15,7 @@
  */
 package com.ccadllc.cedi.dtrace
 
-import cats.{ Applicative, FlatMap, Functor, Monad, MonadError, ~> }
+import cats._
 import cats.effect._
 import cats.implicits._
 
@@ -455,7 +455,10 @@ private[dtrace] sealed trait TraceTPolyFunctions {
     }
 }
 
-private[dtrace] sealed trait TraceTInstances extends TraceTConcurrentEffectInstance with TraceTTimerInstance with TraceTContextShiftInstance
+private[dtrace] sealed trait TraceTInstances extends TraceTConcurrentEffectInstance
+  with TraceTTimerInstance
+  with TraceTContextShiftInstance
+  with TraceTParallelInstances
 
 private[dtrace] sealed trait TraceTConcurrentEffectInstance extends TraceTConcurrentInstance with TraceTEffectInstance {
 
@@ -642,5 +645,90 @@ private[dtrace] sealed trait TraceTContextShiftInstance {
     def shift: TraceT[F, Unit] = TraceT.toTraceT(cs.shift)
     def evalOn[A](ec: ExecutionContext)(f: TraceT[F, A]): TraceT[F, A] =
       TraceT.suspendEffect { tc => cs.evalOn(ec)(f.toEffect(tc)) }
+  }
+}
+
+private[dtrace] sealed trait TraceTParallelInstances extends TraceTParallelInstance {
+  implicit def ioParApplicative(implicit cs: ContextShift[IO], p: Parallel[IO, IO.Par]): Applicative[TraceT[IO.Par, ?]] =
+    implicitly[Parallel[TraceT[IO, ?], TraceT[IO.Par, ?]]].applicative
+}
+
+private[dtrace] sealed trait TraceTParallelInstance extends TraceTNonEmptyParallelInstance {
+
+  implicit def parallelTraceTInstance[M[_]: Monad, F[_]: Applicative](implicit P: Parallel[M, F]): Parallel[TraceT[M, ?], TraceT[F, ?]] =
+    new ParallelTraceT[M, F]
+
+  /** A `Parallel[TraceT[M, ?], TraceT[F, ?]` typeclass instance given an instance of `Parallel[M, F]` */
+  protected class ParallelTraceT[M[_]: Monad, F[_]: Applicative](implicit P: Parallel[M, F]) extends NonEmptyParallelTraceT[M, F] with Parallel[TraceT[M, ?], TraceT[F, ?]] {
+    override def applicative: Applicative[TraceT[F, ?]] = new Applicative[TraceT[F, ?]] {
+      override def map[A, B](ta: TraceT[F, A])(f: A => B): TraceT[F, B] = TraceT.suspendEffect { tc =>
+        P.applicative.map(ta.toEffect(tc))(f)
+      }
+      override def pure[A](a: A): TraceT[F, A] = TraceT.toTraceT(P.applicative.pure(a))
+      override def ap[A, B](tab: TraceT[F, A => B])(ta: TraceT[F, A]): TraceT[F, B] = TraceT.suspendEffect { tc =>
+        P.applicative.ap(tab.toEffect(tc))(ta.toEffect(tc))
+      }
+      override def toString: String = "ParApplicative[TraceT[F, ?]]"
+    }
+    override def monad: Monad[TraceT[M, ?]] = new Monad[TraceT[M, ?]] {
+      override def pure[A](a: A): TraceT[M, A] = TraceT.toTraceT(P.monad.pure(a))
+
+      override def map[A, B](ta: TraceT[M, A])(f: A => B): TraceT[M, B] = TraceT.suspendEffect { tc =>
+        P.monad.map(ta.toEffect(tc))(f)
+      }
+
+      override def flatMap[A, B](ta: TraceT[M, A])(f: A => TraceT[M, B]): TraceT[M, B] = TraceT.suspendEffect { tc =>
+        P.monad.flatMap(ta.toEffect(tc))(f(_).toEffect(tc))
+      }
+
+      override def tailRecM[A, B](a: A)(f: A => TraceT[M, Either[A, B]]): TraceT[M, B] =
+        TraceT.suspendEffect { tc => P.monad.tailRecM(a)(f(_).toEffect(tc)) }
+
+      override def toString: String = "ParMonad[TraceT[M, ?]]"
+    }
+  }
+}
+
+private[dtrace] sealed trait TraceTNonEmptyParallelInstance {
+
+  implicit def neParallelTraceTInstance[M[_]: FlatMap, F[_]: Apply](implicit P: NonEmptyParallel[M, F]): NonEmptyParallel[TraceT[M, ?], TraceT[F, ?]] =
+    new NonEmptyParallelTraceT[M, F]
+
+  /** A `NonEmptyParallel[TraceT[M, ?], TraceT[F, ?]` typeclass instance given an instance of `NonEmptyParallel[M, F]` */
+  protected class NonEmptyParallelTraceT[M[_]: FlatMap, F[_]: Apply](implicit P: NonEmptyParallel[M, F]) extends NonEmptyParallel[TraceT[M, ?], TraceT[F, ?]] {
+    def apply: Apply[TraceT[F, ?]] = new Apply[TraceT[F, ?]] {
+      override def ap[A, B](tab: TraceT[F, A => B])(ta: TraceT[F, A]): TraceT[F, B] = TraceT.suspendEffect { tc =>
+        P.apply.ap(tab.toEffect(tc))(ta.toEffect(tc))
+      }
+      override def map[A, B](ta: TraceT[F, A])(f: A => B): TraceT[F, B] = TraceT.suspendEffect { tc =>
+        P.apply.map(ta.toEffect(tc))(f)
+      }
+      override def toString: String = "ParApply[TraceT[F, ?]]"
+    }
+    def flatMap: FlatMap[TraceT[M, ?]] = new FlatMap[TraceT[M, ?]] {
+      override def flatMap[A, B](ta: TraceT[M, A])(f: A => TraceT[M, B]): TraceT[M, B] = TraceT.suspendEffect { tc =>
+        P.flatMap.flatMap(ta.toEffect(tc))(f(_).toEffect(tc))
+      }
+      override def ap[A, B](tab: TraceT[M, A => B])(ta: TraceT[M, A]): TraceT[M, B] = TraceT.suspendEffect { tc =>
+        P.flatMap.ap(tab.toEffect(tc))(ta.toEffect(tc))
+      }
+      override def map[A, B](ta: TraceT[M, A])(f: A => B): TraceT[M, B] = TraceT.suspendEffect { tc =>
+        P.flatMap.map(ta.toEffect(tc))(f)
+      }
+      override def tailRecM[A, B](a: A)(f: A => TraceT[M, Either[A, B]]): TraceT[M, B] =
+        TraceT.suspendEffect { tc => P.flatMap.tailRecM(a)(f(_).toEffect(tc)) }
+
+      override def toString: String = "ParFlatMap[TraceT[M, ?]]"
+    }
+    def sequential: TraceT[F, ?] ~> TraceT[M, ?] = new (TraceT[F, ?] ~> TraceT[M, ?]) {
+      def apply[A](tfa: TraceT[F, A]): TraceT[M, A] = TraceT.suspendEffect[M, A] { tc =>
+        P.sequential(tfa.toEffect(translate(tc, P.parallel)))
+      }
+    }
+    def parallel: TraceT[M, ?] ~> TraceT[F, ?] = new (TraceT[M, ?] ~> TraceT[F, ?]) {
+      def apply[A](tma: TraceT[M, A]): TraceT[F, A] = TraceT.suspendEffect[F, A] { tc =>
+        P.parallel(tma.toEffect(translate(tc, P.sequential)))
+      }
+    }
   }
 }
