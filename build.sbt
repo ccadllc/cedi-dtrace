@@ -1,5 +1,7 @@
 lazy val circeVersion = "0.9.3"
 
+lazy val catsEffectVersion = "0.10"
+
 lazy val http4sVersion = "0.18.11"
 
 lazy val logbackVersion = "1.2.3"
@@ -13,7 +15,7 @@ lazy val commonSettings = Seq(
     Contributor("mpilquist", "Michael Pilquist")
   ),
   libraryDependencies ++= Seq(
-    "org.typelevel" %% "cats-effect" % "0.10",
+    "org.typelevel" %% "cats-effect" % catsEffectVersion,
     "org.scalatest" %% "scalatest" % "3.0.4" % "test",
     "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
   ),
@@ -26,6 +28,7 @@ lazy val core = project.in(file("core")).enablePlugins(SbtOsgi).
   settings(commonSettings).
   settings(
     name := "dtrace-core",
+    libraryDependencies += "org.typelevel" %% "cats-effect-laws" % catsEffectVersion % "test",
     buildOsgiBundle("com.ccadllc.cedi.dtrace")
   )
 
@@ -88,5 +91,8 @@ lazy val http4s = project.in(file("http4s")).enablePlugins(SbtOsgi).
   ).dependsOn(core % "compile->compile;test->test", money % "compile->test", xb3 % "compile->test")
 
 lazy val readme = project.in(file("readme")).settings(commonSettings).settings(noPublish).enablePlugins(TutPlugin).settings(
-  tutTargetDirectory := baseDirectory.value / ".."
-).dependsOn(core, logging)
+  tutTargetDirectory := baseDirectory.value / "..",
+  libraryDependencies ++= Seq(
+    "org.http4s" %% "http4s-dsl" % http4sVersion,
+    "org.http4s" %% "http4s-circe" % http4sVersion)
+).dependsOn(core, logging, money, xb3, http4s)
