@@ -1,8 +1,10 @@
 lazy val catsEffectVersion = "1.0.0"
 
+lazy val catsCoreVersion = "1.4.0"
+
 lazy val circeVersion = "0.10.0-M2"
 
-lazy val http4sVersion = "0.19.0-M1"
+lazy val http4sVersion = "0.19.0-M2"
 
 lazy val logbackVersion = "1.2.3"
 
@@ -15,6 +17,7 @@ lazy val commonSettings = Seq(
     Contributor("mpilquist", "Michael Pilquist")
   ),
   libraryDependencies ++= Seq(
+    "org.typelevel" %% "cats-core" % catsCoreVersion,
     "org.typelevel" %% "cats-effect" % catsEffectVersion
   ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((2, v)) if v >= 13 => Seq(
