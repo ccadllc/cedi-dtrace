@@ -71,24 +71,24 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
     Span.root[IO](Span.Name("calculate-quarterly-sales")).unsafeRunSync,
     TraceSystem(testSystemMetadata, new TestEmitter[IO]))
 
-  checkAllAsync("TraceIO", implicit ec => {
-    implicit val csIo = ec.contextShift[IO]
+  checkAllAsync("TraceIO", implicit testC => {
+    implicit val csIo = testC.contextShift[IO]
     implicit val tcInstance = tc
     ConcurrentEffectTests[TraceIO].concurrentEffect[Int, Int, Int]
   })
 
-  checkAllAsync("TraceIO.Par", implicit ec => {
-    implicit val cs = ec.contextShift[IO]
+  checkAllAsync("TraceIO.Par", implicit testC => {
+    implicit val cs = testC.contextShift[IO]
     ApplicativeTests[TraceIO.Par].applicative[Int, Int, Int]
   })
 
-  checkAllAsync("TraceIO", implicit ec => {
-    implicit val cs = ec.contextShift[IO]
+  checkAllAsync("TraceIO", implicit testC => {
+    implicit val cs = testC.contextShift[IO]
     ParallelTests[TraceIO, TraceIO.Par].parallel[Int, Int]
   })
 
-  testAsync("TraceIO.Par's applicative instance is different") { implicit ec =>
-    implicit val cs = ec.contextShift[IO]
+  testAsync("TraceIO.Par's applicative instance is different") { implicit testC =>
+    implicit val cs = testC.contextShift[IO]
     implicitly[Applicative[TraceIO]] shouldNot be(implicitly[Applicative[TraceIO.Par]])
     ()
   }
@@ -143,32 +143,32 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
     }
   }
 
-  testAsync("ContextShift[TraceIO].shift") { ec =>
-    implicit val cs = TraceIO.contextShift(ec)
+  testAsync("ContextShift[TraceIO].shift") { testC =>
+    implicit val cs = TraceIO.contextShift(testC)
     val f = cs.shift.trace(tc).unsafeToFuture()
     f.value shouldBe 'empty
-    ec.tick()
+    testC.tick()
     f.value shouldBe Some(Success(()))
     ()
   }
 
-  testAsync("ContextShift[TraceIO].evalOn") { ec =>
-    implicit val cs = TraceIO.contextShift(ec)
-    val ec2 = TestContext()
-    val f = cs.evalOn(ec2)(TraceIO(1)).trace(tc).unsafeToFuture()
+  testAsync("ContextShift[TraceIO].evalOn") { testC =>
+    implicit val cs = TraceIO.contextShift(testC)
+    val testC2 = TestContext()
+    val f = cs.evalOn(testC2)(TraceIO(1)).trace(tc).unsafeToFuture()
     f.value shouldBe 'empty
-    ec.tick()
+    testC.tick()
     f.value shouldBe 'empty
-    ec2.tick()
+    testC2.tick()
     f.value shouldBe 'empty
-    ec.tick()
+    testC.tick()
     f.value shouldBe Some(Success(1))
     ()
   }
 
   private def checkAllAsync(name: String, f: TestContext => Laws#RuleSet): Unit = {
-    val context = TestContext()
-    val ruleSet = f(context)
+    val testC = TestContext()
+    val ruleSet = f(testC)
     for ((id, prop) <- ruleSet.all.properties)
       test(s"$name.$id") { silenceSystemErr(check(prop)) }
   }
