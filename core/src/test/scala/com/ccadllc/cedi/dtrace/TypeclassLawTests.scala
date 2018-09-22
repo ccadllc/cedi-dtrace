@@ -56,11 +56,11 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
     TraceSystem(testSystemMetadata, new TestEmitter[IO])
   )
 
-  checkAllAsync("TraceIO", implicit ec => ConcurrentEffectTests[TraceIO].concurrentEffect[Int, Int, Int])
+  checkAllAsync("TraceIO", implicit testC => ConcurrentEffectTests[TraceIO].concurrentEffect[Int, Int, Int])
 
   private def checkAllAsync(name: String, f: TestContext => Laws#RuleSet): Unit = {
-    val context = TestContext()
-    val ruleSet = f(context)
+    val testC = TestContext()
+    val ruleSet = f(testC)
     for ((id, prop) <- ruleSet.all.properties)
       test(s"$name.$id") { silenceSystemErr(check(prop)) }
   }
