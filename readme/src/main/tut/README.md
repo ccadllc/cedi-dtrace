@@ -30,7 +30,7 @@ A *Distributed Trace* is a directed graph of *Span*s. A *Span* identifies a bran
 
 ### <a id="usage"></a> Examples of Use
 
-```tut:silent
+```scala
 import cats.effect.IO
 
 import java.time.Instant
@@ -74,7 +74,22 @@ val traceSystem = TraceSystem(
   *   `def emit(tc: TraceContext[F]): F[Unit]` to actually do the work of
   * emitting the current Span to the destination and in the format of your choosing.
   */
-  emitter = LogEmitter[IO]
+  emitter = LogEmitter[IO],
+
+ /*
+  * This time will generate points in time using the `cats.effect.Clock#realTime` function,
+  * which is by default the `System.currentTimeMillis`.  It will convert it to MICROSECONDS
+  * precision in order to calculate the duration of a `Span` execution.  This is just a
+  * convenience function.  There is also a convenience function
+  * - `TraceSystem.monotonicTimer[IO]` - for calculating using the `cats.effect.Clock#monotonic`
+  *  which by default uses `System.nanoTime` and will use its NANOSECOND precision to calculate
+  * the duration of a `Span` execution.  If you'd prefer to use different levels of precision,
+  * you can create a timer using `TraceSystem.Timer.realTime[IO](TimeUnit.MILLISECONDS)`, for
+  * example.  Note that these levels of precision may be rounded up or down if using
+  * `cats.effect.Clock#monotonic`, as it will likely be using `System.currentTimeMillis`
+  * which will only provide millisecond level precision (roughly).
+  *
+  timer = TraceSystem.realTimeTimer[IO]
 )
 
 /* Compose the Money and X-B3 HTTP Trace Header encoder/decoder into an aggregate (generating both on encoded and preferring X-B3 on decode) */
@@ -105,6 +120,7 @@ def generateSalesReport(region: Region): TraceT[IO, SalesReport] = for {
   )
 } yield report
 
+
 /*
  * We add a Span to the overall `generateSalesReport` action,
  * showing the ability to create Span notes from the traced action result
@@ -119,7 +135,7 @@ val tracedIO: TraceT[IO, SalesReport] = generateSalesReport(region).newAnnotated
  */
 val io: IO[SalesReport] = for {
   /* We create a local root Span (we could also extract it from an HTTP header using the `money`, `xb3` and `http4s` modules - see alternate example below) */
-  rootSpan <- Span.root[IO](Span.Name("locally-initiated-report"))
+  rootSpan <- Span.root(traceSystem.timer, Span.Name("locally-initiated-report"))
   /*
    * The tracedIO we've derived earlier around `generateSalesReport` (which includes
    * the retrieval and calculate sales figures nested actions, each with their own Spans) is an instance of `TraceT[IO, A]`,
@@ -136,7 +152,6 @@ val io: IO[SalesReport] = for {
 /*
  * Alternate flow: We convert our traced io to an IO for a htt4s app, possibly continuing an existing trace, if we found
  * either X-B3 or Money HTTP headers in the request; otherwise, a new root trace is generated.
- * We could compose this server action or pass it directly to an http4s blaze server for execution.
  */
 val http4sServerAction = HttpService[IO] {
   case request @ GET -> Root / "salesreport" / accountRep =>
@@ -146,7 +161,7 @@ val http4sServerAction = HttpService[IO] {
 }
 
 /*
- * Main flow: Now, at the end of the universe, we run the io program.  This will result, in this example using the supplied logging
+ * Now, at the end of the universe, we run the io program.  This will result, in this example using the supplied logging
  * framework Emitter, in the following items logged via the `distributed-trace.txt` logger:
  *   Span: [ span-id=-4268861818882462019 ] [ trace-id=2a71fb7b-f38d-4f6a-a4d1-229c6c5bc963 ] [ parent-id=-6262761813211462065 ]
  *     [ span-name=retrieve-sales-figures] [ app-name=sales-management-system ] [ start-time=2016-09-26T00:29:14.802Z ]

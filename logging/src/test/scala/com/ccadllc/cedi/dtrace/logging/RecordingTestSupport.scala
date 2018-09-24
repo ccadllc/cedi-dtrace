@@ -47,14 +47,14 @@ trait RecordingTestSupport extends TestSupport with BeforeAndAfterEach {
   protected def spanNote(note: Note): String
 
   protected def assertRootSpanRecorded(): Unit = {
-    val spanRoot = Span.root[IO](Span.Name("calculate-quarterly-sales")).unsafeRunSync
+    val spanRoot = Span.root[IO](quarterlySalesCalculationTimer, Span.Name("calculate-quarterly-sales")).unsafeRunSync
     IO(Thread.sleep(5L)).toTraceT.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
     LogEmitterTestCache.containingAll(spanId(spanRoot.spanId.spanId), parentSpanId(spanRoot.spanId.spanId), spanName(spanRoot.spanName)) should have size (1)
     ()
   }
 
   protected def assertChildSpanRecorded(): Unit = {
-    val spanRoot = Span.root[IO](Span.Name("calculate-quarterly-sales")).unsafeRunSync
+    val spanRoot = Span.root[IO](quarterlySalesCalculationTimer, Span.Name("calculate-quarterly-sales")).unsafeRunSync
     val retrieveExistingSalesSpanName = Span.Name("retrieve-existing-sales")
     IO(Thread.sleep(5L)).newSpan(retrieveExistingSalesSpanName).trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
     LogEmitterTestCache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(retrieveExistingSalesSpanName)) should have size (1)
@@ -63,7 +63,7 @@ trait RecordingTestSupport extends TestSupport with BeforeAndAfterEach {
   }
 
   protected def assertChildSpanRecordedWithNote(note: Note): Unit = {
-    val spanRoot = Span.root[IO](Span.Name("calculate-quarterly-sales")).unsafeRunSync
+    val spanRoot = Span.root[IO](quarterlySalesCalculationTimer, Span.Name("calculate-quarterly-sales")).unsafeRunSync
     val retrieveExistingSalesSpanName = Span.Name("retrieve-existing-sales")
     IO(Thread.sleep(5L)).newSpan(retrieveExistingSalesSpanName, note).trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
     val entriesWithNote = LogEmitterTestCache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(retrieveExistingSalesSpanName), spanNote(note))
@@ -75,7 +75,7 @@ trait RecordingTestSupport extends TestSupport with BeforeAndAfterEach {
 
   protected def assertNestedSpansRecorded(): Unit = {
     val spanRootName = Span.Name("calculate-quarterly-sales")
-    val spanRoot = Span.root[IO](spanRootName).unsafeRunSync
+    val spanRoot = Span.root[IO](quarterlySalesCalculationTimer, spanRootName).unsafeRunSync
     val requestExistingSalesFiguresSpanName = Span.Name("request-existing-sales-figures")
     val generateNewSalesFiguresSpanName = Span.Name("generate-new-sales-figures")
     def calculateSales: TraceIO[Unit] = for {

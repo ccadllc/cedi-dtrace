@@ -15,14 +15,12 @@
  */
 package com.ccadllc.cedi.dtrace
 
-import java.time.Instant
-import java.time.temporal.ChronoUnit
+import cats.Functor
+import cats.effect.Sync
+import cats.implicits._
 
 import scala.concurrent.duration._
 import scala.language.higherKinds
-
-import cats.effect.Sync
-import cats.implicits._
 
 /**
  * Represents a single span for a distributed trace.  A span is the traced execution of an effectful program `F`.
@@ -30,7 +28,7 @@ import cats.implicits._
  *   of spans.
  * @param spanName - the human readable name of this span - it is the logical name of the effectful program whose execution
  *   this span is recording.
- * @param startTime - the `java.time.Instant` representing the timestamp at which the program started execution
+ * @param startTime - the [[TraceSystem#Time]] representing the point in time at which the program started execution
  * @param failure - the [[FailureDetail]] is present and provides a means to render the detail of a program execution failure
  *   if the execution failed; otherwise is it not present.
  * @param duration - the elapsed time of the execution of the program.
@@ -40,7 +38,7 @@ import cats.implicits._
 case class Span(
   spanId: SpanId,
   spanName: Span.Name,
-  startTime: Instant,
+  startTime: TraceSystem.Time,
   failure: Option[FailureDetail],
   duration: FiniteDuration,
   notes: Vector[Note]) {
@@ -50,26 +48,26 @@ case class Span(
    */
   val root: Boolean = spanId.root
 
-  private[dtrace] def newChild[F[_]: Sync](spanName: Span.Name): F[Span] = for {
-    startTime <- Span.nowInstant
+  private[dtrace] def newChild[F[_]: Sync](timer: TraceSystem.Timer[F], spanName: Span.Name): F[Span] = for {
+    startTime <- timer.time
     child <- spanId.newChild
   } yield Span(child, spanName, startTime, None, Duration.Zero, Vector.empty)
 
   private[dtrace] def setNotes(notes: Vector[Note]): Span =
     copy(notes = notes)
 
-  private[dtrace] def updateStartTime[F[_]: Sync]: F[Span] =
-    Span.nowInstant map { t => copy(startTime = t) }
+  private[dtrace] def updateStartTime[F[_]: Functor](timer: TraceSystem.Timer[F]): F[Span] =
+    timer.time map { t => copy(startTime = t) }
 
-  private[dtrace] def finishSuccess[F[_]: Sync]: F[Span] =
-    finish(None)
+  private[dtrace] def finishSuccess[F[_]: Functor](timer: TraceSystem.Timer[F]): F[Span] =
+    finish(timer, None)
 
-  private[dtrace] def finishFailure[F[_]: Sync](detail: FailureDetail): F[Span] =
-    finish(Some(detail))
+  private[dtrace] def finishFailure[F[_]: Functor](timer: TraceSystem.Timer[F], detail: FailureDetail): F[Span] =
+    finish(timer, Some(detail))
 
-  private def finish[F[_]: Sync](failure: Option[FailureDetail]): F[Span] =
-    Span.nowInstant map { endTime =>
-      copy(failure = failure, duration = FiniteDuration(ChronoUnit.MICROS.between(startTime, endTime), MICROSECONDS))
+  private def finish[F[_]: Functor](timer: TraceSystem.Timer[F], failure: Option[FailureDetail]): F[Span] =
+    timer.time map { endTime =>
+      copy(failure = failure, duration = FiniteDuration(endTime.value - startTime.value, endTime.unit))
     }
 
   override def toString: String =
@@ -77,29 +75,29 @@ case class Span(
 }
 
 object Span {
-  case class Name(value: String) { override def toString: String = value }
+  final case class Name(value: String) { override def toString: String = value }
 
   /**
    * Creates a root span by generating a root [[SpanId]].
+   * @param timer - the [[TraceSystem#Timer]] used to measure the span.
    * @param spanName - the human readable name of this span.
    * @param notes - a variable argument list of [[Note]]s, metadata to annotate this span.
    * @return newSpan - an effectful program which when run will result in a new root span.
    */
-  def root[F[_]: Sync](spanName: Name, notes: Note*): F[Span] = SpanId.root flatMap { newSpan(_, spanName, notes: _*) }
+  def root[F[_]: Sync](timer: TraceSystem.Timer[F], spanName: Name, notes: Note*): F[Span] =
+    SpanId.root flatMap { newSpan(timer, _, spanName, notes: _*) }
 
   /**
    * Create a new child of the passed-in [[SpanId]].
+   * @param timer - the [[TraceSystem#Timer]] used to measure the span.
    * @param spanId - the [[SpanId]] containing the identity for which a child span will be created.
    * @param spanName - the human readable name of this span.
    * @param notes - a variable argument list of [[Note]]s, metadata to annotate this span.
    * @return newSpan - an effectful program which when run will result in a new child span.
    */
-  def newChild[F[_]: Sync](spanId: SpanId, spanName: Name, notes: Note*): F[Span] = spanId.newChild flatMap { newSpan(_, spanName, notes: _*) }
+  def newChild[F[_]: Sync](timer: TraceSystem.Timer[F], spanId: SpanId, spanName: Name, notes: Note*): F[Span] =
+    spanId.newChild flatMap { newSpan(timer, _, spanName, notes: _*) }
 
-  private[dtrace] val empty: Span = Span(SpanId.empty, Span.Name("empty"), Instant.EPOCH, None, 0.seconds, Vector.empty)
-
-  private def nowInstant[F[_]](implicit F: Sync[F]): F[Instant] = F.delay(Instant.now)
-
-  private def newSpan[F[_]: Sync](spanId: SpanId, spanName: Span.Name, notes: Note*): F[Span] =
-    nowInstant map { Span(spanId, spanName, _, None, Duration.Zero, notes.toVector) }
+  private def newSpan[F[_]: Functor](timer: TraceSystem.Timer[F], spanId: SpanId, spanName: Span.Name, notes: Note*): F[Span] =
+    timer.time map { Span(spanId, spanName, _, None, Duration.Zero, notes.toVector) }
 }

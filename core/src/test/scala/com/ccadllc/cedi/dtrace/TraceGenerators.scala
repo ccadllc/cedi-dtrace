@@ -17,8 +17,8 @@ package com.ccadllc.cedi.dtrace
 
 import cats.effect.Sync
 
-import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 import org.scalacheck.{ Arbitrary, Gen }
 
@@ -31,6 +31,9 @@ trait TraceGenerators {
 
   def testEmitter[F[_]: Sync]: TraceSystem.Emitter[F] = new TestEmitter[F]
 
+  def genTsTimer[F[_]: Sync]: Gen[TraceSystem.Timer[F]] =
+    Gen.oneOf(Gen.const(TraceSystem.monotonicTimer[F]), Gen.const(TraceSystem.realTimeTimer[F]))
+
   def genOption[A](g: Gen[A]): Gen[Option[A]] = Gen.oneOf(Gen.const(Option.empty[A]), g map Option.apply)
 
   def genUUID: Gen[UUID] = for {
@@ -38,10 +41,20 @@ trait TraceGenerators {
     lo <- arbitrary[Long]
   } yield new UUID(hi, lo)
 
-  def genInstant(minMillis: Long, maxMillis: Long): Gen[Instant] =
-    Gen.chooseNum(minMillis, maxMillis) map { ms => Instant.ofEpochMilli(ms) }
-  def genValidInstant: Gen[Instant] = genInstant(Long.MinValue >> 1, Long.MaxValue)
-  def genFiniteDuration: Gen[FiniteDuration] = genInstant(-256L, 256L) map { i => FiniteDuration(i.toEpochMilli * 1000L, MICROSECONDS) }
+  def genTimeUnit: Gen[TimeUnit] = Gen.oneOf(Gen.const(TimeUnit.MILLISECONDS), Gen.const(TimeUnit.NANOSECONDS))
+
+  def genTimeSource: Gen[TraceSystem.Time.Source] = Gen.oneOf(
+    Gen.const(TraceSystem.Time.Source.Monotonic),
+    Gen.const(TraceSystem.Time.Source.RealTime))
+
+  def genTsTime(min: Long, max: Long): Gen[TraceSystem.Time] = for {
+    v <- Gen.chooseNum(min, max)
+    u <- genTimeUnit
+    s <- genTimeSource
+  } yield TraceSystem.Time(v, u, s)
+
+  def genValidTsTime: Gen[TraceSystem.Time] = genTsTime(Long.MinValue >> 1, Long.MaxValue)
+  def genFiniteDuration: Gen[FiniteDuration] = genTsTime(-256L, 256L) map { t => FiniteDuration(t.value, t.unit) }
   def genVectorOfN[A](size: Int, genElement: Gen[A]): Gen[Vector[A]] = Gen.listOfN(size, genElement) map { _.toVector }
   def genVectorOfN[A](minimum: Int, maximum: Int, genElement: Gen[A]): Gen[Vector[A]] = Gen.chooseNum(minimum, maximum) flatMap { genVectorOfN(_, genElement) }
   def genStr: Gen[String] = Gen.listOf(Gen.alphaNumChar) map { _.mkString }
@@ -53,7 +66,10 @@ trait TraceGenerators {
 
   def genTraceSystemMetadata: Gen[Map[String, String]] = Gen.nonEmptyMap(genTraceSystemMetadataPair)
 
-  def genTraceSystem[F[_]: Sync]: Gen[TraceSystem[F]] = genTraceSystemMetadata map { TraceSystem(_, testEmitter[F]) }
+  def genTraceSystem[F[_]: Sync]: Gen[TraceSystem[F]] = for {
+    md <- genTraceSystemMetadata
+    timer <- genTsTimer[F]
+  } yield TraceSystem(md, testEmitter[F], timer)
 
   def genSpanId: Gen[SpanId] = for {
     traceId <- genUUID
@@ -85,7 +101,7 @@ trait TraceGenerators {
   def genSpan: Gen[Span] = for {
     spanId <- genSpanId
     spanName <- genSpanName
-    startTime <- genValidInstant
+    startTime <- genValidTsTime
     failure <- genOption(genFailureDetail)
     duration <- genFiniteDuration
     notes <- genNotes

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Combined Conditional Access Development, LLC.
+ * Copyright 2018 Combined Conditional Access Development, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,20 @@
  */
 package com.ccadllc.cedi.dtrace
 
+import cats.implicits._
+
 import io.circe._
 
-import java.time.Instant
-import java.time.format.DateTimeParseException
-
 package object logging {
-  implicit final val encodeInstant: Encoder[Instant] = Encoder.instance(time =>
-    Json.fromString(time.toString))
-  implicit final val decodeInstant: Decoder[Instant] = Decoder.instance { c =>
+  implicit final val encodeTime: Encoder[TraceSystem.Time] = Encoder.instance { time =>
+    Json.fromString(time.show)
+  }
+  implicit final val decodeTime: Decoder[TraceSystem.Time] = Decoder.instance { c =>
     c.as[String] match {
-      case Right(s) => try Right(Instant.parse(s)) catch {
-        case _: DateTimeParseException => Left(DecodingFailure("Instant", c.history))
+      case Right(s) => TraceSystem.Time.parse(s).leftMap {
+        fd => DecodingFailure(s"Failed to parse $s to Time (${fd.render})", c.history)
       }
-      case l @ Left(_) => l.asInstanceOf[Decoder.Result[Instant]]
+      case l @ Left(_) => l.asInstanceOf[Decoder.Result[TraceSystem.Time]]
     }
   }
 }

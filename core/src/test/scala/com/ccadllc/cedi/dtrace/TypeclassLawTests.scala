@@ -67,9 +67,12 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
   private implicit def catsEffectLawsArbitraryForTraceIOParallel[A: Arbitrary: Cogen]: Arbitrary[TraceIO.Par[A]] =
     Arbitrary(catsEffectLawsArbitraryForIOParallel[A].arbitrary map TraceIO.Par.apply)
 
-  private val tc: TraceContext[IO] = TraceContext(
-    Span.root[IO](Span.Name("calculate-quarterly-sales")).unsafeRunSync,
-    TraceSystem(testSystemMetadata, new TestEmitter[IO]))
+  private val tc: TraceContext[IO] = {
+    val timer = TraceSystem.realTimeTimer[IO]
+    TraceContext(
+      Span.root(timer, Span.Name("calculate-quarterly-sales")).unsafeRunSync,
+      TraceSystem(testSystemMetadata, new TestEmitter[IO], timer))
+  }
 
   checkAllAsync("TraceIO", implicit testC => {
     implicit val csIo = testC.contextShift[IO]

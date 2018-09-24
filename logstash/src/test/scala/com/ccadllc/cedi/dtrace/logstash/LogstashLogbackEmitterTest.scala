@@ -22,8 +22,8 @@ import org.scalatest.WordSpec
 class LogstashLogbackEmitterTest extends WordSpec with TestData {
   "LogstashLogbackEmitterTest" should {
     "work" in {
-      val system = TraceSystem(testSystemMetadata, new LogstashLogbackEmitter[IO])
-      val spanRoot = Span.root[IO](Span.Name("calculate-quarterly-sales")).unsafeRunSync
+      val system = TraceSystem(testSystemMetadata, new LogstashLogbackEmitter[IO], quarterlySalesCalculationTimer)
+      val spanRoot = Span.root[IO](quarterlySalesCalculationTimer, Span.Name("calculate-quarterly-sales")).unsafeRunSync
       IO.unit.toTraceT.trace(TraceContext(spanRoot, system)).unsafeRunSync
     }
   }

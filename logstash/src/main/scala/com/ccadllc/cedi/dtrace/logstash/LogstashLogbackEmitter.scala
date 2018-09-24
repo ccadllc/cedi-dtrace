@@ -17,7 +17,7 @@ package com.ccadllc.cedi.dtrace
 package logstash
 
 import cats.effect.Sync
-import java.time.format.DateTimeFormatter
+import cats.implicits._
 import net.logstash.logback.marker.LogstashMarker
 import net.logstash.logback.marker.Markers._
 import org.slf4j.LoggerFactory
@@ -38,7 +38,7 @@ final class LogstashLogbackEmitter[F[_]](implicit F: Sync[F]) extends TraceSyste
           and[LogstashMarker](append("span-id", s.spanId.spanId)).
           and[LogstashMarker](append("parent-id", s.spanId.parentSpanId)).
           and[LogstashMarker](append("span-name", s.spanName.value)).
-          and[LogstashMarker](append("start-time", DateTimeFormatter.ISO_INSTANT.format(s.startTime))).
+          and[LogstashMarker](append("start-time", s.startTime.show)).
           and[LogstashMarker](append("span-success", s.failure.isEmpty)).
           and[LogstashMarker](append("failure-detail", s.failure.map(_.render).orNull)).
           and[LogstashMarker](append("span-duration", s.duration.toMicros)).
