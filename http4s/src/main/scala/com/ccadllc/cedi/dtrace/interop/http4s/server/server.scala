@@ -21,26 +21,10 @@ import cats.effect.Sync
 import cats.implicits._
 
 import org.http4s.{ Header => H4sHeader, _ }
-import org.http4s.parser.HttpHeaderParser
-import org.http4s.util.CaseInsensitiveString
 
 import scala.language.higherKinds
 
 package object server {
-  /**
-   * This function drops the parser for the built-in `http4s` `X-B3-Trace-Id` header since it only successfully parses 64 bit
-   * values, failing on 128 bit values and with cedi dtrace, the 128 bit value will be produced and are preferred
-   * to consume in order to represent traces uniquely in a distributed environment.  Once `http4s` updates the parser to handle
-   * 128 bit values, this can be removed.  This should be invoked in your initialization code.
-   * Once [[https://github.com/http4s/http4s/issues/1859 this issue]] is resolved, this can be removed.
-   *
-   * @param F - an instance of `cats.effect.Sync` for the effect type `F`, used to delay the side effecting action.
-   * @tparam F - a type constructor representing the effect in which to execute the side-effecting action to drop the
-   *   X-B3 Trace ID header from the global header parser registry.
-   */
-  def dropBuiltInXb3Headers[F[_]](implicit F: Sync[F]): F[Unit] =
-    F.delay(HttpHeaderParser.dropParser(CaseInsensitiveString("X-B3-TRACEID"))).void
-
   /**
    * This function can be used to execute a traced action within an `HttpService[F]` with
    * the [[TraceContext]] of `F` possibly derived from HTTP headers, given instances of `cats.effect.Sync[F]`, [[HeaderCodec]],
@@ -78,7 +62,7 @@ package object server {
    */
   def tracedAction[F[_], A](req: Request[F], spanName: Span.Name, notes: Note*)(action: TraceT[F, A])(implicit codec: HeaderCodec, F: Sync[F], ts: TraceSystem[F]): F[A] = codec.decode(fromHttp4s(req.headers.toList)) match {
     case Right(spanIdMaybe) =>
-      spanIdMaybe.fold(Span.root[F](spanName, notes: _*)) { Span.newChild[F](_, spanName, notes: _*) }.flatMap { span =>
+      spanIdMaybe.fold(Span.root[F](ts.timer, spanName, notes: _*)) { Span.newChild[F](ts.timer, _, spanName, notes: _*) }.flatMap { span =>
         action.trace(TraceContext(span, ts))
       }
     case Left(errDetail) => F.raiseError[A](errDetail)

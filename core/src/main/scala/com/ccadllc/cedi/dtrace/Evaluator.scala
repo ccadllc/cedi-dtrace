@@ -27,8 +27,7 @@ package com.ccadllc.cedi.dtrace
  */
 class Evaluator[A](
   val exceptionToFailure: Throwable => Option[FailureDetail],
-  val resultToFailure: A => Option[FailureDetail]
-)
+  val resultToFailure: A => Option[FailureDetail])
 
 /**
  * This companion object for `Evaluator` instances provides smart constructors and a `default` value should no

@@ -1,6 +1,10 @@
-lazy val circeVersion = "0.9.3"
+lazy val catsEffectVersion = "1.0.0"
 
-lazy val http4sVersion = "0.18.11"
+lazy val catsCoreVersion = "1.4.0"
+
+lazy val circeVersion = "0.10.0-M2"
+
+lazy val http4sVersion = "0.19.0-M2"
 
 lazy val logbackVersion = "1.2.3"
 
@@ -13,11 +17,19 @@ lazy val commonSettings = Seq(
     Contributor("mpilquist", "Michael Pilquist")
   ),
   libraryDependencies ++= Seq(
-    "org.typelevel" %% "cats-effect" % "0.10",
-    "org.scalatest" %% "scalatest" % "3.0.4" % "test",
-    "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
-  ),
-  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3")
+    "org.typelevel" %% "cats-core" % catsCoreVersion,
+    "org.typelevel" %% "cats-effect" % catsEffectVersion
+  ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((2, v)) if v >= 13 => Seq(
+      "org.scalatest" %% "scalatest" % "3.0.6-SNAP2" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
+    )
+    case _ => Seq(
+      "org.scalatest" %% "scalatest" % "3.0.5" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
+    )
+  }),
+  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.7")
 )
 
 lazy val root = project.in(file(".")).aggregate(core, logging, logstash, xb3, money, http4s).settings(commonSettings).settings(noPublish)
@@ -26,6 +38,7 @@ lazy val core = project.in(file("core")).enablePlugins(SbtOsgi).
   settings(commonSettings).
   settings(
     name := "dtrace-core",
+    libraryDependencies += "org.typelevel" %% "cats-effect-laws" % catsEffectVersion % "test",
     buildOsgiBundle("com.ccadllc.cedi.dtrace")
   )
 
@@ -37,7 +50,6 @@ lazy val logging = project.in(file("logging")).enablePlugins(SbtOsgi).
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core" % circeVersion,
       "io.circe" %% "circe-generic" % circeVersion,
-      "io.circe" %% "circe-java8" % circeVersion,
       "org.slf4j" % "slf4j-api" % slf4jVersion,
       "ch.qos.logback" % "logback-core" % logbackVersion % "test",
       "ch.qos.logback" % "logback-classic" % logbackVersion % "test",
@@ -64,7 +76,7 @@ lazy val xb3 = project.in(file("xb3")).enablePlugins(SbtOsgi).
   settings(commonSettings).
   settings(
     name := "dtrace-xb3",
-    libraryDependencies += "org.scodec" %% "scodec-bits" % "1.1.5",
+    libraryDependencies += "org.scodec" %% "scodec-bits" % "1.1.6",
     buildOsgiBundle("com.ccadllc.cedi.dtrace.interop.xb3")
   ).dependsOn(core % "compile->compile;test->test")
 
@@ -80,10 +92,24 @@ lazy val http4s = project.in(file("http4s")).enablePlugins(SbtOsgi).
   settings(
     name := "dtrace-http4s",
     parallelExecution in Test := false,
-    libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-core" % http4sVersion,
-      "org.http4s" %% "http4s-dsl" % http4sVersion % "test"
-    ),
+    // TODO: This is only temporary until http4s publishes for 2.13
+    // Replace this libDependencies and the two skips with just a
+    // libDeps for the two http4s libs
+    libraryDependencies := (CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, v)) if v >= 13 => Seq.empty
+      case _ => libraryDependencies.value ++ Seq(
+        "org.http4s" %% "http4s-core" % http4sVersion,
+        "org.http4s" %% "http4s-dsl" % http4sVersion % "test"
+      )
+    }),
+    skip in compile := (CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, v)) => v >= 13
+      case _ => false
+    }),
+    skip in publish := (CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, v)) => v >= 13
+      case _ => false
+    }),
     buildOsgiBundle("com.ccadllc.cedi.dtrace.interop.http4s")
   ).dependsOn(core % "compile->compile;test->test", money % "compile->test", xb3 % "compile->test")
 

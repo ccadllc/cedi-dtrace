@@ -14,17 +14,22 @@
  * limitations under the License.
  */
 package com.ccadllc.cedi.dtrace
-package logstash
 
-import cats.effect.IO
-import org.scalatest.WordSpec
+import cats.implicits._
 
-class LogstashLogbackEmitterTest extends WordSpec with TestData {
-  "LogstashLogbackEmitterTest" should {
-    "work" in {
-      val system = TraceSystem(testSystemMetadata, new LogstashLogbackEmitter[IO], quarterlySalesCalculationTimer)
-      val spanRoot = Span.root[IO](quarterlySalesCalculationTimer, Span.Name("calculate-quarterly-sales")).unsafeRunSync
-      IO.unit.toTraceT.trace(TraceContext(spanRoot, system)).unsafeRunSync
+import io.circe._
+
+package object logging {
+  implicit final val encodeTime: Encoder[TraceSystem.Time] = Encoder.instance { time =>
+    Json.fromString(time.show)
+  }
+  implicit final val decodeTime: Decoder[TraceSystem.Time] = Decoder.instance { c =>
+    c.as[String] match {
+      case Right(s) => TraceSystem.Time.parse(s).leftMap {
+        fd => DecodingFailure(s"Failed to parse $s to Time (${fd.render})", c.history)
+      }
+      case l @ Left(_) => l.asInstanceOf[Decoder.Result[TraceSystem.Time]]
     }
   }
 }
+
