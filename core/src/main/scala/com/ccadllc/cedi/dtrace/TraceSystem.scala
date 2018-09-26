@@ -19,6 +19,8 @@ import cats._
 import cats.effect.{ Clock, Sync }
 import cats.implicits._
 
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 
 import scala.language.higherKinds
@@ -66,7 +68,10 @@ object TraceSystem {
    * will be used; otherwise, if it is a [[Timer#RealTime]], the `cats.effect.Clock#realTime` will be used.
    */
   final case class Time(value: Long, unit: TimeUnit, source: Time.Source) {
-    override val toString: String = s"$value ${unit.toString.toLowerCase} (${source.toString.toLowerCase})"
+    override def toString: String = source match {
+      case Time.Source.Monotonic => s"$value ${unit.toString.toLowerCase}"
+      case Time.Source.RealTime => DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(TimeUnit.MILLISECONDS.convert(value, unit)))
+    }
   }
   object Time {
     sealed abstract class Source extends Product with Serializable
@@ -74,25 +79,30 @@ object TraceSystem {
       case object Monotonic extends Source
       case object RealTime extends Source
       def fromString(str: String): Either[FailureDetail, Source] = if (str === Monotonic.toString) Right(Monotonic)
-      else if (str === RealTime.toString) Right(RealTime) else Left(FailureDetail.Message(s"$str was neither $Monotonic nor $RealTime"))
+      else if (str === RealTime.toString) Right(RealTime) else Left(FailureDetail(s"$str was neither $Monotonic nor $RealTime"))
     }
-    final val TimeRegex: Regex = "([0-9]+) ([a-z]+) (\\([a-z]+\\))".r
+    final val TimeRegex: Regex = "([0-9]+) ([a-z]+)".r
 
     implicit val show: Show[Time] = Show.fromToString
 
-    def parse(str: String): Either[FailureDetail, Time] = str match {
-      case TimeRegex(valueStr, unitStr, sourceStr) => for {
-        value <- Either.catchNonFatal { valueStr.toLong }.leftMap {
-          _ => FailureDetail.Message(s"Could not parse $valueStr as a Long from $str for Time")
-        }
-        unit <- Either.catchNonFatal { TimeUnit.valueOf(unitStr.toUpperCase) }.leftMap {
-          e => FailureDetail.Message(s"Could not parse $unitStr as a TimeUnit from $str for Time (${e.getMessage})")
-        }
-        source <- Source.fromString(sourceStr.capitalize).leftMap {
-          fd => FailureDetail.Message(s"Could not parse $sourceStr as a Time.Source from $str for Time (${fd.render})")
-        }
-      } yield Time(value, unit, source)
-      case other => Left(FailureDetail.Message(s"Could not parse $str to a Time value"))
+    def parse(str: String): Either[FailureDetail, Time] = {
+      def realTimeParse(str: String): Either[FailureDetail, Time] = Either.catchNonFatal {
+        Time(TimeUnit.MILLISECONDS.toMicros(Instant.parse(str).toEpochMilli), TimeUnit.MICROSECONDS, Time.Source.RealTime)
+      }.leftMap(FailureDetail(_))
+      def monotonicParse(str: String): Either[FailureDetail, Time] = str match {
+        case TimeRegex(valueStr, unitStr) => for {
+          value <- Either.catchNonFatal { valueStr.toLong }.leftMap {
+            _ => FailureDetail(s"Could not parse $valueStr as a Long from $str for Time")
+          }
+          unit <- Either.catchNonFatal { TimeUnit.valueOf(unitStr.toUpperCase) }.leftMap {
+            e => FailureDetail(s"Could not parse $unitStr as a TimeUnit from $str for Time (${e.getMessage})")
+          }
+        } yield Time(value, unit, Time.Source.Monotonic)
+        case other => Left(FailureDetail(s"Could not parse $str to a Time value"))
+      }
+      realTimeParse(str).fold(
+        rte => monotonicParse(str).leftMap(mte => FailureDetail(s"Could parse $str as neither a real-time ($rte) or monotonic ($mte) TraceSystem.Time")),
+        Right(_))
     }
   }
 
