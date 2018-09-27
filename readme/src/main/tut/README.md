@@ -6,7 +6,7 @@ Quick links:
 - [Examples of use](#usage)
 - [Configuration](#config)
 - [How to get latest version](#getit)
-- API Docs [Core](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-core_2.12/1.5.0/dtrace-core_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/index.html) [Logging](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logging_2.12/1.5.0/dtrace-logging_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logging/index.html)
+- API Docs [Core](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-core_2.12/1.5.0/dtrace-core_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/index.html) [Logging](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logging_2.12/1.5.0/dtrace-logging_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logging/index.html) [Logstash](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logstash_2.12/1.5.0/dtrace-logstash_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logstash/index.html) [Money](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-money_2.12/1.5.0/dtrace-money_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/money/index.html) [Http4s](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-http4s_2.12/1.5.0/dtrace-http4s_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/http4s/index.html) [XB3](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-xb3_2.12/1.5.0/dtrace-xb3_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/xb3/index.html)
 
 
 ### <a id="about"></a>About the library
