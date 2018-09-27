@@ -6,7 +6,7 @@ Quick links:
 - [Examples of use](#usage)
 - [Configuration](#config)
 - [How to get latest version](#getit)
-- API Docs [Core](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-core_2.12/1.3.0/dtrace-core_2.12-1.3.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/index.html) [Logging](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logging_2.12/1.3.0/dtrace-logging_2.12-1.3.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logging/index.html)
+- API Docs [Core](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-core_2.12/1.5.0/dtrace-core_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/index.html) [Logging](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logging_2.12/1.5.0/dtrace-logging_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logging/index.html)
 
 
 ### <a id="about"></a>About the library
@@ -40,7 +40,7 @@ import org.http4s._
 import org.http4s.dsl.io._
 
 import com.ccadllc.cedi.dtrace._
-import com.ccadllc.cedi.dtrace.interop.htt4s._
+import com.ccadllc.cedi.dtrace.interop.http4s._
 import com.ccadllc.cedi.dtrace.logging.LogEmitter
 
 import TraceSystem._
@@ -196,7 +196,7 @@ Cedi Distributed Trace supports Scala 2.11 and 2.12. This distribution is publis
 This is the core functionality, recording trace and span information over effectful programs, passing these recorded events to registred emitters for disposition.
 
 ```scala
-libraryDependencies += "com.ccadllc.cedi" %% "dtrace-core" % "1.3.0-SNAPSHOT"
+libraryDependencies += "com.ccadllc.cedi" %% "dtrace-core" % "1.5.0"
 ```
 
 #### dtrace-logging
@@ -204,7 +204,7 @@ libraryDependencies += "com.ccadllc.cedi" %% "dtrace-core" % "1.3.0-SNAPSHOT"
 This component provides emitters for logging the trace spans in text and/or JSON format using the `sf4j` logging framework.  It uses the `circe` library for formatting the trace span information as JSON.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logging" % "1.3.0-SNAPSHOT"
+libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logging" % "1.5.0"
 ```
 
 #### dtrace-logstash
@@ -212,7 +212,7 @@ libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logging" % "1.3.0-SNAPSHOT
 This component provides emitters for logging in logstash-compliant format.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logstash" % "1.3.0-SNAPSHOT"
+libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logstash" % "1.5.0"
 ```
 
 #### dtrace-money interoperability
@@ -220,7 +220,7 @@ libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logstash" % "1.3.0-SNAPSHO
 This component provides an instance of the core HeaderCodec in order to encode and decode Money-compliant HTTP headers.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-money" % "1.3.0-SNAPSHOT"
+libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-money" % "1.5.0"
 ```
 
 #### dtrace-xb3 interoperability
@@ -228,7 +228,7 @@ libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-money" % "1.3.0-SNAPSHOT"
 This component provides an insance of the core HeaderCodec in order to encode and decode X-B3/Zipkin-compliant HTTP headers.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-xb3" % "1.3.0-SNAPSHOT"
+libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-xb3" % "1.5.0"
 ```
 
 #### dtrace-http4s interoperability
@@ -236,7 +236,7 @@ libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-xb3" % "1.3.0-SNAPSHOT"
 This component provides convenience functions to ingest trace-related HTTP headers (such as Money or X-B3) in an http4s server-side service and to propagate trace-related HTTP headers within an http4s client-side request to a remote entity.  This module is used in combination with either or both the dtrace-xb3 and dtrace-money modules.  If you have another protocol you wish to use instead, it will likewise interoperate with any implementation of the core HeaderCodec trait in implicit scope.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-http4s" % "1.3.0-SNAPSHOT"
+libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-http4s" % "1.5.0"
 ```
 
 ## Copyright and License

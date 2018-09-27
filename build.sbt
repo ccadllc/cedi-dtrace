@@ -4,7 +4,7 @@ lazy val catsCoreVersion = "1.4.0"
 
 lazy val circeVersion = "0.10.0"
 
-lazy val http4sVersion = "0.19.0-M2"
+lazy val http4sVersion = "0.19.0-M3"
 
 lazy val logbackVersion = "1.2.3"
 
