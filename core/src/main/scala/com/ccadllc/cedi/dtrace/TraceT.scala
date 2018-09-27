@@ -450,6 +450,9 @@ object TraceT extends TraceTPolyFunctions with TraceTInstances {
    * TODO: Look into a better construct such that we don't have to depend on the
    * underlying `F` having a `Monad[F]` in order to make the overall `TraceT[F, ?]`
    * stacksafe as its very brittle and non-type-safe.
+   *
+   * This was taken pretty much whole cloth from [[https://github.com/typelevel/cats/blob/master/core/src/main/scala/cats/data/Kleisli.scala#L104 Kleisli]]
+   * in order to make `cats-effect` typeclasses which are `Kleisli` stack-safe.
    */
   private[dtrace] def suspendEffect[F[_], A](toEffect: TraceContext[F] => F[A])(implicit F: Functor[F]): TraceT[F, A] = F match {
     case m: Monad[F] @unchecked => TraceT { tc => m.flatMap(m.pure(tc))(toEffect) }
