@@ -25,7 +25,9 @@ import cats.Show
 final case class Header(name: Header.CaseInsensitiveName, value: Header.Value)
 object Header {
   final case class CaseInsensitiveName(value: String) {
-    override val hashCode: Int = value.toLowerCase.hashCode
+    /* Added to suppress equals/hashcode warning from compiler when using the `override val hashCode` idiom */
+    private val hc: Int = value.toLowerCase.hashCode
+    override def hashCode: Int = hc
     override def equals(other: Any): Boolean = other match {
       case CaseInsensitiveName(ov) => value.equalsIgnoreCase(ov)
       case _ => false

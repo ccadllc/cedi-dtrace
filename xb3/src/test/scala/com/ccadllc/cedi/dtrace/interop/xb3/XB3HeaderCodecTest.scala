@@ -57,12 +57,10 @@ class XB3HeaderCodecTest extends WordSpec with Matchers with GeneratorDrivenProp
         val expectedNonRootHeaders = List(
           Header(TraceIdHeaderName, Header.Value(ByteVector.fromUUID(traceIdValue).toHex)),
           Header(ParentIdHeaderName, Header.Value(ByteVector.fromLong(parentSpanIdValue).toHex)),
-          Header(SpanIdHeaderName, Header.Value(ByteVector.fromLong(spanIdValue).toHex))
-        )
+          Header(SpanIdHeaderName, Header.Value(ByteVector.fromLong(spanIdValue).toHex)))
         val expectedRootHeaders = List(
           Header(TraceIdHeaderName, Header.Value(ByteVector.fromUUID(traceIdValue).toHex)),
-          Header(SpanIdHeaderName, Header.Value(ByteVector.fromLong(spanIdValue).toHex))
-        )
+          Header(SpanIdHeaderName, Header.Value(ByteVector.fromLong(spanIdValue).toHex)))
         val spanId = SpanId(traceIdValue, parentSpanIdValue, spanIdValue)
         val headers = headerCodec.encode(spanId)
         val expectedHeaders = if (spanId.root) expectedRootHeaders else expectedNonRootHeaders

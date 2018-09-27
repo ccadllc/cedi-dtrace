@@ -26,15 +26,14 @@ import scala.util.matching.Regex
 import MoneyHeaderCodec._
 
 /**
- * Implements the [[HeaderCodec]] trait, providing for the encoding and decoding of
- * `Money`-style tracing HTTP headers into and from a [[SpanId]] respectively.
+ * Implements the `HeaderCodec` trait, providing for the encoding and decoding of
+ * `Money`-style tracing HTTP headers into and from a `SpanId` respectively.
  */
 class MoneyHeaderCodec extends HeaderCodec {
 
   override def encode(spanId: SpanId): List[Header] = {
     val headerValue = Header.Value(
-      s"$TraceIdHeader=${spanId.traceId};$ParentIdHeader=${spanId.parentSpanId};$SpanIdHeader=${spanId.spanId}"
-    )
+      s"$TraceIdHeader=${spanId.traceId};$ParentIdHeader=${spanId.parentSpanId};$SpanIdHeader=${spanId.spanId}")
     List(Header(HeaderName, headerValue))
   }
 

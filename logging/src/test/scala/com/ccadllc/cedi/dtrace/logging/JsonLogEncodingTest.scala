@@ -21,7 +21,6 @@ import scala.language.higherKinds
 import cats.effect.{ IO, Sync }
 
 import io.circe._
-import io.circe.java8.time._
 import io.circe.syntax._
 
 import org.scalacheck.Arbitrary
