@@ -15,7 +15,8 @@
  */
 package com.ccadllc.cedi.dtrace
 
-import java.time.Instant
+import cats.effect._
+
 import java.util.UUID
 
 import scala.concurrent.duration._
@@ -42,14 +43,13 @@ trait TestData {
   protected val quarterlySalesTotalNoteValue: Note.DoubleValue = Note.DoubleValue(95.6)
   protected val quarterlySalesTotalNote: Note = Note(Note.Name("quarterlySalesTotal"), Some(quarterlySalesTotalNoteValue))
   protected val quarterlySalesCalculationSpanNotes: Vector[Note] = Vector[Note](
-    quarterlySalesUnitsNote, quarterlySalesGoalReachedNote, salesRegionNote, quarterlySalesTotalNote
-  )
+    quarterlySalesUnitsNote, quarterlySalesGoalReachedNote, salesRegionNote, quarterlySalesTotalNote)
+  protected val quarterlySalesCalculationTimer: TraceSystem.Timer[IO] = TraceSystem.realTimeTimer[IO]
   protected val quarterlySalesCalculationSpan: Span = Span(
     quarterlySalesCalculationSpanId,
     Span.Name("Calculate Quarterly Sales"),
-    Instant.now,
+    quarterlySalesCalculationTimer.time.unsafeRunSync,
     None,
     15000.microseconds,
-    quarterlySalesCalculationSpanNotes
-  )
+    quarterlySalesCalculationSpanNotes)
 }

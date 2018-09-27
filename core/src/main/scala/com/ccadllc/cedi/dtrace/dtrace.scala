@@ -15,10 +15,11 @@
  */
 package com.ccadllc.cedi
 
-import cats.MonadError
-import cats.effect.{ IO, Sync }
+import cats._
+import cats.effect._
 import cats.implicits._
 
+import scala.concurrent.ExecutionContext
 import scala.language.higherKinds
 
 /**
@@ -41,17 +42,23 @@ package object dtrace {
    */
   object TraceIO {
     /**
+     * Type alias provided for convenience when using an `IO.Par` as the type of paralleleffectful
+     * program being traced.
+     */
+    type Par[A] = TraceT[IO.Par, A]
+
+    object Par {
+      def apply[A](iop: IO.Par[A]): Par[A] = TraceT.toTraceT(iop)
+      def unwrap[A](tiop: TraceIO.Par[A])(implicit P: NonEmptyParallel[IO, IO.Par]): TraceIO[A] = TraceT { tc =>
+        IO.Par.unwrap(tiop.toEffect(translate(tc, P.parallel)))
+      }
+    }
+
+    /**
      * Ask for the current `TraceContext[IO]` in a `TraceIO`.
      * @return a `TraceContext[IO]` wrapped in a `TraceIO`.
      */
     def ask: TraceIO[TraceContext[IO]] = TraceT { IO.pure }
-
-    /**
-     * Lifts a value `A` into a `TraceIO[A]` context.
-     * @param a - the pure value `A` to lift into a `TraceIO` context.
-     * @return a pure value `A` wrapped in a `TraceIO`.
-     */
-    def pure[A](a: A): TraceIO[A] = toTraceIO(IO.pure(a))
 
     /**
      * Lifts the non-strict, possibly impure expression computing `A` into a `TraceIO[A]`
@@ -60,6 +67,24 @@ package object dtrace {
      * @return a non-strict expression which computes `A` lifted into a `TraceIO`.
      */
     def apply[A](a: => A): TraceIO[A] = toTraceIO(IO(a))
+
+    /**
+     * Creates a `ContextSwitch[TraceIO]` given an `ExecutionContext`.
+     *
+     * @param ec - an `ExecutionContext` used to switch back to after the `ContextSwitch.evalOn` finishes.
+     * @return a `ContextSwitch[TraceIO]`
+     */
+    def contextShift(ec: ExecutionContext)(implicit F: Monad[IO]): ContextShift[TraceIO] = {
+      implicit val cs = IO.contextShift(ec)
+      TraceT.contextShift
+    }
+
+    /**
+     * Lifts a value `A` into a `TraceIO[A]` context.
+     * @param a - the pure value `A` to lift into a `TraceIO` context.
+     * @return a pure value `A` wrapped in a `TraceIO`.
+     */
+    def pure[A](a: A): TraceIO[A] = toTraceIO(IO.pure(a))
 
     /**
      * Lifts the non-strict, possibly impure expression computing a `TraceIO[A]` into a `TraceIO[A]`
@@ -91,6 +116,30 @@ package object dtrace {
    * the appropriate typeclasses in implicit scope.
    */
   implicit class TraceEnrichedEffect[F[_], A](private val self: F[A]) extends AnyVal {
+
+    /**
+     * Lifts this `F[A]` into a `TraceT[F, A] and then transforms that `TraceT` to an equivalent `TraceT[F, A]` where
+     * a best-effort will be made to execute the passed-in function on the finish of the underlying effectful program.
+     * The function can't be guaranteed to run in the face of interrupts, etc.  It depends on the nature of the effectful program
+     * itself.
+     * @param f - a function which is passed an optional `Throwable` - defined if the program failed and
+     *   returns a `TraceT[F, Unit]`, a program run only for its effect.
+     * @return a new `TraceT[F, A]` with the error handling of the aforementioned `f` function
+     *   parameter.
+     */
+    @deprecated("use bracketCase on effect", "1.4.0")
+    def bestEffortOnFinish(f: Option[Throwable] => F[Unit])(implicit F: MonadError[F, Throwable]): F[A] = F match {
+      case b: Bracket[F, Throwable] @unchecked =>
+        b.bracketCase(self)(F.pure) {
+          case ((_, ExitCase.Error(e))) => f(Some(e))
+          case _ => f(None)
+        }
+      case _ =>
+        self.attempt flatMap { r =>
+          f(r.left.toOption).attempt flatMap { _ => r.fold(F.raiseError, F.pure) }
+        }
+    }
+
     /**
      * Creates a new child [[Span]] in the `TraceT[F, A]` created by lifting this `F[A]`, using the
      * default [[Evaluator]] to determine success/failure of the `F[A]` for the purposes of span recording.
@@ -134,8 +183,7 @@ package object dtrace {
      */
     def newAnnotatedSpan(
       spanName: Span.Name,
-      notes: Note*
-    )(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Sync[F]): TraceT[F, A] =
+      notes: Note*)(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Sync[F]): TraceT[F, A] =
       toTraceT.newAnnotatedSpan(spanName, notes: _*)(resultAnnotator)
 
     /**
@@ -183,8 +231,7 @@ package object dtrace {
     def newAnnotatedSpan(
       spanName: Span.Name,
       evaluator: Evaluator[A],
-      notes: Note*
-    )(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Sync[F]): TraceT[F, A] =
+      notes: Note*)(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Sync[F]): TraceT[F, A] =
       toTraceT.newAnnotatedSpan(spanName, evaluator, notes: _*)(resultAnnotator)
 
     /**
@@ -192,20 +239,13 @@ package object dtrace {
      * @return traceTOfA - a `TraceT[F, A]`
      */
     def toTraceT: TraceT[F, A] = TraceT.toTraceT[F, A](self)
+  }
 
-    /**
-     * Lifts this `F[A]` into a `TraceT[F, A] and then transforms that `TraceT` to an equivalent `TraceT[F, A]` where
-     * a best-effort will be made to execute the passed-in function on the finish of the underlying effectful program.
-     * The function can't be guaranteed to run in the face of interrupts, etc.  It depends on the nature of the effectful program
-     * itself.
-     * @param f - a function which is passed an optional `Throwable` - defined if the program failed and
-     *   returns a `TraceT[F, Unit]`, a program run only for its effect.
-     * @return a new `TraceT[F, A]` with the error handling of the aforementioned `f` function
-     *   parameter.
-     */
-    def bestEffortOnFinish(f: Option[Throwable] => F[Unit])(implicit F: MonadError[F, Throwable]): F[A] =
-      self.attempt flatMap { r =>
-        f(r.left.toOption).attempt flatMap { _ => r.fold(F.raiseError, F.pure) }
-      }
+  private[dtrace] def translate[F[_], G[_]](tc: TraceContext[F], trans: F ~> G): TraceContext[G] = {
+    val emitter: TraceSystem.Emitter[G] = new TraceSystem.Emitter[G] {
+      def emit(tcg: TraceContext[G]): G[Unit] = trans(tc.system.emitter.emit(tc))
+      def description: String = tc.system.emitter.description
+    }
+    TraceContext(tc.currentSpan, TraceSystem(tc.system.metadata, emitter, tc.system.timer.translate(trans)))
   }
 }

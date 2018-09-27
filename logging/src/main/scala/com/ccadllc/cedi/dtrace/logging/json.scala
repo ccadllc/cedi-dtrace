@@ -19,7 +19,6 @@ package logging
 import scala.language.higherKinds
 
 import io.circe._
-import io.circe.java8.time._
 import io.circe.syntax._
 
 /**
