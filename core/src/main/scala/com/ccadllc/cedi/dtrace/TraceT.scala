@@ -104,7 +104,7 @@ final class TraceT[F[_], A](private[dtrace] val toEffect: TraceContext[F] => F[A
    *   returns a `TraceT[F, Unit]`, a program run only for its effect.
    * @return new `TraceT[F, A]` with the error handling of the aforementioned `f` function
    */
-  @deprecated("Use bracketCase instead", "1.4.0")
+  @deprecated("Use bracketCase instead", "1.5.0")
   def bestEffortOnFinish(f: Option[Throwable] => TraceT[F, Unit])(implicit F: MonadError[F, Throwable]): TraceT[F, A] =
     TraceT.suspendEffect(tc => toEffect(tc).bestEffortOnFinish(f(_).toEffect(tc)))
 
@@ -424,6 +424,11 @@ object TraceT extends TraceTPolyFunctions with TraceTInstances {
    */
   def suspend[F[_], A](t: => TraceT[F, A])(implicit F: Sync[F]): TraceT[F, A] =
     toTraceT(F.delay(t)).flatMap(identity)
+
+  /**
+   * Generates a `Timer[TraceT[F, ?]]` given a `Timer[F]` in implicit scope.
+   */
+  def timer[F[_]: Timer]: Timer[TraceT[F, ?]] = implicitly[Timer[TraceT[F, ?]]]
 
   /**
    * Lifts a program `F` which computes `A` into a `TraceT[F, A]` context.

@@ -127,7 +127,7 @@ package object dtrace {
      * @return a new `TraceT[F, A]` with the error handling of the aforementioned `f` function
      *   parameter.
      */
-    @deprecated("use bracketCase on effect", "1.4.0")
+    @deprecated("use bracketCase on effect", "1.5.0")
     def bestEffortOnFinish(f: Option[Throwable] => F[Unit])(implicit F: MonadError[F, Throwable]): F[A] = F match {
       case b: Bracket[F, Throwable] @unchecked =>
         b.bracketCase(self)(F.pure) {
