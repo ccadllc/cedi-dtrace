@@ -1,14 +1,20 @@
+import sbtcrossproject.crossProject
+
 lazy val catsEffectVersion = "1.0.0"
 
 lazy val catsCoreVersion = "1.4.0"
 
 lazy val circeVersion = "0.10.0"
 
-lazy val http4sVersion = "0.19.0-M3"
+lazy val fs2Version = "1.0.0"
+
+lazy val http4sVersion = "0.19.0"
 
 lazy val logbackVersion = "1.2.3"
 
 lazy val slf4jVersion = "1.7.25"
+
+lazy val sloggingVersion = "0.6.1"
 
 lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
@@ -18,7 +24,8 @@ lazy val commonSettings = Seq(
   ),
   libraryDependencies ++= Seq(
     "org.typelevel" %% "cats-core" % catsCoreVersion,
-    "org.typelevel" %% "cats-effect" % catsEffectVersion
+    "org.typelevel" %% "cats-effect" % catsEffectVersion,
+    "co.fs2" %% "fs2-core" % fs2Version
   ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((2, v)) if v >= 13 => Seq(
       "org.scalatest" %% "scalatest" % "3.0.6-SNAP2" % "test",
@@ -32,31 +39,75 @@ lazy val commonSettings = Seq(
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.7")
 )
 
-lazy val root = project.in(file(".")).aggregate(core, logging, logstash, xb3, money, http4s).settings(commonSettings).settings(noPublish)
+lazy val root = project.in(file(".")).aggregate(
+  coreJVM,
+  coreJS,
+  loggingJVM,
+  loggingJS,
+  logstash,
+  xb3JVM,
+  xb3JS,
+  moneyJVM,
+  moneyJS,
+  http4s
+).settings(commonSettings).settings(noPublish)
 
-lazy val core = project.in(file("core")).enablePlugins(SbtOsgi).
+lazy val core = crossProject(JVMPlatform, JSPlatform).in(file("core")).
   settings(commonSettings).
   settings(
     name := "dtrace-core",
-    libraryDependencies += "org.typelevel" %% "cats-effect-laws" % catsEffectVersion % "test",
-    buildOsgiBundle("com.ccadllc.cedi.dtrace")
+    libraryDependencies += "org.typelevel" %% "cats-effect-laws" % catsEffectVersion % "test"
   )
 
-lazy val logging = project.in(file("logging")).enablePlugins(SbtOsgi).
-  settings(commonSettings).
-  settings(
+lazy val coreJVM = core.jvm.enablePlugins(SbtOsgi).
+  settings(buildOsgiBundle("com.ccadllc.cedi.dtrace"))
+
+lazy val coreJS = core.js
+
+lazy val logging = crossProject(JVMPlatform, JSPlatform).in(file("logging")).
+  settings(commonSettings).settings(
     name := "dtrace-logging",
-    parallelExecution in Test := false,
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core" % circeVersion,
-      "io.circe" %% "circe-generic" % circeVersion,
-      "org.slf4j" % "slf4j-api" % slf4jVersion,
-      "ch.qos.logback" % "logback-core" % logbackVersion % "test",
-      "ch.qos.logback" % "logback-classic" % logbackVersion % "test",
-      "net.logstash.logback" % "logstash-logback-encoder" % "5.1" % "optional"
-    ),
+      "io.circe" %% "circe-generic" % circeVersion
+    )
+  )
+
+lazy val loggingJVM = logging.jvm.enablePlugins(SbtOsgi).
+  settings(
+    parallelExecution in Test := false,
+    // TODO: This is only temporary until slogging publishes for 2.13
+    // Replace this libDependencies and the two skips with just a
+    // libDeps for the slogging lib
+    libraryDependencies := (CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, v)) if v >= 13 => Seq.empty
+      case _ => libraryDependencies.value ++ Seq(
+        "biz.enef" %% "slogging" % sloggingVersion,
+        "biz.enef" %% "slogging-slf4j" % sloggingVersion,
+        "org.slf4j" % "slf4j-api" % slf4jVersion,
+        "ch.qos.logback" % "logback-core" % logbackVersion % "test",
+        "ch.qos.logback" % "logback-classic" % logbackVersion % "test",
+        "net.logstash.logback" % "logstash-logback-encoder" % "5.1" % "optional"
+      )
+    }),
+    skip in compile := (CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, v)) => v >= 13
+      case _ => false
+    }),
+    skip in publish := (CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, v)) => v >= 13
+      case _ => false
+    }),
     buildOsgiBundle("com.ccadllc.cedi.dtrace.logging")
-  ).dependsOn(core % "compile->compile;test->test")
+  ).dependsOn(coreJVM % "compile->compile;test->test")
+
+lazy val loggingJS = logging.js.
+  settings(
+    libraryDependencies ++= Seq(
+      "biz.enef" %%% "slogging" % sloggingVersion,
+      "biz.enef" %%% "slogging-winston" % sloggingVersion
+    )
+  ).dependsOn(coreJS % "compile->compile;test->test")
 
 lazy val logstash = project.in(file("logstash")).enablePlugins(SbtOsgi).
   settings(commonSettings).
@@ -70,22 +121,25 @@ lazy val logstash = project.in(file("logstash")).enablePlugins(SbtOsgi).
       "ch.qos.logback" % "logback-classic" % logbackVersion % "test"
     ),
     buildOsgiBundle("com.ccadllc.cedi.dtrace.logstash")
-  ).dependsOn(core % "compile->compile;test->test")
+  ).dependsOn(coreJVM % "compile->compile;test->test")
 
-lazy val xb3 = project.in(file("xb3")).enablePlugins(SbtOsgi).
-  settings(commonSettings).
-  settings(
-    name := "dtrace-xb3",
-    libraryDependencies += "org.scodec" %% "scodec-bits" % "1.1.6",
-    buildOsgiBundle("com.ccadllc.cedi.dtrace.interop.xb3")
-  ).dependsOn(core % "compile->compile;test->test")
+lazy val xb3 = crossProject(JVMPlatform, JSPlatform).
+  in(file("xb3")).settings(commonSettings).settings(name := "dtrace-xb3")
 
-lazy val money = project.in(file("money")).enablePlugins(SbtOsgi).
-  settings(commonSettings).
-  settings(
-    name := "dtrace-money",
-    buildOsgiBundle("com.ccadllc.cedi.dtrace.interop.money")
-  ).dependsOn(core % "compile->compile;test->test")
+lazy val xb3JVM = xb3.jvm.enablePlugins(SbtOsgi).settings(
+  buildOsgiBundle("com.ccadllc.cedi.dtrace.interop.xb3")
+).dependsOn(coreJVM % "compile->compile;test->test")
+
+lazy val xb3JS = xb3.js.dependsOn(coreJS % "compile->compile;test->test")
+
+lazy val money = crossProject(JVMPlatform, JSPlatform).
+  in(file("money")).settings(commonSettings).settings(name := "dtrace-money")
+
+lazy val moneyJVM = money.jvm.enablePlugins(SbtOsgi).settings(
+  buildOsgiBundle("com.ccadllc.cedi.dtrace.interop.money")
+).dependsOn(coreJVM % "compile->compile;test->test")
+
+lazy val moneyJS = money.js.dependsOn(coreJS % "compile->compile;test->test")
 
 lazy val http4s = project.in(file("http4s")).enablePlugins(SbtOsgi).
   settings(commonSettings).
@@ -111,8 +165,8 @@ lazy val http4s = project.in(file("http4s")).enablePlugins(SbtOsgi).
       case _ => false
     }),
     buildOsgiBundle("com.ccadllc.cedi.dtrace.interop.http4s")
-  ).dependsOn(core % "compile->compile;test->test", money % "compile->test", xb3 % "compile->test")
+  ).dependsOn(coreJVM % "compile->compile;test->test", moneyJVM % "compile->test", xb3JVM % "compile->test")
 
 lazy val readme = project.in(file("readme")).settings(commonSettings).settings(noPublish).enablePlugins(TutPlugin).settings(
   tutTargetDirectory := baseDirectory.value / ".."
-).dependsOn(core, logging)
+).dependsOn(coreJVM, loggingJVM)
