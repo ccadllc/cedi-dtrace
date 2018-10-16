@@ -104,7 +104,7 @@ final class TraceT[F[_], A](private[dtrace] val toEffect: TraceContext[F] => F[A
    *   returns a `TraceT[F, Unit]`, a program run only for its effect.
    * @return new `TraceT[F, A]` with the error handling of the aforementioned `f` function
    */
-  @deprecated("Use bracketCase instead", "1.5.0")
+  @deprecated("Use guaranteeCase instead", "1.5.0")
   def bestEffortOnFinish(f: Option[Throwable] => TraceT[F, Unit])(implicit F: MonadError[F, Throwable]): TraceT[F, A] =
     TraceT.suspendEffect(tc => toEffect(tc).bestEffortOnFinish(f(_).toEffect(tc)))
 
@@ -188,6 +188,42 @@ final class TraceT[F[_], A](private[dtrace] val toEffect: TraceContext[F] => F[A
    */
   def flatMap[B](f: A => TraceT[F, B])(implicit F: FlatMap[F]): TraceT[F, B] =
     TraceT.suspendEffect(tc => toEffect(tc).flatMap(f(_).toEffect(tc)))
+
+  /**
+   * Returns a `TraceT[F, ?]` action that ensures the `finalizer` is always run.
+   *
+   * The `guarantee` operation is the equivalent of the
+   * `try {} catch {} finally {}` statements from mainstream languages.
+   *
+   * @see [[guaranteeCase]]
+   *
+   * @param finalizer is an action that gets executed whoever this trace
+   *        terminates, either normally or in error, or if it gets
+   *        canceled
+   */
+  def guarantee(finalizer: TraceT[F, Unit])(implicit F: Bracket[F, Throwable]): TraceT[F, A] =
+    guaranteeCase(_ => finalizer)
+
+  /**
+   * Returns a new `TraceT[F, ?]` task that ensures the 'finalizer'
+   * function is always run, with the possibility of
+   * distinguishing between normal termination and cancellation.
+   * during the computation, or in case of cancellation.
+   *
+   * In comparison with the simpler [[guarantee]] version, this one
+   * allows the caller to differentiate between normal termination,
+   * termination in error and cancellation via an `ExitCase`
+   * parameter.
+   *
+   * @see [[guarantee]]
+   *
+   * @param finalizer is a function that gets called after this trace
+   *        terminates, either normally or in error, or if it gets
+   *        canceled, receiving as input the result of `use`
+   *        (cancellation, error or successful result)
+   */
+  def guaranteeCase(finalizer: ExitCase[Throwable] => TraceT[F, Unit])(implicit F: Bracket[F, Throwable]): TraceT[F, A] =
+    TraceT.suspendEffect(tc => F.guaranteeCase(toEffect(tc))(finalizer(_).toEffect(tc)))
 
   /**
    * Handles an error by mapping it to a new `TraceT`.
