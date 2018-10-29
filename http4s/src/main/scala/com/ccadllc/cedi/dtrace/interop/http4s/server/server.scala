@@ -33,8 +33,8 @@ package object server {
    * You can also provide your own [[HeaderCodec]] if, for instance, you wish to compose these into an aggregate
    * or there are other types of trace headers you wish to extract.  This function also requires that you
    * provide the initial `Span.Name` along with an `Evaluator[A]` to determine if an application-specific result
-   * should be considered a span failure (use [[tracedAction]] if you have no need to pass in an `Evaluator`).
-   * on the particular action.
+   * should be considered a span failure - use [[tracedAction]] if you have no need to pass in an `Evaluator` - along with
+   * any [[Note]]s you wish to include in the spans.
    * {{{
    *  import com.ccadllc.cedi.dtrace._
    *  import com.ccadllc.cedi.dtrace.http4s._
