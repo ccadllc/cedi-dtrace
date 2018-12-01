@@ -29,7 +29,7 @@ lazy val commonSettings = Seq(
       "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
     )
   }),
-  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.7")
+  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9")
 )
 
 lazy val root = project.in(file(".")).aggregate(core, logging, logstash, xb3, money, http4s).settings(commonSettings).settings(noPublish)
