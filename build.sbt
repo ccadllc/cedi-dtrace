@@ -1,12 +1,12 @@
 import sbtcrossproject.crossProject
 
-lazy val catsEffectVersion = "1.1.0-M1"
+lazy val catsEffectVersion = "1.1.0"
 
 lazy val catsCoreVersion = "1.5.0"
 
 lazy val circeVersion = "0.10.1"
 
-lazy val fs2Version = "1.0.0"
+lazy val fs2Version = "1.0.2"
 
 lazy val http4sVersion = "0.20.0-M3"
 
