@@ -8,7 +8,7 @@ lazy val circeVersion = "0.10.1"
 
 lazy val fs2Version = "1.0.2"
 
-lazy val http4sVersion = "0.20.0-M3"
+lazy val http4sVersion = "0.20.0-M4"
 
 lazy val logbackVersion = "1.2.3"
 
