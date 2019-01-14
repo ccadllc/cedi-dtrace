@@ -6,8 +6,6 @@ lazy val catsCoreVersion = "1.5.0"
 
 lazy val circeVersion = "0.10.1"
 
-lazy val fs2Version = "1.0.2"
-
 lazy val http4sVersion = "0.20.0-M4"
 
 lazy val logbackVersion = "1.2.3"
@@ -18,18 +16,17 @@ lazy val sloggingVersion = "0.6.1"
 
 lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
-  crossScalaVersions := Seq("2.12.7", "2.11.12", "2.13.0-M5"),
+  crossScalaVersions := Seq("2.12.7", "2.11.12"),
   contributors ++= Seq(
     Contributor("sbuzzard", "Steve Buzzard"),
     Contributor("mpilquist", "Michael Pilquist")
   ),
   libraryDependencies ++= Seq(
     "org.typelevel" %% "cats-core" % catsCoreVersion,
-    "org.typelevel" %% "cats-effect" % catsEffectVersion,
-    "co.fs2" %% "fs2-core" % fs2Version
+    "org.typelevel" %% "cats-effect" % catsEffectVersion
   ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((2, v)) if v >= 13 => Seq(
-      "org.scalatest" %% "scalatest" % "3.0.6-SNAP2" % "test",
+      "org.scalatest" %% "scalatest" % "3.0.6-SNAP5" % "test",
       "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
     )
     case _ => Seq(
@@ -37,7 +34,7 @@ lazy val commonSettings = Seq(
       "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
     )
   }),
-  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.7")
+  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9")
 )
 
 lazy val root = project.in(file(".")).aggregate(
@@ -125,7 +122,10 @@ lazy val logstash = project.in(file("logstash")).enablePlugins(SbtOsgi).
   ).dependsOn(coreJVM % "compile->compile;test->test")
 
 lazy val xb3 = crossProject(JVMPlatform, JSPlatform).
-  in(file("xb3")).settings(commonSettings).settings(name := "dtrace-xb3")
+  in(file("xb3")).settings(commonSettings).settings(
+    name := "dtrace-xb3",
+    libraryDependencies += ("org.scodec" %% "scodec-bits" % "1.1.7")
+  )
 
 lazy val xb3JVM = xb3.jvm.enablePlugins(SbtOsgi).settings(
   buildOsgiBundle("com.ccadllc.cedi.dtrace.interop.xb3")
