@@ -76,7 +76,7 @@ lazy val xb3 = project.in(file("xb3")).enablePlugins(SbtOsgi).
   settings(commonSettings).
   settings(
     name := "dtrace-xb3",
-    libraryDependencies += "org.scodec" %% "scodec-bits" % "1.1.6",
+    libraryDependencies += "org.scodec" %% "scodec-bits" % "1.1.8",
     buildOsgiBundle("com.ccadllc.cedi.dtrace.interop.xb3")
   ).dependsOn(core % "compile->compile;test->test")
 
