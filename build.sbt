@@ -124,7 +124,7 @@ lazy val logstash = project.in(file("logstash")).enablePlugins(SbtOsgi).
 lazy val xb3 = crossProject(JVMPlatform, JSPlatform).
   in(file("xb3")).settings(commonSettings).settings(
     name := "dtrace-xb3",
-    libraryDependencies += ("org.scodec" %% "scodec-bits" % "1.1.7")
+    libraryDependencies += ("org.scodec" %% "scodec-bits" % "1.1.9")
   )
 
 lazy val xb3JVM = xb3.jvm.enablePlugins(SbtOsgi).settings(
