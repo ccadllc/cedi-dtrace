@@ -57,40 +57,41 @@ case class SalesFigure(region: String, product: String, units: Int, total: Doubl
  * hold the top-level information about the program (application and node name,
  * deployment and environment names, etc.)
  */
-val traceSystem = TraceSystem(
-  metadata = Map(
-    "application name" -> "sales-management-system",
-    "application ID" -> UUID.randomUUID.toString,
-    "node name" -> "crm.widgetsforsale.com",
-    "node ID" -> UUID.randomUUID.toString,
-    "deployment name" -> "us-west-2",
-    "environment name" -> "production"
-  ),
- /* This emitter will write a text entry for each span to the "distributed-trace.txt"
-  * logger and a JSON entry for each span to the "distributed-trace.json" logger; however,
-  * it is easy to provide your own emitter by implementing the `TraceSystem.Emitter[F]`
-  * trait, which requires providing implementations for two methods:
-  *   `def description: String` to provide a description of your emitter and
-  *   `def emit(tc: TraceContext[F]): F[Unit]` to actually do the work of
-  * emitting the current Span to the destination and in the format of your choosing.
-  */
-  emitter = LogEmitter[IO],
-
- /*
-  * This time will generate points in time using the `cats.effect.Clock#realTime` function,
-  * which is by default the `System.currentTimeMillis`.  It will convert it to MICROSECONDS
-  * precision in order to calculate the duration of a `Span` execution.  This is just a
-  * convenience function.  There is also a convenience function
-  * - `TraceSystem.monotonicTimer[IO]` - for calculating using the `cats.effect.Clock#monotonic`
-  *  which by default uses `System.nanoTime` and will use its NANOSECOND precision to calculate
-  * the duration of a `Span` execution.  If you'd prefer to use different levels of precision,
-  * you can create a timer using `TraceSystem.Timer.realTime[IO](TimeUnit.MILLISECONDS)`, for
-  * example.  Note that these levels of precision may be rounded up or down if using
-  * `cats.effect.Clock#monotonic`, as it will likely be using `System.currentTimeMillis`
-  * which will only provide millisecond level precision (roughly).
-  *
-  timer = TraceSystem.realTimeTimer[IO]
-)
+val traceSystem = LogEmitter[IO].map { emitter =>
+  TraceSystem(
+    metadata = Map(
+      "application name" -> "sales-management-system",
+      "application ID" -> UUID.randomUUID.toString,
+      "node name" -> "crm.widgetsforsale.com",
+      "node ID" -> UUID.randomUUID.toString,
+      "deployment name" -> "us-west-2",
+      "environment name" -> "production"
+    ),
+   /* This emitter will write a text entry for each span to the "distributed-trace.txt"
+    * logger and a JSON entry for each span to the "distributed-trace.json" logger; however,
+    * it is easy to provide your own emitter by implementing the `TraceSystem.Emitter[F]`
+    * trait, which requires providing implementations for two methods:
+    *   `def description: String` to provide a description of your emitter and
+    *   `def emit(tc: TraceContext[F]): F[Unit]` to actually do the work of
+    * emitting the current Span to the destination and in the format of your choosing.
+    */
+    emitter = emitter,
+   /*
+    * This time will generate points in time using the `cats.effect.Clock#realTime` function,
+    * which is by default the `System.currentTimeMillis`.  It will convert it to MICROSECONDS
+    * precision in order to calculate the duration of a `Span` execution.  This is just a
+    * convenience function.  There is also a convenience function
+    * - `TraceSystem.monotonicTimer[IO]` - for calculating using the `cats.effect.Clock#monotonic`
+    *  which by default uses `System.nanoTime` and will use its NANOSECOND precision to calculate
+    * the duration of a `Span` execution.  If you'd prefer to use different levels of precision,
+    * you can create a timer using `TraceSystem.Timer.realTime[IO](TimeUnit.MILLISECONDS)`, for
+    * example.  Note that these levels of precision may be rounded up or down if using
+    * `cats.effect.Clock#monotonic`, as it will likely be using `System.currentTimeMillis`
+    * which will only provide millisecond level precision (roughly).
+    *
+    timer = TraceSystem.realTimeTimer[IO]
+  )
+}
 
 /* Compose the Money and X-B3 HTTP Trace Header encoder/decoder into an aggregate (generating both on encoded and preferring X-B3 on decode) */
 implicit val headerCodec: HeaderCodec = interop.xb3.headerCodec.andThen(interop.money.headerCodec)
@@ -134,8 +135,9 @@ val tracedIO: TraceT[IO, SalesReport] = generateSalesReport(region).newAnnotated
  * We convert our traced io to an IO for a non-HTTP app (generating a new root trace)
  */
 val io: IO[SalesReport] = for {
+  ts <- traceSystem
   /* We create a local root Span (we could also extract it from an HTTP header using the `money`, `xb3` and `http4s` modules - see alternate example below) */
-  rootSpan <- Span.root(traceSystem.timer, Span.Name("locally-initiated-report"))
+  rootSpan <- Span.root(ts.timer, Span.Name("locally-initiated-report"))
   /*
    * The tracedIO we've derived earlier around `generateSalesReport` (which includes
    * the retrieval and calculate sales figures nested actions, each with their own Spans) is an instance of `TraceT[IO, A]`,
@@ -146,7 +148,7 @@ val io: IO[SalesReport] = for {
    * accomplished by applying the root `Span` for this process using the `trace` method on on our top-level
    * `TraceT` instance (represented here by the `tracedIO` value).
    */
-  result <- tracedIO.trace(TraceContext(rootSpan, traceSystem))
+  result <- tracedIO.trace(TraceContext(rootSpan, ts))
 } yield result
 
 /*
@@ -201,7 +203,7 @@ libraryDependencies += "com.ccadllc.cedi" %% "dtrace-core" % "1.5.0"
 
 #### dtrace-logging
 
-This component provides emitters for logging the trace spans in text and/or JSON format using the `sf4j` logging framework.  It uses the `circe` library for formatting the trace span information as JSON.
+This component provides emitters for logging the trace spans in text and/or JSON format using the `sf4j` logging framework for the JVM and `winston` logger for the Java Script platform.  It uses the `circe` library for formatting the trace span information as JSON.
 
 ```scala
 libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logging" % "1.5.0"
