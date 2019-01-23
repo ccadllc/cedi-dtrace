@@ -31,7 +31,7 @@ lazy val commonSettings = Seq(
     )
     case _ => Seq(
       "org.scalatest" %% "scalatest" % "3.0.5" % "test",
-      "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
+      "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
     )
   }),
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9")
