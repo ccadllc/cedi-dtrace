@@ -85,7 +85,7 @@ lazy val loggingJVM = logging.jvm.enablePlugins(SbtOsgi).
         "org.slf4j" % "slf4j-api" % slf4jVersion,
         "ch.qos.logback" % "logback-core" % logbackVersion % "test",
         "ch.qos.logback" % "logback-classic" % logbackVersion % "test",
-        "net.logstash.logback" % "logstash-logback-encoder" % "5.1" % "optional"
+        "net.logstash.logback" % "logstash-logback-encoder" % "5.3" % "optional"
       )
     }),
     skip in compile := (CrossVersion.partialVersion(scalaVersion.value) match {
@@ -114,7 +114,7 @@ lazy val logstash = project.in(file("logstash")).enablePlugins(SbtOsgi).
     parallelExecution in Test := false,
     libraryDependencies ++= Seq(
       "org.slf4j" % "slf4j-api" % slf4jVersion,
-      "net.logstash.logback" % "logstash-logback-encoder" % "5.1",
+      "net.logstash.logback" % "logstash-logback-encoder" % "5.3",
       "ch.qos.logback" % "logback-core" % logbackVersion % "test",
       "ch.qos.logback" % "logback-classic" % logbackVersion % "test"
     ),
