@@ -4,7 +4,7 @@ lazy val catsEffectVersion = "1.2.0"
 
 lazy val catsCoreVersion = "1.5.0"
 
-lazy val circeVersion = "0.10.1"
+lazy val circeVersion = "0.11.1"
 
 lazy val http4sVersion = "0.20.0-M4"
 
