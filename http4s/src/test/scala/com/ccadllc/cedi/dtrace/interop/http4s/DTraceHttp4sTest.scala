@@ -32,6 +32,8 @@ import scodec.bits.ByteVector
 import interop.http4s.client._
 import interop.http4s.server._
 
+import Uri.uri
+
 class DTraceHttp4sTest extends WordSpec with Matchers with GeneratorDrivenPropertyChecks with TraceGenerators with TestData {
 
   implicit override val generatorDrivenConfig: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful = 100)
