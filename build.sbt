@@ -10,7 +10,7 @@ lazy val http4sVersion = "0.20.0-M5"
 
 lazy val logbackVersion = "1.2.3"
 
-lazy val slf4jVersion = "1.7.25"
+lazy val slf4jVersion = "1.7.26"
 
 lazy val sloggingVersion = "0.6.1"
 
