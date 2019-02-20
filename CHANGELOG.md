@@ -1,5 +1,11 @@
 1.5.0
 =====
+ - The `core`, `logging`, `xb3`, and `money` modules are now built for
+   both the JVM and JavaScript environments. The `logging` module uses
+   `biz.enef.slogging` to abstract over JVM and JavaScript-specific
+   logging frameworks, with the JVM environment continuing to use
+   `org.slf4j` over `ch.qos.logback` while the JavaScript environment
+   uses `biz.enef.slogging-winston`.
  - Updated typeclasses to use cats-effect 1.0, which includes a number
    of changes, including the `Bracket` typeclass for handling finalization
    and resource cleanup. This typeclass and the `TraceT.bracket` and
