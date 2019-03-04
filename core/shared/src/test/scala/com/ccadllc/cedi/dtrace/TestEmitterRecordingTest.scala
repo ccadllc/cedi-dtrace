@@ -24,7 +24,7 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
     "support recording a successful current tracing span which is the root span containing same parent and current span IDs" in {
       val testEmitter = new TestEmitter[IO]
       val testTimer = TraceSystem.realTimeTimer[IO]
-      val salesManagementSystem = TraceSystem(testSystemMetadata, testEmitter, testTimer)
+      val salesManagementSystem = TraceSystem(testSystemData, testEmitter, testTimer)
       val spanRoot = Span.root(testTimer, Span.Name("calculate-quarterly-sales")).unsafeRunSync
       IO(Thread.sleep(5L)).toTraceT.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
       testEmitter.cache.containingAll(spanId(spanRoot.spanId.spanId), parentSpanId(spanRoot.spanId.spanId), spanName(spanRoot.spanName)) should have size (1)
@@ -32,7 +32,7 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
     "support recording a successful new tracing span with new span ID and name" in {
       val testEmitter = new TestEmitter[IO]
       val testTimer = TraceSystem.realTimeTimer[IO]
-      val salesManagementSystem = TraceSystem(testSystemMetadata, testEmitter, testTimer)
+      val salesManagementSystem = TraceSystem(testSystemData, testEmitter, testTimer)
       val spanRoot = Span.root(testTimer, Span.Name("calculate-quarterly-sales")).unsafeRunSync
       val calcPhillySalesSpanName = Span.Name("calculate-sales-for-philadelphia")
       IO(Thread.sleep(5L)).newSpan(calcPhillySalesSpanName).trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
@@ -54,7 +54,7 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
     "support recording nested spans" in {
       val testEmitter = new TestEmitter[IO]
       val testTimer = TraceSystem.realTimeTimer[IO]
-      val salesManagementSystem = TraceSystem(testSystemMetadata, testEmitter, testTimer)
+      val salesManagementSystem = TraceSystem(testSystemData, testEmitter, testTimer)
       val spanRootName = Span.Name("calculate-quarterly-sales-update")
       val spanRoot = Span.root(testTimer, spanRootName).unsafeRunSync
       val requestUpdatedSalesFiguresSpanName = Span.Name("request-updated-sales-figures")
@@ -83,7 +83,7 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
   private def assertChildSpanRecordedWithNote(note: Note): Unit = {
     val testEmitter = new TestEmitter[IO]
     val testTimer = TraceSystem.realTimeTimer[IO]
-    val salesManagementSystem = TraceSystem(testSystemMetadata, testEmitter, testTimer)
+    val salesManagementSystem = TraceSystem(testSystemData, testEmitter, testTimer)
     val spanRoot = Span.root(testTimer, Span.Name("calculate-quarterly-sales-updates")).unsafeRunSync
     val calcPhillySalesSpanName = Span.Name("calculate-updated-sales-for-philly")
     IO {

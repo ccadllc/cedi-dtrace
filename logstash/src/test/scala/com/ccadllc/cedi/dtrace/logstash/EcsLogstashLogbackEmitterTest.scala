@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Combined Conditional Access Development, LLC.
+ * Copyright 2019 Combined Conditional Access Development, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@ package logstash
 import cats.effect.IO
 import org.scalatest.WordSpec
 
-class LogstashLogbackEmitterTest extends WordSpec with TestData {
-  "LogstashLogbackEmitterTest" should {
+class EcsLogstashLogbackEmitterTest extends WordSpec with TestData {
+  "EcsLogstashLogbackEmitterTest" should {
     "work" in {
-      val system = TraceSystem(testSystemData, new LogstashLogbackEmitter[IO], quarterlySalesCalculationTimer)
+      val system = TraceSystem(testSystemData, new EcsLogstashLogbackEmitter[IO], quarterlySalesCalculationTimer)
       val spanRoot = Span.root[IO](quarterlySalesCalculationTimer, Span.Name("calculate-quarterly-sales")).unsafeRunSync
       IO.unit.toTraceT.trace(TraceContext(spanRoot, system)).unsafeRunSync
     }

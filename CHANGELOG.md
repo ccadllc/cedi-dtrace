@@ -1,5 +1,14 @@
 1.5.0
 =====
+ - Added an Elastic Common Search (ECS) compliant emitter within the logstash
+   module which encodes the spans in a manner consistent with the ECS
+   specification (1.0.0-beta2 revision).  The top-level `metadata` map in the
+   `TraceSystem` has been replaced with a `data` strcture, which separates out
+   identity and metadata components of system-wide common data so that the
+   `logstash` module's `EcsLogstashLogbackEmitter` can encode identity fields
+   directly rather than combining them all into a metadata group.  This isn't
+   specific to ECS but allows for more re-use of common ECS fields at the
+   top-level.
  - Updated typeclasses to use cats-effect 1.0, which includes a number
    of changes, including the `Bracket` typeclass for handling finalization
    and resource cleanup. This typeclass and the `TraceT.bracket` and

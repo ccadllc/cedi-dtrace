@@ -29,26 +29,30 @@ import scala.util.matching.Regex
 /**
  * System level configuration for the trace system.
  *
- * @param metadata - top-level metadata that should be included in all trace span recordings (examples include:
- *   node, deployment, and environment information).
+ * @param data - top-level system-level information that should be included in all trace span recordings (examples include:
+ *   node, deployment, and environment information).  It is separated into identity and metadata as a hint to the
+ *   emitters to emit directly (for identity) or in an appropriate metadata structure (for meta).
  * @param emitter - [[TraceSystem#Emitter]] responsible for actually recording the span information for a distributed trace
  *   to some external sink (e.g., log file, remote database, JMX, etc.).
  * @param timer - [[TraceSystem#Timer]] responsible for generating timer to measure performance of [[Span]]s.
  * @tparam F - an effectful program type used to execute the `Emitter` and `Timer`.
  */
-case class TraceSystem[F[_]](metadata: Map[String, String], emitter: TraceSystem.Emitter[F], timer: TraceSystem.Timer[F]) {
-  override def toString: String = s"[metadata=${metadata.mkString(",")}] [emitter=${emitter.description}] [timer=${timer.description}]"
+case class TraceSystem[F[_]](
+  data: TraceSystem.Data,
+  emitter: TraceSystem.Emitter[F],
+  timer: TraceSystem.Timer[F]) {
+  override def toString: String = s"[data=${data.description}] [emitter=${emitter.description}] [timer=${timer.description}]"
 }
 
 object TraceSystem {
   /**
-   * Describes how to emit the current [[Span]] and its metadata (together constituting the [[TraceContext]]) to an external sink
+   * Describes how to emit the current [[Span]] and its application data (together constituting the [[TraceContext]]) to an external sink
    * (e.g., database, JMX, log file, etc).
    * @tparam F - an effectful program type used to execute the `Emitter`.
    */
   trait Emitter[F[_]] {
     /**
-     * Emits the [[Span]] and metadata in the [[TraceContext]] to some external sink using the effectful program `F[A]`
+     * Emits the [[Span]] and application data in the [[TraceContext]] to some external sink using the effectful program `F[A]`
      * @param tc - the [[TraceContext]] containing a cursor into the current span and the system level properties used to annotate
      *   every span when recording.
      * @return emitterProgram - an effectful program that when run will emit the current span in the [[TraceContext]] to some external
@@ -60,6 +64,29 @@ object TraceSystem {
      * Provides a human readable description of this emitter.
      */
     def description: String
+  }
+
+  final case class Data(
+    identity: Map[Data.Key, Data.Value],
+    meta: Map[Data.Key, Data.Value]) {
+    val combined: Map[Data.Key, Data.Value] = identity ++ meta
+    val identityStrMap: Map[String, String] = stringified(identity)
+    val metaStrMap: Map[String, String] = stringified(meta)
+    val combinedStrMap: Map[String, String] = stringified(combined)
+    val description: String = s"identity: $identityStrMap, meta: $metaStrMap"
+
+    private def stringified(data: Map[Data.Key, Data.Value]): Map[String, String] =
+      data.map { case (k, v) => k.value -> k.value }
+  }
+  object Data {
+    final class Key(val value: String) extends AnyVal
+    object Key {
+      def apply(value: String): Key = new Key(value)
+    }
+    final class Value(val value: String) extends AnyVal
+    object Value {
+      def apply(value: String): Value = new Value(value)
+    }
   }
 
   /**

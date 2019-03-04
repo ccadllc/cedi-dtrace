@@ -246,6 +246,6 @@ package object dtrace {
       def emit(tcg: TraceContext[G]): G[Unit] = trans(tc.system.emitter.emit(tc))
       def description: String = tc.system.emitter.description
     }
-    TraceContext(tc.currentSpan, TraceSystem(tc.system.metadata, emitter, tc.system.timer.translate(trans)))
+    TraceContext(tc.currentSpan, TraceSystem(tc.system.data, emitter, tc.system.timer.translate(trans)))
   }
 }

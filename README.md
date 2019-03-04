@@ -55,17 +55,31 @@ case class SalesFigure(region: String, product: String, units: Int, total: Doubl
 /*
  * Near the beginning of the universe, create a `TraceSystem` object to
  * hold the top-level information about the program (application and node name,
- * deployment and environment names, etc.)
+ * deployment and environment names, etc.). The `TraceSystem.Data` is broken up into
+ * two sections: a map of key/value pairs representing system identity and a
+ * map of key/value pairs representing general system metadata. This separation is
+ * done as a hint to the emitter that the identities be emitted as top-level fields
+ * and their values while the metadata be emitted within a nested metadata structure.
+ * Emitters are free to ignore this and emit both maps at the top level or top within
+ * a metadata group.  The dtrace `logstash` module provides an Elastic Common Schema (ECS)
+ * compliant emitter `EcsLogstashLogbackEmitter` which does use this hint and encodes the
+ * metadata fields under the `ecs` `labels` field group and emits the identity fields at
+ * the top-level.
  */
 val traceSystem = LogEmitter[IO].map { emitter =>
   TraceSystem(
-    metadata = Map(
-      "application name" -> "sales-management-system",
-      "application ID" -> UUID.randomUUID.toString,
-      "node name" -> "crm.widgetsforsale.com",
-      "node ID" -> UUID.randomUUID.toString,
-      "deployment name" -> "us-west-2",
-      "environment name" -> "production"
+    data = TraceSystem.Data(
+      Map(
+        TraceSystem.Data.Key(
+        TraceSystem.Data.Key("application name") -> TraceSystem.Data.Value("sales-management-system"),
+        TraceSystem.Data.Key("application ID") -> TraceSystem.Data.Value(UUID.randomUUID.toString),
+        TraceSystem.Data.Key("node name") -> TraceSystem.Data.Value("crm.widgetsforsale.com"),
+        TraceSystem.Data.Key("node ID") -> TraceSystem.Data.Value(UUID.randomUUID.toString)
+      ),
+      Map(
+        TraceSystem.Data.Key("deployment name") -> TraceSystem.Data.Value("us-west-2"),
+        TraceSystem.Data.Key("environment name") -> TraceSystem.Data.Value("production")
+      )
     ),
    /* This emitter will write a text entry for each span to the "distributed-trace.txt"
     * logger and a JSON entry for each span to the "distributed-trace.json" logger; however,

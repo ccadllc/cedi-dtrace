@@ -24,12 +24,16 @@ import scala.concurrent.duration._
 trait TestData {
 
   // format: OFF
-  protected val testSystemMetadata: Map[String, String] = Map(
-    "application name" -> "widget sales manager",
-    "application ID"   -> UUID.randomUUID.toString,
-    "process GUID"     -> UUID.randomUUID.toString,
-    "deployment name"  -> "us-west-2",
-    "environment name" -> "production"
+  protected val testSystemData: TraceSystem.Data = TraceSystem.Data(
+    Map(
+      TraceSystem.Data.Key("application name") -> TraceSystem.Data.Value("widget sales manager"),
+      TraceSystem.Data.Key("application ID")   -> TraceSystem.Data.Value(UUID.randomUUID.toString),
+      TraceSystem.Data.Key("process GUID")     -> TraceSystem.Data.Value(UUID.randomUUID.toString)
+    ),
+    Map(
+      TraceSystem.Data.Key("deployment name")  -> TraceSystem.Data.Value("us-west-2"),
+      TraceSystem.Data.Key("environment name") -> TraceSystem.Data.Value("production")
+    )
   )
   // format: ON
 

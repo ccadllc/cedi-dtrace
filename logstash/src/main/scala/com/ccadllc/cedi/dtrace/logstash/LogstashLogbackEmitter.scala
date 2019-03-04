@@ -32,7 +32,7 @@ final class LogstashLogbackEmitter[F[_]](implicit F: Sync[F]) extends TraceSyste
     if (logger.isDebugEnabled) {
       val s = tc.currentSpan
       val marker: LogstashMarker =
-        append("where", tc.system.metadata.asJava).
+        append("where", tc.system.data.combinedStrMap.asJava).
           and[LogstashMarker](append("root", s.root)).
           and[LogstashMarker](append("trace-id", s.spanId.traceId.toString)).
           and[LogstashMarker](append("span-id", s.spanId.spanId)).

@@ -54,7 +54,7 @@ class LogEmitter[F[_]](implicit F: Sync[F]) extends TraceSystem.Emitter[F] with 
    */
   override def emit(context: TraceContext[F]): F[Unit] = {
     def emitText: F[Unit] = {
-      def formatText = s"Span: [ span-id=${context.currentSpan.spanId.spanId} ] [ trace-id=${context.currentSpan.spanId.traceId} ] [ parent-id=${context.currentSpan.spanId.parentSpanId} ] [ root=${context.currentSpan.root} ] [ span-name=${context.currentSpan.spanName} ] [ system-metadata=${context.system.metadata.mkString(",")} ] [ start-time=${context.currentSpan.startTime} ] [ span-duration=${context.currentSpan.duration} ] [ span-success=${context.currentSpan.failure.isEmpty} ] [ failure-detail=${context.currentSpan.failure.fold("N/A")(_.render)} ][ notes=[${context.currentSpan.notes.mkString("] [")}] ]"
+      def formatText = s"Span: [ span-id=${context.currentSpan.spanId.spanId} ] [ trace-id=${context.currentSpan.spanId.traceId} ] [ parent-id=${context.currentSpan.spanId.parentSpanId} ] [ root=${context.currentSpan.root} ] [ span-name=${context.currentSpan.spanName} ] [ system-data=${context.system.data.description} ] [ start-time=${context.currentSpan.startTime} ] [ span-duration=${context.currentSpan.duration} ] [ span-success=${context.currentSpan.failure.isEmpty} ] [ failure-detail=${context.currentSpan.failure.fold("N/A")(_.render)} ][ notes=[${context.currentSpan.notes.mkString("] [")}] ]"
       F.delay(textLogger.debug(formatText))
     }
     def emitJson: F[Unit] = {
