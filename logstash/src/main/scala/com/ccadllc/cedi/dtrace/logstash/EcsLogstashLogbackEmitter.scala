@@ -36,13 +36,13 @@ final class EcsLogstashLogbackEmitter[F[_]](implicit F: Sync[F]) extends TraceSy
       val marker: LogstashMarker = {
         val m = append("dtrace.root", s.root).
           and[LogstashMarker](append("dtrace.trace_id", s.spanId.traceId.toString)).
-          and[LogstashMarker](append("dtrace.span_id", s.spanId.spanId)).
           and[LogstashMarker](append("dtrace.parent_id", s.spanId.parentSpanId)).
-          and[LogstashMarker](append("dtrace.span_name", s.spanName.value)).
-          and[LogstashMarker](append("dtrace.start_time", s.startTime.show)).
-          and[LogstashMarker](append("dtrace.span_success", s.failure.isEmpty)).
-          and[LogstashMarker](append("dtrace.failure_detail", s.failure.map(_.render).orNull)).
-          and[LogstashMarker](append("span_duration", s.duration.toNanos)).
+          and[LogstashMarker](append("event.id", s.spanId.spanId)).
+          and[LogstashMarker](append("event.action", s.spanName.value)).
+          and[LogstashMarker](append("event.start", s.startTime.show)).
+          and[LogstashMarker](append("event.outcome", if (s.failure.isEmpty) "success" else "failure")).
+          and[LogstashMarker](append("event.duration", s.duration.toNanos)).
+          and[LogstashMarker](append("error.message", s.failure.map(_.render).orNull)).
           and[LogstashMarker](append("labels", tc.system.data.meta.values.asJava))
         tc.system.data.identity.values.foldLeft(m) { case (acc, (k, v)) => acc.and[LogstashMarker](append(k, v)) }
       }
