@@ -3,7 +3,7 @@
  - Added an Elastic Common Search (ECS) compliant emitter within the logstash
    module which encodes the spans in a manner consistent with the ECS
    specification (1.0.0-beta2 revision).  The top-level `metadata` map in the
-   `TraceSystem` has been replaced with a `data` strcture, which separates out
+   `TraceSystem` has been replaced with a `data` structure, which separates out
    identity and metadata components of system-wide common data so that the
    `logstash` module's `EcsLogstashLogbackEmitter` can encode identity fields
    directly rather than combining them all into a metadata group.  This isn't

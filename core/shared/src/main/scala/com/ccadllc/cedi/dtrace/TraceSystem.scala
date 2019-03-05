@@ -66,26 +66,16 @@ object TraceSystem {
     def description: String
   }
 
-  final case class Data(
-    identity: Map[Data.Key, Data.Value],
-    meta: Map[Data.Key, Data.Value]) {
-    val combined: Map[Data.Key, Data.Value] = identity ++ meta
-    val identityStrMap: Map[String, String] = stringified(identity)
-    val metaStrMap: Map[String, String] = stringified(meta)
-    val combinedStrMap: Map[String, String] = stringified(combined)
-    val description: String = s"identity: $identityStrMap, meta: $metaStrMap"
-
-    private def stringified(data: Map[Data.Key, Data.Value]): Map[String, String] =
-      data.map { case (k, v) => k.value -> k.value }
+  final case class Data(identity: Data.Identity, meta: Data.Meta) {
+    val allValues: Map[String, String] = identity.values ++ meta.values
+    val description: String = s"identity: ${identity.description}, meta: ${meta.description}"
   }
   object Data {
-    final class Key(val value: String) extends AnyVal
-    object Key {
-      def apply(value: String): Key = new Key(value)
+    final case class Identity(values: Map[String, String]) {
+      val description: String = values.mkString(",")
     }
-    final class Value(val value: String) extends AnyVal
-    object Value {
-      def apply(value: String): Value = new Value(value)
+    final case class Meta(values: Map[String, String]) {
+      val description: String = values.mkString(",")
     }
   }
 

@@ -35,16 +35,16 @@ final class EcsLogstashLogbackEmitter[F[_]](implicit F: Sync[F]) extends TraceSy
       val s = tc.currentSpan
       val marker: LogstashMarker = {
         val m = append("dtrace.root", s.root).
-          and[LogstashMarker](append("dtrace.trace-id", s.spanId.traceId.toString)).
-          and[LogstashMarker](append("dtrace.span-id", s.spanId.spanId)).
-          and[LogstashMarker](append("dtrace.parent-id", s.spanId.parentSpanId)).
-          and[LogstashMarker](append("dtrace.span-name", s.spanName.value)).
-          and[LogstashMarker](append("dtrace.start-time", s.startTime.show)).
-          and[LogstashMarker](append("dtrace.span-success", s.failure.isEmpty)).
-          and[LogstashMarker](append("dtrace.failure-detail", s.failure.map(_.render).orNull)).
-          and[LogstashMarker](append("span-duration", s.duration.toNanos)).
-          and[LogstashMarker](append("labels", tc.system.data.metaStrMap.asJava))
-        tc.system.data.identityStrMap.foldLeft(m) { case (acc, (k, v)) => acc.and[LogstashMarker](append(k, v)) }
+          and[LogstashMarker](append("dtrace.trace_id", s.spanId.traceId.toString)).
+          and[LogstashMarker](append("dtrace.span_id", s.spanId.spanId)).
+          and[LogstashMarker](append("dtrace.parent_id", s.spanId.parentSpanId)).
+          and[LogstashMarker](append("dtrace.span_name", s.spanName.value)).
+          and[LogstashMarker](append("dtrace.start_time", s.startTime.show)).
+          and[LogstashMarker](append("dtrace.span_success", s.failure.isEmpty)).
+          and[LogstashMarker](append("dtrace.failure_detail", s.failure.map(_.render).orNull)).
+          and[LogstashMarker](append("span_duration", s.duration.toNanos)).
+          and[LogstashMarker](append("labels", tc.system.data.meta.values.asJava))
+        tc.system.data.identity.values.foldLeft(m) { case (acc, (k, v)) => acc.and[LogstashMarker](append(k, v)) }
       }
       logger.debug(marker, "Span {} {} after {} microseconds",
         s.spanName.value,

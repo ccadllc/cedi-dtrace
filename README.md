@@ -69,16 +69,19 @@ case class SalesFigure(region: String, product: String, units: Int, total: Doubl
 val traceSystem = LogEmitter[IO].map { emitter =>
   TraceSystem(
     data = TraceSystem.Data(
-      Map(
-        TraceSystem.Data.Key(
-        TraceSystem.Data.Key("application name") -> TraceSystem.Data.Value("sales-management-system"),
-        TraceSystem.Data.Key("application ID") -> TraceSystem.Data.Value(UUID.randomUUID.toString),
-        TraceSystem.Data.Key("node name") -> TraceSystem.Data.Value("crm.widgetsforsale.com"),
-        TraceSystem.Data.Key("node ID") -> TraceSystem.Data.Value(UUID.randomUUID.toString)
+      TraceSystem.Data.Identity(
+        Map(
+          "application name" -> "sales-management-system",
+          "application ID" -> UUID.randomUUID.toString,
+          "node name" -> "crm.widgetsforsale.com",
+          "node ID" -> UUID.randomUUID.toString
+        )
       ),
-      Map(
-        TraceSystem.Data.Key("deployment name") -> TraceSystem.Data.Value("us-west-2"),
-        TraceSystem.Data.Key("environment name") -> TraceSystem.Data.Value("production")
+      TraceSystem.Data.Meta(
+        Map(
+          "deployment name" -> "us-west-2",
+          "environment name" -> "production"
+        )
       )
     ),
    /* This emitter will write a text entry for each span to the "distributed-trace.txt"

@@ -5,6 +5,7 @@
 .settings
 tags
 target
+.bloop
 .DS_Store
 .scala_dependencies
 .ensime

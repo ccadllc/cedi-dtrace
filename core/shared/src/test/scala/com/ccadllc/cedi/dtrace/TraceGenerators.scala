@@ -60,15 +60,15 @@ trait TraceGenerators {
   def genVectorOfN[A](minimum: Int, maximum: Int, genElement: Gen[A]): Gen[Vector[A]] = Gen.chooseNum(minimum, maximum) flatMap { genVectorOfN(_, genElement) }
   def genStr: Gen[String] = Gen.listOf(Gen.alphaNumChar) map { _.mkString }
 
-  def genTraceSystemDataPair: Gen[(TraceSystem.Data.Key, TraceSystem.Data.Value)] = for {
+  def genTraceSystemDataPair: Gen[(String, String)] = for {
     name <- genStr
     value <- genStr
-  } yield TraceSystem.Data.Key(name) -> TraceSystem.Data.Value(value)
+  } yield name -> value
 
   def genTraceSystemData: Gen[TraceSystem.Data] = for {
     id <- Gen.nonEmptyMap(genTraceSystemDataPair)
     meta <- Gen.nonEmptyMap(genTraceSystemDataPair)
-  } yield TraceSystem.Data(id, meta)
+  } yield TraceSystem.Data(TraceSystem.Data.Identity(id), TraceSystem.Data.Meta(meta))
 
   def genTraceSystem[F[_]: Effect]: Gen[TraceSystem[F]] = for {
     data <- genTraceSystemData

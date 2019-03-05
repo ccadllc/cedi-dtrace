@@ -35,7 +35,7 @@ object json {
     // format: OFF
     implicit def traceContextEncoderJson[F[_]]: Encoder[TraceContext[F]] = Encoder.instance { tc =>
       Json.obj(
-        "where"           -> tc.system.data.combinedStrMap.asJson,
+        "where"           -> tc.system.data.allValues.asJson,
         "root"            -> tc.currentSpan.root.asJson,
         "trace-id"        -> tc.currentSpan.spanId.traceId.asJson,
         "span-id"         -> tc.currentSpan.spanId.spanId.asJson,
