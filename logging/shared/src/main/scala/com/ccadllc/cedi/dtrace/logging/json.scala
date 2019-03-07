@@ -27,7 +27,6 @@ import io.circe.syntax._
  */
 object json {
   object encoding {
-
     /**
      * Provides an implicit `io.circe.Encoder[TraceContext[F]]`, used by the [[LogEmitter]] to render
      * the `TraceCOntext[F]` as JSON.

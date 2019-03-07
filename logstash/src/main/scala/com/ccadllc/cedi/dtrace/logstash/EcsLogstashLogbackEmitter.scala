@@ -28,22 +28,40 @@ import scala.language.higherKinds
 import scala.collection.JavaConverters._
 
 final class EcsLogstashLogbackEmitter[F[_]](implicit F: Sync[F]) extends TraceSystem.Emitter[F] {
+  object ecs {
+    object field {
+      val kind: String = "event.kind"
+      val module: String = "event.module"
+      val root: String = "dtrace.root"
+      val traceId: String = "dtrace.trace_id"
+      val parentId: String = "dtrace.parent_id"
+      val spanId: String = "event.id"
+      val spanName: String = "event.action"
+      val spanStart: String = "event.start"
+      val spanOutcome: String = "event.outcome"
+      val spanDuration: String = "event.duration"
+      val spanFailureDetail: String = "error.message"
+      val spanNotes: String = "labels"
+    }
+  }
   private val logger = LoggerFactory.getLogger("distributed-trace.ecs.logstash")
   final val description: String = "ECS-Compliant Logstash Logback Emitter"
   final def emit(tc: TraceContext[F]): F[Unit] = F.delay {
     if (logger.isDebugEnabled) {
       val s = tc.currentSpan
       val marker: LogstashMarker = {
-        val m = append("dtrace.root", s.root).
-          and[LogstashMarker](append("dtrace.trace_id", s.spanId.traceId.toString)).
-          and[LogstashMarker](append("dtrace.parent_id", s.spanId.parentSpanId)).
-          and[LogstashMarker](append("event.id", s.spanId.spanId)).
-          and[LogstashMarker](append("event.action", s.spanName.value)).
-          and[LogstashMarker](append("event.start", s.startTime.show)).
-          and[LogstashMarker](append("event.outcome", if (s.failure.isEmpty) "success" else "failure")).
-          and[LogstashMarker](append("event.duration", s.duration.toNanos)).
-          and[LogstashMarker](append("error.message", s.failure.map(_.render).orNull)).
-          and[LogstashMarker](append("labels", tc.system.data.meta.values.asJava))
+        val m = append(ecs.field.kind, "event").
+          and[LogstashMarker](append(ecs.field.module, "dtrace")).
+          and[LogstashMarker](append(ecs.field.root, s.root)).
+          and[LogstashMarker](append(ecs.field.traceId, s.spanId.traceId.toString)).
+          and[LogstashMarker](append(ecs.field.parentId, s.spanId.parentSpanId)).
+          and[LogstashMarker](append(ecs.field.spanId, s.spanId.spanId)).
+          and[LogstashMarker](append(ecs.field.spanName, s.spanName.value)).
+          and[LogstashMarker](append(ecs.field.spanStart, s.startTime.show)).
+          and[LogstashMarker](append(ecs.field.spanOutcome, if (s.failure.isEmpty) "success" else "failure")).
+          and[LogstashMarker](append(ecs.field.spanDuration, s.duration.toNanos)).
+          and[LogstashMarker](append(ecs.field.spanFailureDetail, s.failure.map(_.render).orNull)).
+          and[LogstashMarker](append(ecs.field.spanNotes, tc.system.data.meta.values.asJava))
         tc.system.data.identity.values.foldLeft(m) { case (acc, (k, v)) => acc.and[LogstashMarker](append(k, v)) }
       }
       logger.debug(marker, "Span {} {} after {} microseconds",
