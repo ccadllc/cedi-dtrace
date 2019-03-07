@@ -41,7 +41,7 @@ final class EcsLogstashLogbackEmitter[F[_]](implicit F: Sync[F]) extends TraceSy
       val spanOutcome: String = "event.outcome"
       val spanDuration: String = "event.duration"
       val spanFailureDetail: String = "error.message"
-      val spanNotes: String = "labels"
+      val spanMetadata: String = "labels"
     }
   }
   private val logger = LoggerFactory.getLogger("distributed-trace.ecs.logstash")
@@ -61,7 +61,10 @@ final class EcsLogstashLogbackEmitter[F[_]](implicit F: Sync[F]) extends TraceSy
           and[LogstashMarker](append(ecs.field.spanOutcome, if (s.failure.isEmpty) "success" else "failure")).
           and[LogstashMarker](append(ecs.field.spanDuration, s.duration.toNanos)).
           and[LogstashMarker](append(ecs.field.spanFailureDetail, s.failure.map(_.render).orNull)).
-          and[LogstashMarker](append(ecs.field.spanNotes, tc.system.data.meta.values.asJava))
+          and[LogstashMarker](append(
+            ecs.field.spanMetadata,
+            (tc.system.data.meta.values ++ s.notes.map(
+              n => n.name.value -> n.value).collect { case (name, Some(value)) => name -> value.toString }.toMap).asJava))
         tc.system.data.identity.values.foldLeft(m) { case (acc, (k, v)) => acc.and[LogstashMarker](append(k, v)) }
       }
       logger.debug(marker, "Span {} {} after {} microseconds",
