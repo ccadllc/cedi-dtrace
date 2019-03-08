@@ -715,7 +715,13 @@ private[dtrace] sealed trait TraceTParallelInstance extends TraceTNonEmptyParall
   implicit def parallelTraceTInstance[M[_]: Monad, F[_]: Applicative](implicit P: Parallel[M, F]): Parallel[TraceT[M, ?], TraceT[F, ?]] =
     new ParallelTraceT[M, F]
 
-  /** A `Parallel[TraceT[M, ?], TraceT[F, ?]` typeclass instance given an instance of `Parallel[M, F]` */
+  /**
+   * A `Parallel[TraceT[M, ?], TraceT[F, ?]` typeclass instance given an instance of `Parallel[M, F]`.
+   *
+   * _Note that to summon an implicit instance of `Parallel[M, F]`, if one is not directly available,
+   * you need (at least in the case where `M` == `cats.effect.IO`) an instance of `ContextShift[M]`
+   * (*not* `ContextShift[TraceT[M, ?]]`) in implicit scope_.
+   */
   protected class ParallelTraceT[M[_]: Monad, F[_]: Applicative](implicit P: Parallel[M, F]) extends NonEmptyParallelTraceT[M, F] with Parallel[TraceT[M, ?], TraceT[F, ?]] {
     override def applicative: Applicative[TraceT[F, ?]] = new Applicative[TraceT[F, ?]] {
       override def map[A, B](ta: TraceT[F, A])(f: A => B): TraceT[F, B] = TraceT.suspendEffect { tc =>
