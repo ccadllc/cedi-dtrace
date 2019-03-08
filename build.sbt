@@ -26,11 +26,11 @@ lazy val commonSettings = Seq(
     "org.typelevel" %% "cats-effect" % catsEffectVersion
   ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((2, v)) if v >= 13 => Seq(
-      "org.scalatest" %% "scalatest" % "3.0.6-SNAP5" % "test",
+      "org.scalatest" %% "scalatest" % "3.0.5-SNAP5" % "test",
       "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
     )
     case _ => Seq(
-      "org.scalatest" %% "scalatest" % "3.0.6" % "test",
+      "org.scalatest" %% "scalatest" % "3.0.5" % "test",
       "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
     )
   }),
