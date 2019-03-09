@@ -2,21 +2,23 @@ import sbtcrossproject.crossProject
 
 lazy val catsEffectVersion = "1.2.0"
 
-lazy val catsCoreVersion = "1.5.0"
+lazy val catsCoreVersion = "1.6.0"
 
 lazy val circeVersion = "0.11.1"
 
-lazy val http4sVersion = "0.20.0-M5"
+lazy val http4sVersion = "0.20.0-M6"
 
 lazy val logbackVersion = "1.2.3"
 
-lazy val slf4jVersion = "1.7.25"
+lazy val slf4jVersion = "1.7.26"
 
 lazy val sloggingVersion = "0.6.1"
 
 lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
   crossScalaVersions := Seq("2.12.8", "2.11.12"),
+  scalacOptions ~= (_.filter(opt => opt != "-Xlint" && opt != "-Ywarn-unused")),
+  scalacOptions in Test ~= (_.filter(opt => opt != "-Xlint" && opt != "-Ywarn-unused")),
   contributors ++= Seq(
     Contributor("sbuzzard", "Steve Buzzard"),
     Contributor("mpilquist", "Michael Pilquist")
@@ -28,7 +30,7 @@ lazy val commonSettings = Seq(
     "org.typelevel" %% "cats-effect" % catsEffectVersion
   ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((2, v)) if v >= 13 => Seq(
-      "org.scalatest" %% "scalatest" % "3.0.6-SNAP5" % "test",
+      "org.scalatest" %% "scalatest" % "3.0.5-SNAP5" % "test",
       "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
     )
     case _ => Seq(
