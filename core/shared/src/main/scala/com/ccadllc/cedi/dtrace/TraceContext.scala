@@ -23,7 +23,7 @@ import scala.language.higherKinds
 
 /**
  * Represents a cursor into the "current" [[Span]] and associated system-level information and is associated with an
- * effectful program `F[A]` to realize a trace over that program.
+ * effectful program `F[A]` to realize a trace of that program.
  * @param currentSpan - the current [[Span]] associated with a particular effectful program.
  * @param system - a [[TraceSystem]] consisting of system-level information
  *  which further annotates a [[Span]] when recording it along with an implementation of an

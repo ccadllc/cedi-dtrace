@@ -23,10 +23,10 @@ import scala.concurrent.ExecutionContext
 import scala.language.higherKinds
 
 /**
- * The distributed trace (dtrace) library provides the means to derive and record a `Comcast Money` compliant
- * distributed trace across effectful programs given the appropriate typeclasses for that program in
- * implicit scope.  The effectful programs are enhanced vai a `Kleisli`-like data type, [[TraceT]], which encodes
- * the information to calculate and record a trace [[Span]] at the conclusion of the program execution.
+ * The distributed trace (dtrace) library provides the means to derive and record a distributed trace across effectful
+ * programs given the appropriate typeclasses for that program in implicit scope.  The effectful programs are enhanced
+ * via a `Kleisli`-like data type, [[TraceT]], which encodes the information to calculate and record a trace [[Span]] at
+ * the conclusion of the program execution.
  */
 package object dtrace {
 
@@ -42,8 +42,8 @@ package object dtrace {
    */
   object TraceIO {
     /**
-     * Type alias provided for convenience when using an `IO.Par` as the type of parallel effectful
-     * program being traced.
+     * Type alias provided for convenience when using an `IO.Par` as the type of `cats.effect.Parallel` or
+     * `cats.effect.NonEmptyParallel` effectful program being traced.
      */
     type Par[A] = TraceT[IO.Par, A]
 
@@ -56,9 +56,10 @@ package object dtrace {
 
     /**
      * Ask for the current `TraceContext[IO]` in a `TraceIO`.
-     * @return a `TraceContext[IO]` wrapped in a `TraceIO`.
+     * @return a `TraceContext[IO]`, describing the environment of the active trace,
+     *   wrapped in a `TraceIO`.
      */
-    def ask: TraceIO[TraceContext[IO]] = TraceT { IO.pure }
+    def ask: TraceIO[TraceContext[IO]] = TraceT(IO.pure)
 
     /**
      * Lifts the non-strict, possibly impure expression computing `A` into a `TraceIO[A]`
@@ -69,10 +70,12 @@ package object dtrace {
     def apply[A](a: => A): TraceIO[A] = toTraceIO(IO(a))
 
     /**
-     * Creates a `ContextSwitch[TraceIO]` given an `ExecutionContext`.
+     * Creates a `cats.effect.ContextShift[TraceIO]` given an `ExecutionContext`.  The context shift
+     * provides the means of evaluating an expression on a given execution context (e.g., thread pool)
+     * and switching back after the evaluation is completed.
      *
-     * @param ec - an `ExecutionContext` used to switch back to after the `ContextSwitch.evalOn` finishes.
-     * @return a `ContextSwitch[TraceIO]`
+     * @param ec - an `ExecutionContext` used to switch back to after the `ContextShift.evalOn` finishes.
+     * @return a `ContextShift[TraceIO]`
      */
     def contextShift(ec: ExecutionContext)(implicit F: Monad[IO]): ContextShift[TraceIO] = {
       implicit val cs = IO.contextShift(ec)
@@ -87,7 +90,7 @@ package object dtrace {
     def pure[A](a: A): TraceIO[A] = toTraceIO(IO.pure(a))
 
     /**
-     * Creates a failed `TraceIO`.
+     * Creates a `TraceIO` indicating a failure has occurred during execution of the [[Span]].
      * @param t - the `Throwable` with which to fail the underlying program.
      * @return the `TraceIO[A]` in a failed state.
      */
@@ -125,9 +128,7 @@ package object dtrace {
 
     /**
      * Lifts this `F[A]` into a `TraceT[F, A] and then transforms that `TraceT` to an equivalent `TraceT[F, A]` where
-     * a best-effort will be made to execute the passed-in function on the finish of the underlying effectful program.
-     * The function can't be guaranteed to run in the face of interrupts, etc.  It depends on the nature of the effectful program
-     * itself.
+     * the passed-in function will be executed at the finish of the underlying effectful program.
      * @param f - a function which is passed an optional `Throwable` - defined if the program failed and
      *   returns a `TraceT[F, Unit]`, a program run only for its effect.
      * @return a new `TraceT[F, A]` with the error handling of the aforementioned `f` function

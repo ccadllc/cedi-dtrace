@@ -30,8 +30,8 @@ import scala.util.matching.Regex
  * System level configuration for the trace system.
  *
  * @param data - top-level system-level information that should be included in all trace span recordings (examples include:
- *   node, deployment, and environment information).  It is separated into identity and metadata as a hint to the
- *   emitters to emit directly (for identity) or in an appropriate metadata structure (for meta).
+ *   identity, node, deployment, and environment information).  It is separated into identity and metadata as a hint to the
+ *   emitters to emit directly as part of the span recording or to emit in an appropriate metadata structure.
  * @param emitter - [[TraceSystem#Emitter]] responsible for actually recording the span information for a distributed trace
  *   to some external sink (e.g., log file, remote database, JMX, etc.).
  * @param timer - [[TraceSystem#Timer]] responsible for generating timer to measure performance of [[Span]]s.

@@ -17,6 +17,10 @@ package com.ccadllc.cedi.dtrace
 
 import slogging.{ SLF4JLoggerFactory, UnderlyingLoggerFactory }
 
+/**
+ * Initializes the logging configuration for the JVM platform
+ * to use the `sl4j` library.
+ */
 object LoggingFactory {
   val value: UnderlyingLoggerFactory = SLF4JLoggerFactory()
 }

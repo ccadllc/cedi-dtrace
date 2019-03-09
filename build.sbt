@@ -16,7 +16,7 @@ lazy val sloggingVersion = "0.6.1"
 
 lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
-  crossScalaVersions := Seq("2.12.7", "2.11.12"),
+  crossScalaVersions := Seq("2.12.8", "2.11.12"),
   contributors ++= Seq(
     Contributor("sbuzzard", "Steve Buzzard"),
     Contributor("mpilquist", "Michael Pilquist")

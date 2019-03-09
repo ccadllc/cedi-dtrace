@@ -23,7 +23,8 @@ import scala.concurrent.duration._
 import scala.language.higherKinds
 
 /**
- * Represents a single span for a distributed trace.  A span is the traced execution of an effectful program `F`.
+ * Represents a single span for a distributed trace.  A span is the traced execution of an effectful program `F`,
+ * part of a possibly larger transaction that represents the trace as a whole.
  * @param spanId - the [[SpanId]] representing this span's identity and its place in a distributed trace's hiearchy
  *   of spans.
  * @param spanName - the human readable name of this span - it is the logical name of the effectful program whose execution

@@ -13,7 +13,7 @@ Quick links:
 
 #### Overview
 
-The Cedi Distributed Trace library provides the capability to instrument effectful programs such that logical traces can be derived and recorded across physical processes and machines.  This instrumentation is expressed in a format that is interoperable with [Comcast Money](https://github.com/Comcast/money) and [X-B3/Zipkin](https://istio.io/docs/tasks/telemetry/distributed-tracing.html), providing modules for generating and parsing compliant HTTP headers from/into `TraceContext`s.  Additionally, a module for the use of these headers within [http4s](https://http4s.org) clients and servers is also provided.  The library core consists of immutable data structures which represent the instrumentation and an interpreter - the `TraceT[F, A]` - which annotates the underlying action (represented as an `F[A]` where `F` is the effectful action and `A` is the result type).  The `TraceT[F, A]` can be thought of as a function from a `TraceContext` (the cursor into the active trace) to an effectful program whose execution you wish to trace (the effectful program can be any `F`, such as `cats.effect.IO`, though often you'll need an implicit `cats.effect.Sync[F]` instance if you using something other than `IO`).  Because `IO` is often used as the effectful data type, this library provides a type alias `TraceIO[A]` for `TraceT[IO, A]` and convenience methods to work with this type alias (the latter included in a `TraceIO` object).
+The Cedi Distributed Trace library provides the capability to instrument effectful programs such that logical traces can be derived and recorded across physical processes and machines.  This instrumentation is expressed in a format that is interoperable with [Comcast Money](https://github.com/Comcast/money) and [X-B3/Zipkin](https://istio.io/docs/tasks/telemetry/distributed-tracing.html), providing modules for generating and parsing compliant HTTP headers from/into `TraceContext`s which in turn are used to record the trace spans in the current process.  Additionally, a module for the use of these headers within [http4s](https://http4s.org) clients and servers is also provided.  The library core consists of immutable data structures which represent the instrumentation and an interpreter - the `TraceT[F, A]` - which annotates the underlying action (represented as an `F[A]` where `F` is the effectful action and `A` is the result type).  The `TraceT[F, A]` can be thought of as a function from a `TraceContext` (the cursor into the active trace) to an effectful program whose execution you wish to trace (the effectful program can be any `F`, such as `cats.effect.IO`, though often you'll need an implicit `cats.effect.Sync[F]` instance if you using something other than `IO`).  Because `IO` is often used as the effectful data type, this library provides a type alias `TraceIO[A]` for `TraceT[IO, A]` and convenience methods to work with this type alias (the latter included in a `TraceIO` object).
 
 #### Design Constraints
 
@@ -25,7 +25,7 @@ It is interoperable with [Comcast Money](https://github.com/Comcast/money) and [
 
 #### Background
 
-A *Distributed Trace* is a directed graph of *Span*s. A *Span* identifies a branch of the overall *Trace* representing a logical step or action, executing within the local process.  All but the first *Span* in a *Trace* has a Parent *Span* indicating the upstream operation which triggered its child.  *Span*'s are identified by a unique *Span Identifier* (`SpanId`) along with a parent `SpanId` (and the overall *Distributed Trace* GUID).  A *Trace*'s first *Span* has a parent `SpanId` equal to its own.  Each *Span* also consists of metadata about the action, including whether its action executed successfully or failed (and if a failure, details on it), the duration of the action execution in microseconds, where the *Span* executed (in which application; on which node; in which process; within what environment, etc), and, optionally, individual `Note`s specific to the *Span* (e.g., the `Note` with the *Host Address* of a cable settop box for an action issuing an initialize command to the device).  A logical *Trace* (for example, "issue an initialize to a settop box") might originate from a business system with its transmission *Span* passed in an HTTP header to a microservice running in the cloud which executes *Span*s to query a persistent data store before making a binary RPC call (recorded in a *Span*) to a second microservice, passing the current trace information in the RPC context, before that second microservice finally issues the initialize command to the settop, ending the *Trace*.  The *dtrace library* provides a logging `Emitter` to record the *Span*s, as they are executed, to the configured logging system in both JSON and text formats but also provides the means by which custom emitters can be provided.
+A *Distributed Trace* is a directed graph of *Span*s. A *Span* identifies a branch of the overall *Trace* representing a logical step or action, executing within the local process.  All but the first *Span* in a *Trace* has a Parent *Span* indicating the upstream operation which triggered its child.  *Span*'s are identified by a unique *Span Identifier* (`SpanId`) along with a parent `SpanId` (and the overall *Distributed Trace* GUID).  A *Trace*'s first *Span* has a parent `SpanId` equal to its own.  Each *Span* also consists of metadata about the action, including whether its action executed successfully or failed (and if a failure, details on it), the duration of the action execution in microseconds, where the *Span* executed (in which application; on which node; in which process; within what environment, etc), and, optionally, individual `Note`s specific to the *Span* (e.g., the `Note` with the *Host Address* of a cable settop box for an action issuing an initialize command to the device).  A logical *Trace* (for example, "issue an initialize to a settop box") might originate from a business system with its transmission *Span* passed in an HTTP header to a microservice running in the cloud which executes *Span*s to query a persistent data store before making a binary RPC call (recorded in a *Span*) to a second microservice, passing the current trace information in the RPC context, before that second microservice finally issues the initialize command to the settop, ending the *Trace*.  The *dtrace library* provides several logging `Emitter`s to record the *Span*s, as they are executed, to the configured logging system in JSON and text formats but also provides the means by which custom emitters can be provided.
 
 
 ### <a id="usage"></a> Examples of Use
@@ -208,27 +208,27 @@ io.unsafeRunSync()
 
 ### <a id="getit"></a>How to get latest Version
 
-Cedi Distributed Trace supports Scala 2.11 and 2.12. This distribution is published to Maven Central and consists of two library components.
+Cedi Distributed Trace supports Scala 2.11 and 2.12 (and will support 2.13 once all dependent projects do so). This distribution is published to Maven Central and consists of several library components.
 
 #### dtrace-core
 
-This is the core functionality, recording trace and span information over effectful programs, passing these recorded events to registred emitters for disposition.
+This is the core functionality, recording trace and span information over effectful programs, passing these recorded events to registred emitters for disposition. It is published for both the JVM and the JavaScript (JS) platforms.
 
 ```scala
-libraryDependencies += "com.ccadllc.cedi" %% "dtrace-core" % "2.0.0"
+libraryDependencies += "com.ccadllc.cedi" %%% "dtrace-core" % "2.0.0"
 ```
 
 #### dtrace-logging
 
-This component provides emitters for logging the trace spans in text and/or JSON format using the `sf4j` logging framework for the JVM and `winston` logger for the Java Script platform.  It uses the `circe` library for formatting the trace span information as JSON.
+This component provides emitters for logging the trace spans in text and/or JSON format using the `sf4j` logging framework for the JVM and `winston` logger for the JavaScript (JS) platform.  It uses the `circe` library for formatting the trace span information as JSON.  It uses the `biz.enef.slogging` library to abstract the particular platform targeted from the logging API.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logging" % "2.0.0"
+libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-logging" % "2.0.0"
 ```
 
 #### dtrace-logstash
 
-This component provides emitters for logging in logstash-compliant format.
+This component provides emitters for logging using the Elastic Search (EC) logstash encoder in both a format that mirrors the standard dtrace format used in the `logging` module described above as well as one which does so in an [Elastic Search Common Schema (ECS)](https://github.com/elastic/ecs)-compliant format.  This module is currently targeted to the JVM only.
 
 ```scala
 libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logstash" % "2.0.0"
@@ -239,7 +239,7 @@ libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logstash" % "2.0.0"
 This component provides an instance of the core HeaderCodec in order to encode and decode Money-compliant HTTP headers.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-money" % "2.0.0"
+libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-money" % "2.0.0"
 ```
 
 #### dtrace-xb3 interoperability
@@ -247,12 +247,12 @@ libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-money" % "2.0.0"
 This component provides an insance of the core HeaderCodec in order to encode and decode X-B3/Zipkin-compliant HTTP headers.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-xb3" % "2.0.0"
+libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-xb3" % "2.0.0"
 ```
 
 #### dtrace-http4s interoperability
 
-This component provides convenience functions to ingest trace-related HTTP headers (such as Money or X-B3) in an http4s server-side service and to propagate trace-related HTTP headers within an http4s client-side request to a remote entity.  This module is used in combination with either or both the dtrace-xb3 and dtrace-money modules.  If you have another protocol you wish to use instead, it will likewise interoperate with any implementation of the core HeaderCodec trait in implicit scope.
+This component provides convenience functions to ingest trace-related HTTP headers (such as Money or X-B3) in an http4s server-side service and to propagate trace-related HTTP headers within an http4s client-side request to a remote entity.  This module is used in combination with either or both the dtrace-xb3 and dtrace-money modules.  If you have another protocol you wish to use instead, it will likewise interoperate with any implementation of the core HeaderCodec trait in implicit scope. This module is currently targeted to the JVM only.
 
 ```scala
 libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-http4s" % "2.0.0"
