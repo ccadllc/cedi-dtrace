@@ -698,7 +698,7 @@ private[dtrace] sealed trait TraceTContextShiftInstance {
   /**
    * Generates a `ContextShift[TraceT[F, ?]` in implicit scope, given a `Monad[F]` and `ContextShift[F]` in implicit scope.
    */
-  implicit def contextShiftInstance[F[_]: Monad](implicit cs: ContextShift[F]): ContextShift[TraceT[F, ?]] = new ContextShift[TraceT[F, ?]] {
+  implicit def contextShiftInstance[F[_]](implicit cs: ContextShift[F], F: Monad[F]): ContextShift[TraceT[F, ?]] = new ContextShift[TraceT[F, ?]] {
     def shift: TraceT[F, Unit] = TraceT.toTraceT(cs.shift)
     def evalOn[A](ec: ExecutionContext)(f: TraceT[F, A]): TraceT[F, A] =
       TraceT.suspendEffect { tc => cs.evalOn(ec)(f.toEffect(tc)) }
@@ -712,7 +712,7 @@ private[dtrace] sealed trait TraceTParallelInstances extends TraceTParallelInsta
 
 private[dtrace] sealed trait TraceTParallelInstance extends TraceTNonEmptyParallelInstance {
 
-  implicit def parallelTraceTInstance[M[_]: Monad, F[_]: Applicative](implicit P: Parallel[M, F]): Parallel[TraceT[M, ?], TraceT[F, ?]] =
+  implicit def parallelTraceTInstance[M[_], F[_]](implicit P: Parallel[M, F], M: Monad[M], F: Applicative[F]): Parallel[TraceT[M, ?], TraceT[F, ?]] =
     new ParallelTraceT[M, F]
 
   /**
@@ -722,7 +722,7 @@ private[dtrace] sealed trait TraceTParallelInstance extends TraceTNonEmptyParall
    * you need (at least in the case where `M` == `cats.effect.IO`) an instance of `ContextShift[M]`
    * (*not* `ContextShift[TraceT[M, ?]]`) in implicit scope_.
    */
-  protected class ParallelTraceT[M[_]: Monad, F[_]: Applicative](implicit P: Parallel[M, F]) extends NonEmptyParallelTraceT[M, F] with Parallel[TraceT[M, ?], TraceT[F, ?]] {
+  protected class ParallelTraceT[M[_], F[_]](implicit P: Parallel[M, F], M: Monad[M], F: Applicative[F]) extends NonEmptyParallelTraceT[M, F] with Parallel[TraceT[M, ?], TraceT[F, ?]] {
     override def applicative: Applicative[TraceT[F, ?]] = new Applicative[TraceT[F, ?]] {
       override def map[A, B](ta: TraceT[F, A])(f: A => B): TraceT[F, B] = TraceT.suspendEffect { tc =>
         P.applicative.map(ta.toEffect(tc))(f)
@@ -754,11 +754,17 @@ private[dtrace] sealed trait TraceTParallelInstance extends TraceTNonEmptyParall
 
 private[dtrace] sealed trait TraceTNonEmptyParallelInstance {
 
-  implicit def neParallelTraceTInstance[M[_]: FlatMap, F[_]: Apply](implicit P: NonEmptyParallel[M, F]): NonEmptyParallel[TraceT[M, ?], TraceT[F, ?]] =
+  implicit def neParallelTraceTInstance[M[_], F[_]](implicit P: NonEmptyParallel[M, F], M: FlatMap[M], F: Apply[F]): NonEmptyParallel[TraceT[M, ?], TraceT[F, ?]] =
     new NonEmptyParallelTraceT[M, F]
 
-  /** A `NonEmptyParallel[TraceT[M, ?], TraceT[F, ?]` typeclass instance given an instance of `NonEmptyParallel[M, F]` */
-  protected class NonEmptyParallelTraceT[M[_]: FlatMap, F[_]: Apply](implicit P: NonEmptyParallel[M, F]) extends NonEmptyParallel[TraceT[M, ?], TraceT[F, ?]] {
+  /**
+   * A `NonEmptyParallel[TraceT[M, ?], TraceT[F, ?]` typeclass instance given an instance of `NonEmptyParallel[M, F]`.
+   *
+   * _Note that to summon an implicit instance of `NonEmptyParallel[M, F]`, if one is not directly available,
+   * you need (at least in the case where `M` == `cats.effect.IO`) an instance of `ContextShift[M]`
+   * (*not* `ContextShift[TraceT[M, ?]]`) in implicit scope_.
+   */
+  protected class NonEmptyParallelTraceT[M[_], F[_]](implicit P: NonEmptyParallel[M, F], M: FlatMap[M], F: Apply[F]) extends NonEmptyParallel[TraceT[M, ?], TraceT[F, ?]] {
     def apply: Apply[TraceT[F, ?]] = new Apply[TraceT[F, ?]] {
       override def ap[A, B](tab: TraceT[F, A => B])(ta: TraceT[F, A]): TraceT[F, B] = TraceT.suspendEffect { tc =>
         P.apply.ap(tab.toEffect(tc))(ta.toEffect(tc))

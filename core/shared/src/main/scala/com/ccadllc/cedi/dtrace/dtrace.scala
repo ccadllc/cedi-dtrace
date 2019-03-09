@@ -42,7 +42,7 @@ package object dtrace {
    */
   object TraceIO {
     /**
-     * Type alias provided for convenience when using an `IO.Par` as the type of paralleleffectful
+     * Type alias provided for convenience when using an `IO.Par` as the type of parallel effectful
      * program being traced.
      */
     type Par[A] = TraceT[IO.Par, A]
