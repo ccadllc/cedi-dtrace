@@ -22,6 +22,12 @@ import scala.language.higherKinds
 
 import slogging.{ LoggerConfig => SLoggerConfig, LogLevel }
 
+/**
+ * Provides the for the initialization of the underlying logging
+ * configuration, the target for which is dependent on the implementation
+ * of the `LoggingFactory.value` (which differs depending on whether the
+ * target is to the JVM or JavaScript platform).
+ */
 object LoggingConfig {
   def initialize[F[_]](implicit F: Sync[F]): F[Unit] = F.delay {
     SLoggerConfig.factory = LoggingFactory.value

@@ -17,6 +17,10 @@ package com.ccadllc.cedi.dtrace
 
 import slogging.{ UnderlyingLoggerFactory, WinstonLoggerFactory }
 
+/**
+ * Initializes the logging configuration for the JavaScript platform
+ * to use the `winston` library.
+ */
 object LoggingFactory {
   val value: UnderlyingLoggerFactory = WinstonLoggerFactory()
 }

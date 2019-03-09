@@ -6,14 +6,14 @@ Quick links:
 - [Examples of use](#usage)
 - [Configuration](#config)
 - [How to get latest version](#getit)
-- API Docs [Core](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-core_2.12/1.5.0/dtrace-core_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/index.html) [Logging](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logging_2.12/1.5.0/dtrace-logging_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logging/index.html) [Logstash](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logstash_2.12/1.5.0/dtrace-logstash_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logstash/index.html) [Money](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-money_2.12/1.5.0/dtrace-money_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/money/index.html) [Http4s](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-http4s_2.12/1.5.0/dtrace-http4s_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/http4s/index.html) [XB3](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-xb3_2.12/1.5.0/dtrace-xb3_2.12-1.5.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/xb3/index.html)
+- API Docs [Core](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-core_2.12/2.0.0/dtrace-core_2.12-2.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/index.html) [Logging](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logging_2.12/2.0.0/dtrace-logging_2.12-2.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logging/index.html) [Logstash](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logstash_2.12/2.0.0/dtrace-logstash_2.12-2.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logstash/index.html) [Money](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-money_2.12/2.0.0/dtrace-money_2.12-2.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/money/index.html) [Http4s](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-http4s_2.12/2.0.0/dtrace-http4s_2.12-2.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/http4s/index.html) [XB3](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-xb3_2.12/2.0.0/dtrace-xb3_2.12-2.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/xb3/index.html)
 
 
 ### <a id="about"></a>About the library
 
 #### Overview
 
-The Cedi Distributed Trace library provides the capability to instrument effectful programs such that logical traces can be derived and recorded across physical processes and machines.  This instrumentation is expressed in a format that is interoperable with [Comcast Money](https://github.com/Comcast/money) and [X-B3/Zipkin](https://istio.io/docs/tasks/telemetry/distributed-tracing.html), providing modules for generating and parsing compliant HTTP headers from/into `TraceContext`s.  Additionally, a module for the use of these headers within [http4s](https://http4s.org) clients and servers is also provided.  The library core consists of immutable data structures which represent the instrumentation and an interpreter - the `TraceT[F, A]` - which annotates the underlying action (represented as an `F[A]` where `F` is the effectful action and `A` is the result type).  The `TraceT[F, A]` can be thought of as a function from a `TraceContext` (the cursor into the active trace) to an effectful program whose execution you wish to trace (the effectful program can be any `F`, such as `cats.effect.IO`, though often you'll need an implicit `cats.effect.Sync[F]` instance if you using something other than `IO`).  Because `IO` is often used as the effectful data type, this library provides a type alias `TraceIO[A]` for `TraceT[IO, A]` and convenience methods to work with this type alias (the latter included in a `TraceIO` object).
+The Cedi Distributed Trace library provides the capability to instrument effectful programs such that logical traces can be derived and recorded across physical processes and machines.  This instrumentation is expressed in a format that is interoperable with [Comcast Money](https://github.com/Comcast/money) and [X-B3/Zipkin](https://istio.io/docs/tasks/telemetry/distributed-tracing.html), providing modules for generating and parsing compliant HTTP headers from/into `TraceContext`s which in turn are used to record the trace spans in the current process.  Additionally, a module for the use of these headers within [http4s](https://http4s.org) clients and servers is also provided.  The library core consists of immutable data structures which represent the instrumentation and an interpreter - the `TraceT[F, A]` - which annotates the underlying action (represented as an `F[A]` where `F` is the effectful action and `A` is the result type).  The `TraceT[F, A]` can be thought of as a function from a `TraceContext` (the cursor into the active trace) to an effectful program whose execution you wish to trace (the effectful program can be any `F`, such as `cats.effect.IO`, though often you'll need an implicit `cats.effect.Sync[F]` instance if you using something other than `IO`).  Because `IO` is often used as the effectful data type, this library provides a type alias `TraceIO[A]` for `TraceT[IO, A]` and convenience methods to work with this type alias (the latter included in a `TraceIO` object).
 
 #### Design Constraints
 
@@ -25,8 +25,7 @@ It is interoperable with [Comcast Money](https://github.com/Comcast/money) and [
 
 #### Background
 
-A *Distributed Trace* is a directed graph of *Span*s. A *Span* identifies a branch of the overall *Trace* representing a logical step or action, executing within the local process.  All but the first *Span* in a *Trace* has a Parent *Span* indicating the upstream operation which triggered its child.  *Span*s are identified by a unique *Span Identifier* (`SpanId`) along with a parent `SpanId` (and the overall *Distributed Trace* GUID).  A *Trace*'s first *Span* has a parent `SpanId` equal to its own.  Each *Span* also consists of metadata about the action, including whether its action executed successfully or failed (and if a failure, details on it), the duration of the action execution in microseconds, where the *Span* executed (in which application; on which node; in which process; within what environment, etc), and, optionally, individual `Note`s specific to the *Span* (e.g., the `Note` with the *Host Address* of a cable settop box for an action issuing an initialize command to the device).  A logical *Trace* (for example, "issue an initialize to a settop box") might originate from a business system with its transmission *Span* passed in an HTTP header to a microservice running in the cloud which executes *Span*s to query a persistent data store before making a binary RPC call (recorded in a *Span*) to a second microservice, passing the current trace information in the RPC context, before that second microservice finally issues the initialize command to the settop, ending the *Trace*.  The *dtrace library* provides a logging `Emitter` to record the *Span*s, as they are executed, to the configured logging system in both JSON and text formats but also provides the means by which custom emitters can be provided.
-
+A *Distributed Trace* is a directed graph of *Span*s. A *Span* identifies a branch of the overall *Trace* representing a logical step or action, executing within the local process.  All but the first *Span* in a *Trace* has a Parent *Span* representing the upstream operation which triggered its child.  *Span*s are identified by a unique *Span Identifier* (`SpanId`) along with a parent `SpanId` (and the overall *Distributed Trace* GUID).  A *Trace*'s first *Span* has a parent `SpanId` equal to its own.  Each *Span* also consists of metadata about the action, including whether its action executed successfully or failed (and if a failure, details on the cause), the duration of the span execution, where the *Span* executed (in which application; on which node; in which process; within what environment, etc), and, optionally, individual `Note`s representing metadata specific to the *Span* (e.g., the `Note` with the *Host Address* of a cable settop box for an action issuing an initialize command to the device).  A logical *Trace* (for example, "issue an initialize to a settop box") might originate from a business system with its transmission *Span* passed in an HTTP header to a microservice running in the cloud which executes *Span*s to query a persistent data store before making a custom RPC call (recorded in yet another *Span*) to a second microservice, passing the current trace information in the RPC context, before that second microservice finally issues the initialize command to the settop, ending the *Trace*.  The *dtrace library* provides several logging `Emitter`s to record the *Span*s, as they are executed, to the configured logging system in JSON and text formats but also provides the means by which custom emitters can be provided.
 
 ### <a id="usage"></a> Examples of Use
 
@@ -55,17 +54,34 @@ case class SalesFigure(region: String, product: String, units: Int, total: Doubl
 /*
  * Near the beginning of the universe, create a `TraceSystem` object to
  * hold the top-level information about the program (application and node name,
- * deployment and environment names, etc.)
+ * deployment and environment names, etc.). The `TraceSystem.Data` is broken up into
+ * two sections: a map of key/value pairs representing system identity and a
+ * map of key/value pairs representing general system metadata. This separation is
+ * done as a hint to the emitter that the identities be emitted as top-level fields
+ * and their values while the metadata be emitted within a nested metadata structure.
+ * Emitters are free to ignore this and emit both maps at the top level or top within
+ * a metadata group.  The dtrace `logstash` module provides an Elastic Common Schema (ECS)
+ * compliant emitter `EcsLogstashLogbackEmitter` which does use this hint and encodes the
+ * metadata fields under the `ecs` `labels` field group and emits the identity fields at
+ * the top-level.
  */
 val traceSystem = LogEmitter[IO].map { emitter =>
   TraceSystem(
-    metadata = Map(
-      "application name" -> "sales-management-system",
-      "application ID" -> UUID.randomUUID.toString,
-      "node name" -> "crm.widgetsforsale.com",
-      "node ID" -> UUID.randomUUID.toString,
-      "deployment name" -> "us-west-2",
-      "environment name" -> "production"
+    data = TraceSystem.Data(
+      TraceSystem.Data.Identity(
+        Map(
+          "application name" -> "sales-management-system",
+          "application ID" -> UUID.randomUUID.toString,
+          "node name" -> "crm.widgetsforsale.com",
+          "node ID" -> UUID.randomUUID.toString
+        )
+      ),
+      TraceSystem.Data.Meta(
+        Map(
+          "deployment name" -> "us-west-2",
+          "environment name" -> "production"
+        )
+      )
     ),
    /* This emitter will write a text entry for each span to the "distributed-trace.txt"
     * logger and a JSON entry for each span to the "distributed-trace.json" logger; however,
@@ -170,7 +186,7 @@ val http4sServerAction = HttpService[IO] {
  *     [ span-duration=2500 microseconds ] [ span-success=true ] [ failure-detail=N/A ][ notes=[name=region,value=Philly] ]
  *     [ node-name=crm.widgetsforsale.com ]
  *
- *   Span: [ span-id=-2264899918881452036 ] [ trace-id=2a71fb7b-f38d-4f6a-a4d1-229c6c5bc963 ] [ parent-id=-6262761813211462065 ]
+ *   Span: [ span-id=-2264899918882.0.036 ] [ trace-id=2a71fb7b-f38d-4f6a-a4d1-229c6c5bc963 ] [ parent-id=-6262761813211462065 ]
  *     [ span-name=calculate-sales-report] [ app-name=sales-management-system] [ start-time=2016-09-26T00:29:14.799Z ]
  *     [ span-duration=2500 microseconds ] [ span-success=true ] [ failure-detail=N/A ]
  *     [ notes=[name=region,value=Philly], [name=total-figures,value=2] ] [ node-name=crm.widgetsforsale.com ]
@@ -191,30 +207,30 @@ io.unsafeRunSync()
 
 ### <a id="getit"></a>How to get latest Version
 
-Cedi Distributed Trace supports Scala 2.11 and 2.12. This distribution is published to Maven Central and consists of two library components.
+Cedi Distributed Trace supports Scala 2.11 and 2.12 (and will support 2.13 once all dependent projects do so). This distribution is published to Maven Central and consists of several library components.
 
 #### dtrace-core
 
-This is the core functionality, recording trace and span information over effectful programs, passing these recorded events to registred emitters for disposition.
+This is the core functionality, recording trace and span information over effectful programs, passing these recorded events to registred emitters for disposition. It is published for both the JVM and the JavaScript (JS) platforms.
 
 ```scala
-libraryDependencies += "com.ccadllc.cedi" %% "dtrace-core" % "1.5.0"
+libraryDependencies += "com.ccadllc.cedi" %%% "dtrace-core" % "2.0.0"
 ```
 
 #### dtrace-logging
 
-This component provides emitters for logging the trace spans in text and/or JSON format using the `sf4j` logging framework for the JVM and `winston` logger for the Java Script platform.  It uses the `circe` library for formatting the trace span information as JSON.
+This component provides emitters for logging the trace spans in text and/or JSON format using the `sf4j` logging framework for the JVM and `winston` logger for the JavaScript (JS) platform.  It uses the `circe` library for formatting the trace span information as JSON.  It uses the `biz.enef.slogging` library to abstract the particular platform targeted from the logging API.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logging" % "1.5.0"
+libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-logging" % "2.0.0"
 ```
 
 #### dtrace-logstash
 
-This component provides emitters for logging in logstash-compliant format.
+This component provides emitters for logging using the Elastic Search (EC) logstash encoder in both a format that mirrors the standard dtrace format used in the `logging` module described above as well as one which does so in an [Elastic Search Common Schema (ECS)](https://github.com/elastic/ecs)-compliant format.  This module is currently targeted to the JVM only.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logstash" % "1.5.0"
+libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logstash" % "2.0.0"
 ```
 
 #### dtrace-money interoperability
@@ -222,7 +238,7 @@ libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logstash" % "1.5.0"
 This component provides an instance of the core HeaderCodec in order to encode and decode Money-compliant HTTP headers.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-money" % "1.5.0"
+libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-money" % "2.0.0"
 ```
 
 #### dtrace-xb3 interoperability
@@ -230,15 +246,15 @@ libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-money" % "1.5.0"
 This component provides an insance of the core HeaderCodec in order to encode and decode X-B3/Zipkin-compliant HTTP headers.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-xb3" % "1.5.0"
+libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-xb3" % "2.0.0"
 ```
 
 #### dtrace-http4s interoperability
 
-This component provides convenience functions to ingest trace-related HTTP headers (such as Money or X-B3) in an http4s server-side service and to propagate trace-related HTTP headers within an http4s client-side request to a remote entity.  This module is used in combination with either or both the dtrace-xb3 and dtrace-money modules.  If you have another protocol you wish to use instead, it will likewise interoperate with any implementation of the core HeaderCodec trait in implicit scope.
+This component provides convenience functions to ingest trace-related HTTP headers (such as Money or X-B3) in an http4s server-side service and to propagate trace-related HTTP headers within an http4s client-side request to a remote entity.  This module is used in combination with either or both the dtrace-xb3 and dtrace-money modules.  If you have another protocol you wish to use instead, it will likewise interoperate with any implementation of the core HeaderCodec trait in implicit scope. This module is currently targeted to the JVM only.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-http4s" % "1.5.0"
+libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-http4s" % "2.0.0"
 ```
 
 ## Copyright and License

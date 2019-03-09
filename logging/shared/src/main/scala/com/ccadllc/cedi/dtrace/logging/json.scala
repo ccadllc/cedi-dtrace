@@ -22,7 +22,7 @@ import io.circe._
 import io.circe.syntax._
 
 /**
- * Provides the encoding of a `Span` - and associated `TraceSystem[F]` metadata - to JSON
+ * Provides the encoding of a `Span` - and associated `TraceSystem[F]` data - to JSON
  * using the `io.circe` framework.
  */
 object json {
@@ -34,7 +34,7 @@ object json {
     // format: OFF
     implicit def traceContextEncoderJson[F[_]]: Encoder[TraceContext[F]] = Encoder.instance { tc =>
       Json.obj(
-        "where"           -> tc.system.metadata.asJson,
+        "where"           -> tc.system.data.allValues.asJson,
         "root"            -> tc.currentSpan.root.asJson,
         "trace-id"        -> tc.currentSpan.spanId.traceId.asJson,
         "span-id"         -> tc.currentSpan.spanId.spanId.asJson,

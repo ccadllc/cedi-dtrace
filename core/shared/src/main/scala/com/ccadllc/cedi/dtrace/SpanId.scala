@@ -39,8 +39,8 @@ final case class SpanId(traceId: UUID, parentSpanId: Long, spanId: Long) {
   val root: Boolean = parentSpanId == spanId
 
   /**
-   * Creates a new child span identifier from this instance, with the new instance's `parentSpanId` equal to this instance's `spanId` and a new value generated
-   * for the new instance's `spanId`.
+   * Creates a new child span identifier from this instance, with the new instance's `parentSpanId` equal
+   * to this instance's `spanId` and a new value generated for the new instance's `spanId`.
    * @return newSpanIdDescription - an effectful description of a new [[SpanId]].
    */
   def newChild[F[_]: Sync]: F[SpanId] = SpanId.nextSpanIdValue map { newSpanId => copy(parentSpanId = spanId, spanId = newSpanId) }

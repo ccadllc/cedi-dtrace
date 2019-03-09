@@ -71,7 +71,7 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
     val timer = TraceSystem.realTimeTimer[IO]
     TraceContext(
       Span.root(timer, Span.Name("calculate-quarterly-sales")).unsafeRunSync,
-      TraceSystem(testSystemMetadata, new TestEmitter[IO], timer))
+      TraceSystem(testSystemData, new TestEmitter[IO], timer))
   }
 
   checkAllAsync("TraceIO", implicit testC => {

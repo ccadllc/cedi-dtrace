@@ -1,5 +1,14 @@
-1.5.0
+2.0.0
 =====
+ - Added an Elastic Common Search (ECS) compliant emitter within the logstash
+   module which encodes the spans in a manner consistent with the ECS
+   specification (1.0.0-beta2 revision).  The top-level `metadata` map in the
+   `TraceSystem` has been replaced with a `data` structure, which separates out
+   identity and metadata components of system-wide common data so that the
+   `logstash` module's `EcsLogstashLogbackEmitter` can encode identity fields
+   directly rather than combining them all into a metadata group.  This isn't
+   specific to ECS but allows for more re-use of common ECS fields at the
+   top-level.
  - The `core`, `logging`, `xb3`, and `money` modules are now built for
    both the JVM and JavaScript environments. The `logging` module uses
    `biz.enef.slogging` to abstract over JVM and JavaScript-specific

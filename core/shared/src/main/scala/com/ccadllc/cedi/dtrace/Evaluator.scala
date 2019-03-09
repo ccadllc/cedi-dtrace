@@ -19,7 +19,7 @@ package com.ccadllc.cedi.dtrace
  * Provides the hooks by which the result of a effectful program can be converted into a `FailureDetail` for use in
  * determining whether the program has failed for the purposes of the trace and how to render that failure.
  * If the traced program fails, the `exceptionToFailure` function is used to determine if this failure should be
- * recorded as such for the span and if the program itself is successful, the `resultToFailure` function is used to
+ * recorded as such for the span and if the program itself is successful, while the `resultToFailure` function is used to
  * determine if there is an application level failure embedded in the result and if so, how it should be rendered.
  *
  * The default evaluator for a span, if a custom one is not specified, is to treat a failures and successes at
