@@ -1,4 +1,4 @@
-1.5.0
+2.0.0
 =====
  - Added an Elastic Common Search (ECS) compliant emitter within the logstash
    module which encodes the spans in a manner consistent with the ECS
