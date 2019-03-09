@@ -21,6 +21,8 @@ lazy val commonSettings = Seq(
     Contributor("sbuzzard", "Steve Buzzard"),
     Contributor("mpilquist", "Michael Pilquist")
   ),
+  scalacOptions ~= (_.filter(opt => opt != "-Xlint" && opt != "-Ywarn-unused")),
+  scalacOptions in Test ~= (_.filter(opt => opt != "-Xlint" && opt != "-Ywarn-unused")),
   libraryDependencies ++= Seq(
     "org.typelevel" %% "cats-core" % catsCoreVersion,
     "org.typelevel" %% "cats-effect" % catsEffectVersion

@@ -87,6 +87,13 @@ package object dtrace {
     def pure[A](a: A): TraceIO[A] = toTraceIO(IO.pure(a))
 
     /**
+     * Creates a failed `TraceIO`.
+     * @param t - the `Throwable` with which to fail the underlying program.
+     * @return the `TraceIO[A]` in a failed state.
+     */
+    def raiseError[A](t: Throwable): TraceIO[A] = toTraceIO(IO.raiseError(t): IO[A])
+
+    /**
      * Lifts the non-strict, possibly impure expression computing a `TraceIO[A]` into a `TraceIO[A]`
      * The expression is suspended until the outer `TraceIO` returned is run.
      * @param t - the non-strict expression computing `TraceIO[A]` to lift into a `TraceIO` context suspended
@@ -96,19 +103,18 @@ package object dtrace {
      */
     def suspend[A](t: => IO[A]): TraceIO[A] = toTraceIO(IO.suspend(t))
 
-    /**
-     * Creates a failed `TraceIO`.
-     * @param t - the `Throwable` with which to fail the underlying program.
-     * @return the `TraceIO[A]` in a failed state.
-     */
-    def raiseError[A](t: Throwable): TraceIO[A] = toTraceIO(IO.raiseError(t): IO[A])
-
     /*
      * Lifts an `IO` which computes `A` into a `TraceIO[A]` context.
      * @param io - an `IO` which computes a value `A`.
      * @return a `TraceIO[A]`
      */
     def toTraceIO[A](io: IO[A]): TraceIO[A] = TraceT { _ => io }
+
+    /**
+     * An alias for `TraceIO.pure(())` provided for convenience.
+     * @return a pure unit `()` value.
+     */
+    def unit: TraceIO[Unit] = toTraceIO(IO.unit)
   }
 
   /**

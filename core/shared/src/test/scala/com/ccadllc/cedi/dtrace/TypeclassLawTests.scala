@@ -85,9 +85,14 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
     ApplicativeTests[TraceIO.Par].applicative[Int, Int, Int]
   })
 
-  checkAllAsync("TraceIO", implicit testC => {
+  checkAllAsync("TraceIO.parallel", implicit testC => {
     implicit val cs = testC.contextShift[IO]
     ParallelTests[TraceIO, TraceIO.Par].parallel[Int, Int]
+  })
+
+  checkAllAsync("TraceIO.nonEmptyParallel", implicit testC => {
+    implicit val cs = testC.contextShift[IO]
+    NonEmptyParallelTests[TraceIO, TraceIO.Par].nonEmptyParallel[Int, Int]
   })
 
   testAsync("TraceIO.Par's applicative instance is different") { implicit testC =>
