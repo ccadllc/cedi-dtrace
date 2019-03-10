@@ -18,14 +18,10 @@ lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
   parallelExecution in Global := !scala.util.Properties.propIsSet("disableParallel"),
   crossScalaVersions := Seq("2.12.8", "2.11.12"),
-  scalacOptions ~= (_.filter(opt => opt != "-Xlint" && opt != "-Ywarn-unused")),
-  scalacOptions in Test ~= (_.filter(opt => opt != "-Xlint" && opt != "-Ywarn-unused")),
   contributors ++= Seq(
     Contributor("sbuzzard", "Steve Buzzard"),
     Contributor("mpilquist", "Michael Pilquist")
   ),
-  scalacOptions ~= (_.filter(opt => opt != "-Xlint" && opt != "-Ywarn-unused")),
-  scalacOptions in Test ~= (_.filter(opt => opt != "-Xlint" && opt != "-Ywarn-unused")),
   libraryDependencies ++= Seq(
     "org.typelevel" %% "cats-core" % catsCoreVersion,
     "org.typelevel" %% "cats-effect" % catsEffectVersion
@@ -39,7 +35,19 @@ lazy val commonSettings = Seq(
       "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
     )
   }),
-  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9")
+  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9"),
+  pomExtra := (
+    <url>http://github.com/ccadllc/{githubProject.value}</url>
+    <developers>
+      {for (Contributor(username, name) <- contributors.value) yield
+      <developer>
+        <id>{username}</id>
+        <name>{name}</name>
+        <url>https://github.com/{username}</url>
+      </developer>
+      }
+    </developers>
+  )
 )
 
 lazy val root = project.in(file(".")).aggregate(
