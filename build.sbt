@@ -16,6 +16,7 @@ lazy val sloggingVersion = "0.6.1"
 
 lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
+  parallelExecution in Global := !scala.util.Properties.propIsSet("disableParallel"),
   crossScalaVersions := Seq("2.12.8", "2.11.12"),
   scalacOptions ~= (_.filter(opt => opt != "-Xlint" && opt != "-Ywarn-unused")),
   scalacOptions in Test ~= (_.filter(opt => opt != "-Xlint" && opt != "-Ywarn-unused")),
@@ -30,7 +31,7 @@ lazy val commonSettings = Seq(
     "org.typelevel" %% "cats-effect" % catsEffectVersion
   ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((2, v)) if v >= 13 => Seq(
-      "org.scalatest" %% "scalatest" % "3.0.5-SNAP5" % "test",
+      "org.scalatest" %% "scalatest" % "3.0.6-SNAP5" % "test",
       "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
     )
     case _ => Seq(
