@@ -69,7 +69,7 @@ final class TraceT[F[_], A](private[dtrace] val toEffect: TraceContext[F] => F[A
       toEffect(updated).attempt.flatMap { eOrR =>
         val annotatedTc = updated.setNotes(notes.toVector ++ resultAnnotator.applyOrElse(eOrR, (_: Either[Throwable, A]) => Vector.empty))
         eOrR match {
-          case Right(r) => evaluator.resultToFailure(r).fold(annotatedTc.emitSuccess)(updated.emitFailure) map { _ => r }
+          case Right(r) => evaluator.resultToFailure(r).fold(annotatedTc.emitSuccess)(annotatedTc.emitFailure) map { _ => r }
           case Left(e) => evaluator.exceptionToFailure(e).fold(annotatedTc.emitSuccess)(annotatedTc.emitFailure) flatMap { _ => F.raiseError(e) }
         }
       }
