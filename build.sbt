@@ -18,6 +18,7 @@ lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
   parallelExecution in Global := !scala.util.Properties.propIsSet("disableParallel"),
   crossScalaVersions := Seq("2.12.8", "2.11.12"),
+  scalacOptions in (Compile, console) ~= (_ filterNot Set("-Xfatal-warnings", "-Ywarn-unused-import").contains),
   contributors ++= Seq(
     Contributor("sbuzzard", "Steve Buzzard"),
     Contributor("mpilquist", "Michael Pilquist")

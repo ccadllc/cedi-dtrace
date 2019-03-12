@@ -51,12 +51,42 @@ object Header {
  * desired by the composer.
  */
 trait HeaderCodec { self =>
-  def encode(spanId: SpanId): List[Header]
-  def decode(headers: List[Header]): Either[Header.DecodeFailure, Option[SpanId]]
+  /**
+   * Encode an Header given a [[SpanId]].  Protocol-specific
+   * name/value properties can be passed in the given map to configure
+   * behavior for that protocol. For example, the `xb3` module allows
+   * one to pass `Map("Compressed", "true")` to generate a compressed
+   * 'b3' header which combines the trace ID, span ID and parent XB3
+   * header values into one.
+   */
+  def encode(spanId: SpanId, properties: Map[String, String]): List[Header]
+
+  /**
+   * Encode an Header given a [[SpanId]]. A convenience variant of
+   * `encode(spanId, properties)` when no `properties` apply to the encoding.
+   */
+  def encode(spanId: SpanId): List[Header] = encode(spanId, Map.empty)
+
+  /**
+   * Decode a [[SpanId]] from protocol-specific Headers.
+   * Protocol-specific name/value properties can be passed in the given map.
+   */
+  def decode(headers: List[Header], properties: Map[String, String]): Either[Header.DecodeFailure, Option[SpanId]]
+
+  /**
+   * Decode a [[SpanId]] from protocol-specific Headers.  A convenience variant of
+   * `decode(headers, properties)` when no `properties` apply to the decoding.
+   */
+  def decode(headers: List[Header]): Either[Header.DecodeFailure, Option[SpanId]] = decode(headers, Map.empty)
+
+  /**
+   * Convenience methods to compose multiple [[HeaderCodec]]s when parsing and encoding
+   * headers for multiple protocols (e.g., `money` and `xb3).
+   */
   def andThen(other: HeaderCodec): HeaderCodec = new HeaderCodec {
-    def encode(spanId: SpanId): List[Header] = self.encode(spanId) ++ other.encode(spanId)
-    def decode(headers: List[Header]): Either[Header.DecodeFailure, Option[SpanId]] = self.decode(headers) match {
-      case Right(None) => other.decode(headers)
+    def encode(spanId: SpanId, props: Map[String, String]): List[Header] = self.encode(spanId, props) ++ other.encode(spanId, props)
+    def decode(headers: List[Header], props: Map[String, String]): Either[Header.DecodeFailure, Option[SpanId]] = self.decode(headers, props) match {
+      case Right(None) => other.decode(headers, props)
       case other => other
     }
   }

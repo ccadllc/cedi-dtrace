@@ -31,13 +31,19 @@ import MoneyHeaderCodec._
  */
 class MoneyHeaderCodec extends HeaderCodec {
 
-  override def encode(spanId: SpanId): List[Header] = {
+  /**
+   * Encodes a `Money` compliant header.  The `properties` argument is currently unused.
+   */
+  override def encode(spanId: SpanId, properties: Map[String, String]): List[Header] = {
     val headerValue = Header.Value(
       s"$TraceIdHeader=${spanId.traceId};$ParentIdHeader=${spanId.parentSpanId};$SpanIdHeader=${spanId.spanId}")
     List(Header(HeaderName, headerValue))
   }
 
-  override def decode(headers: List[Header]): Either[Header.DecodeFailure, Option[SpanId]] = {
+  /**
+   * Decodes a [[SpanId]] from a `Money` compliant header.  The `properties` argument is currently unused.
+   */
+  override def decode(headers: List[Header], properties: Map[String, String]): Either[Header.DecodeFailure, Option[SpanId]] = {
     headers.collectFirst { case Header(HeaderName, Header.Value(value)) => value }.traverse {
       case value @ HeaderRegex(traceId, _, parentId, spanId) =>
         Either.catchNonFatal { SpanId(UUID.fromString(traceId), parentId.toLong, spanId.toLong) }.leftMap { t =>
