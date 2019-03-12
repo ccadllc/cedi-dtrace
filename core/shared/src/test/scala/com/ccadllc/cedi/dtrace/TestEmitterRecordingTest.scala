@@ -16,6 +16,9 @@
 package com.ccadllc.cedi.dtrace
 
 import cats.effect.IO
+import cats.implicits._
+
+import scala.concurrent.ExecutionContext
 
 import org.scalatest.{ BeforeAndAfterEach, Matchers, WordSpec }
 
@@ -50,6 +53,9 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
     }
     "support recording a successful new tracing span with new span ID, name, and double note" in {
       assertChildSpanRecordedWithNote(quarterlySalesTotalNote)
+    }
+    "support recording two new successful tracing spans spawned in parallel with notes" in {
+      assertParallelChildSpansRecordedWithNotes(salesRegionNote, quarterlySalesGoalReachedNote)
     }
     "support recording nested spans" in {
       val testEmitter = new TestEmitter[IO]
@@ -93,6 +99,25 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
     val entriesWithNote = testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(calcPhillySalesSpanName), note.toString)
     val entriesWithSpanId = testEmitter.cache.containingAll(spanId(spanRoot.spanId.spanId))
     entriesWithNote should have size (1)
+    entriesWithSpanId should have size (1)
+    ()
+  }
+
+  private def assertParallelChildSpansRecordedWithNotes(note1: Note, note2: Note): Unit = {
+    implicit val co = IO.contextShift(ExecutionContext.global)
+    val testEmitter = new TestEmitter[IO]
+    val testTimer = TraceSystem.realTimeTimer[IO]
+    val salesManagementSystem = TraceSystem(testSystemData, testEmitter, testTimer)
+    val spanRoot = Span.root(testTimer, Span.Name("calculate-quarterly-sales-updates")).unsafeRunSync
+    val calcPhillySalesSpanName1 = Span.Name("calculate-updated-sales1-for-philly")
+    val calcPhillySalesSpanName2 = Span.Name("calculate-updated-sales2-for-philly")
+    (IO(Thread.sleep(3)).newSpan(calcPhillySalesSpanName1, note1), IO(Thread.sleep(5)).newSpan(calcPhillySalesSpanName2, note2)).parTupled.void.trace(
+      TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
+    val entriesWithNote1 = testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(calcPhillySalesSpanName1), note1.toString)
+    val entriesWithNote2 = testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(calcPhillySalesSpanName2), note2.toString)
+    val entriesWithSpanId = testEmitter.cache.containingAll(spanId(spanRoot.spanId.spanId))
+    entriesWithNote1 should have size (1)
+    entriesWithNote2 should have size (1)
     entriesWithSpanId should have size (1)
     ()
   }
