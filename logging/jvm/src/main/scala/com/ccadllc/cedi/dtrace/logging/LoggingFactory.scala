@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 package com.ccadllc.cedi.dtrace
+package logging
 
 import slogging.{ SLF4JLoggerFactory, UnderlyingLoggerFactory }
 
