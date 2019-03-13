@@ -16,7 +16,7 @@ lazy val sloggingVersion = "0.6.1"
 
 lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
-  parallelExecution in Global := !scala.util.Properties.propIsSet("disableParallel"),
+  parallelExecution in Global := false,
   crossScalaVersions := Seq("2.12.8", "2.11.12"),
   contributors ++= Seq(
     Contributor("sbuzzard", "Steve Buzzard"),
@@ -86,7 +86,6 @@ lazy val logging = crossProject(JVMPlatform, JSPlatform).in(file("logging")).
 
 lazy val loggingJVM = logging.jvm.enablePlugins(SbtOsgi).
   settings(
-    parallelExecution in Test := false,
     // TODO: This is only temporary until slogging publishes for 2.13
     // Replace this libDependencies and the two skips with just a
     // libDeps for the slogging lib
@@ -124,7 +123,6 @@ lazy val logstash = project.in(file("logstash")).enablePlugins(SbtOsgi).
   settings(commonSettings).
   settings(
     name := "dtrace-logstash",
-    parallelExecution in Test := false,
     libraryDependencies ++= Seq(
       "org.slf4j" % "slf4j-api" % slf4jVersion,
       "net.logstash.logback" % "logstash-logback-encoder" % "5.3",
@@ -159,7 +157,6 @@ lazy val http4s = project.in(file("http4s")).enablePlugins(SbtOsgi).
   settings(commonSettings).
   settings(
     name := "dtrace-http4s",
-    parallelExecution in Test := false,
     // TODO: This is only temporary until http4s publishes for 2.13
     // Replace this libDependencies and the two skips with just a
     // libDeps for the two http4s libs
