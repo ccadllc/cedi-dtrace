@@ -62,15 +62,17 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
   }
 
   private implicit def catsConcurrentEffectLawsArbitraryForTraceIO[A: Arbitrary: Cogen]: Arbitrary[TraceIO[A]] =
-    Arbitrary(catsEffectLawsArbitraryForIO[A].arbitrary map TraceIO.toTraceIO)
+    Arbitrary(
+      catsEffectLawsArbitraryForIO[A].arbitrary.map(
+        _.newSpan(quarterlyPhillySalesCalculateSpanName, quarterlyPhillySpecificSpanNotes: _*)))
 
   private implicit def catsEffectLawsArbitraryForTraceIOParallel[A: Arbitrary: Cogen]: Arbitrary[TraceIO.Par[A]] =
     Arbitrary(catsEffectLawsArbitraryForIOParallel[A].arbitrary map TraceIO.Par.apply)
 
-  private val tc: TraceContext[IO] = {
+  private def tc: TraceContext[IO] = {
     val timer = TraceSystem.realTimeTimer[IO]
     TraceContext(
-      Span.root(timer, Span.Name("calculate-quarterly-sales")).unsafeRunSync,
+      Span.root(timer, quarterlySalesCalculateSpanName, quarterlySalesCalculationSpanNotes: _*).unsafeRunSync,
       TraceSystem(testSystemData, new TestEmitter[IO], timer))
   }
 
