@@ -27,6 +27,16 @@ import org.slf4j.LoggerFactory
 import scala.language.higherKinds
 import scala.collection.JavaConverters._
 
+/**
+ * This `TraceSystem.Emitter[F]` will log `Span`s in a format that is compliant with
+ * the [[https://github.com/elastic/ecs Elastic Common Schema (ECS)]] using the `logstash`
+ * encoder.  This emitter utilizes pre-defined ECS fields and field groups where available
+ * and appropriate and, where custom fields are used, follows the conventions of ECS
+ * (e.g., field names using '_').  Currently only the `dtrace.trace_id` and `dtrace.parent_id`
+ * are custom fields with all others mapped to those of ECS (primarily in the `event` field group
+ * with the exception of `error_message` used for error detail and `labels` which hold the
+ * `Note` and `TraceSystem.Data` identity and metadata properties.
+ */
 final class EcsLogstashLogbackEmitter[F[_]](implicit F: Sync[F]) extends TraceSystem.Emitter[F] {
   object ecs {
     object field {

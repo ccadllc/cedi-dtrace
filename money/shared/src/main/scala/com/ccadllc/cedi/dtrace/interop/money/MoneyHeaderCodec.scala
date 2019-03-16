@@ -27,17 +27,25 @@ import MoneyHeaderCodec._
 
 /**
  * Implements the `HeaderCodec` trait, providing for the encoding and decoding of
- * `Money`-style tracing HTTP headers into and from a `SpanId` respectively.
+ * [[https://github.com/Comcast/money Comcast Money]]-style tracing HTTP headers into and from a `SpanId` respectively.
  */
 class MoneyHeaderCodec extends HeaderCodec {
 
-  override def encode(spanId: SpanId): List[Header] = {
+  /**
+   * Encodes a [[https://github.com/Comcast/money Comcast Money]]-compliant header.  The
+   * `properties` argument is currently unused for the `Money` protocol.
+   */
+  override def encode(spanId: SpanId, properties: Map[String, String]): List[Header] = {
     val headerValue = Header.Value(
       s"$TraceIdHeader=${spanId.traceId};$ParentIdHeader=${spanId.parentSpanId};$SpanIdHeader=${spanId.spanId}")
     List(Header(HeaderName, headerValue))
   }
 
-  override def decode(headers: List[Header]): Either[Header.DecodeFailure, Option[SpanId]] = {
+  /**
+   * Decodes a `SpanId` from a [[https://github.com/Comcast/money Comcast Money]]-compliant header.
+   * The `properties` argument is currently unused for the `Money` protocol.
+   */
+  override def decode(headers: List[Header], properties: Map[String, String]): Either[Header.DecodeFailure, Option[SpanId]] = {
     headers.collectFirst { case Header(HeaderName, Header.Value(value)) => value }.traverse {
       case value @ HeaderRegex(traceId, _, parentId, spanId) =>
         Either.catchNonFatal { SpanId(UUID.fromString(traceId), parentId.toLong, spanId.toLong) }.leftMap { t =>
@@ -57,9 +65,10 @@ object MoneyHeaderCodec {
 
   /** The `Money` compliant HTTP header Parent Span ID component value identifier. */
   final val ParentIdHeader: String = "parent-id"
+
   /** The `Money` compliant HTTP header Span ID component value identifier. */
   final val SpanIdHeader: String = "span-id"
 
-  /* Used to validate / parse `Money` compliant HTTP header into a [[SpanId]] instance. */
+  /* Used to validate / parse `Money` compliant HTTP header into a `SpanId` instance. */
   final val HeaderRegex: Regex = s"$TraceIdHeader=([0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-fA-F]{12});$ParentIdHeader=([\\-0-9]+);$SpanIdHeader=([\\-0-9]+)".r
 }

@@ -15,6 +15,7 @@
  */
 package com.ccadllc.cedi.dtrace
 
+import cats.NonEmptyParallel
 import cats.effect.IO
 import cats.implicits._
 
@@ -28,7 +29,7 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
       val testEmitter = new TestEmitter[IO]
       val testTimer = TraceSystem.realTimeTimer[IO]
       val salesManagementSystem = TraceSystem(testSystemData, testEmitter, testTimer)
-      val spanRoot = Span.root(testTimer, Span.Name("calculate-quarterly-sales")).unsafeRunSync
+      val spanRoot = Span.root(testTimer, quarterlySalesCalculateSpanName).unsafeRunSync
       IO(Thread.sleep(5L)).toTraceT.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
       testEmitter.cache.containingAll(spanId(spanRoot.spanId.spanId), parentSpanId(spanRoot.spanId.spanId), spanName(spanRoot.spanName)) should have size (1)
     }
@@ -36,10 +37,9 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
       val testEmitter = new TestEmitter[IO]
       val testTimer = TraceSystem.realTimeTimer[IO]
       val salesManagementSystem = TraceSystem(testSystemData, testEmitter, testTimer)
-      val spanRoot = Span.root(testTimer, Span.Name("calculate-quarterly-sales")).unsafeRunSync
-      val calcPhillySalesSpanName = Span.Name("calculate-sales-for-philadelphia")
-      IO(Thread.sleep(5L)).newSpan(calcPhillySalesSpanName).trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
-      testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(calcPhillySalesSpanName)) should have size (1)
+      val spanRoot = Span.root(testTimer, quarterlySalesCalculateSpanName).unsafeRunSync
+      IO(Thread.sleep(5L)).newSpan(quarterlyPhillySalesCalculateSpanName).trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
+      testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(quarterlyPhillySalesCalculateSpanName)) should have size (1)
       testEmitter.cache.containingAll(spanId(spanRoot.spanId.spanId)) should have size (1)
     }
     "support recording a successful new tracing span with new span ID, name, and string note" in {
@@ -54,23 +54,30 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
     "support recording a successful new tracing span with new span ID, name, and double note" in {
       assertChildSpanRecordedWithNote(quarterlySalesTotalNote)
     }
-    "support recording two new successful tracing spans spawned in parallel with notes" in {
-      assertParallelChildSpansRecordedWithNotes(salesRegionNote, quarterlySalesGoalReachedNote)
+    "support recording two new successful tracing spans spawned in parallel using `Parallel` typeclass `Applicative` capabilities with notes" in {
+      assertParallelApplicativeChildSpansRecordedWithNotes(salesRegionNote, quarterlySalesGoalReachedNote)
+    }
+    "support recording two new successful tracing spans spawned in parallel using `NonEmptyParallel` typeclass `Apply` capabilities with notes" in {
+      assertNonEmptyParallelApplyChildSpansRecordedWithNotes(salesRegionNote, quarterlySalesGoalReachedNote)
+    }
+    "support recording two new successful tracing spans spawned in parallel using `Parallel` typeclass `Monad` capabilities with notes" in {
+      assertParallelMonadChildSpansRecordedWithNotes(salesRegionNote, quarterlySalesGoalReachedNote)
+    }
+    "support recording two new successful tracing spans spawned in parallel using `NonEmptyParallel` typeclass `FlatMap` capabilities with notes" in {
+      assertNonEmptyParallelFlatMapChildSpansRecordedWithNotes(salesRegionNote, quarterlySalesGoalReachedNote)
     }
     "support recording nested spans" in {
       val testEmitter = new TestEmitter[IO]
       val testTimer = TraceSystem.realTimeTimer[IO]
       val salesManagementSystem = TraceSystem(testSystemData, testEmitter, testTimer)
-      val spanRootName = Span.Name("calculate-quarterly-sales-update")
+      val spanRootName = quarterlySalesCalculateSpanName
       val spanRoot = Span.root(testTimer, spanRootName).unsafeRunSync
-      val requestUpdatedSalesFiguresSpanName = Span.Name("request-updated-sales-figures")
-      val generateUpdatedSalesFiguresSpanName = Span.Name("generate-updated-sales-figures")
+      def requestUpdatedSalesFigures: TraceIO[Boolean] = IO(false).newSpan(requestUpdatedSalesFiguresSpanName)
+      def generateUpdatedSalesFigures: TraceIO[Unit] = IO(Thread.sleep(5L)).newSpan(generateUpdatedSalesFiguresSpanName)
       def generateSalesFigures: TraceIO[Unit] = for {
         existing <- requestUpdatedSalesFigures
         _ <- if (existing) TraceIO.pure(()) else generateUpdatedSalesFigures
       } yield ()
-      def requestUpdatedSalesFigures: TraceIO[Boolean] = IO(false).newSpan(requestUpdatedSalesFiguresSpanName)
-      def generateUpdatedSalesFigures: TraceIO[Unit] = IO(Thread.sleep(5L)).newSpan(generateUpdatedSalesFiguresSpanName)
       generateSalesFigures.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
       val entries = testEmitter.cache.all
       entries should have size (3)
@@ -90,31 +97,57 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
     val testEmitter = new TestEmitter[IO]
     val testTimer = TraceSystem.realTimeTimer[IO]
     val salesManagementSystem = TraceSystem(testSystemData, testEmitter, testTimer)
-    val spanRoot = Span.root(testTimer, Span.Name("calculate-quarterly-sales-updates")).unsafeRunSync
-    val calcPhillySalesSpanName = Span.Name("calculate-updated-sales-for-philly")
+    val spanRoot = Span.root(testTimer, quarterlySalesCalculateSpanName).unsafeRunSync
     IO {
       Thread.sleep(5L)
       note
-    }.newAnnotatedSpan(calcPhillySalesSpanName) { case Right(n) => Vector(n) }.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
-    val entriesWithNote = testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(calcPhillySalesSpanName), note.toString)
+    }.newAnnotatedSpan(quarterlyPhillySalesCalculateSpanName) { case Right(n) => Vector(n) }.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
+    val entriesWithNote = testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(quarterlyPhillySalesCalculateSpanName), note.toString)
     val entriesWithSpanId = testEmitter.cache.containingAll(spanId(spanRoot.spanId.spanId))
     entriesWithNote should have size (1)
     entriesWithSpanId should have size (1)
     ()
   }
 
-  private def assertParallelChildSpansRecordedWithNotes(note1: Note, note2: Note): Unit = {
+  private def assertParallelApplicativeChildSpansRecordedWithNotes(note1: Note, note2: Note): Unit = {
     implicit val co = IO.contextShift(ExecutionContext.global)
+    assertParallelChildSpansRecordedWithNotes(note1, note2) { (io1: TraceIO[Unit], io2: TraceIO[Unit]) =>
+      (io1 -> io2).parTupled.void
+    }
+  }
+
+  private def assertNonEmptyParallelApplyChildSpansRecordedWithNotes(note1: Note, note2: Note): Unit = {
+    implicit val co = IO.contextShift(ExecutionContext.global)
+    assertParallelChildSpansRecordedWithNotes(note1, note2) { (io1: TraceIO[Unit], io2: TraceIO[Unit]) =>
+      (io1 -> io2).parTupled(NonEmptyParallel[TraceIO, TraceIO.Par]).void
+    }
+  }
+
+  private def assertParallelMonadChildSpansRecordedWithNotes(note1: Note, note2: Note): Unit = {
+    implicit val co = IO.contextShift(ExecutionContext.global)
+    assertParallelChildSpansRecordedWithNotes(note1, note2) { (io1: TraceIO[Unit], io2: TraceIO[Unit]) =>
+      List(io1, io2).parSequence_
+    }
+  }
+
+  private def assertNonEmptyParallelFlatMapChildSpansRecordedWithNotes(note1: Note, note2: Note): Unit = {
+    implicit val co = IO.contextShift(ExecutionContext.global)
+    assertParallelChildSpansRecordedWithNotes(note1, note2) { (io1: TraceIO[Unit], io2: TraceIO[Unit]) =>
+      NonEmptyParallel[TraceIO, TraceIO.Par].parProductR(io1)(io2)
+    }
+  }
+
+  private def assertParallelChildSpansRecordedWithNotes(
+    note1: Note, note2: Note)(parAction: (TraceIO[Unit], TraceIO[Unit]) => TraceIO[Unit]): Unit = {
     val testEmitter = new TestEmitter[IO]
     val testTimer = TraceSystem.realTimeTimer[IO]
     val salesManagementSystem = TraceSystem(testSystemData, testEmitter, testTimer)
-    val spanRoot = Span.root(testTimer, Span.Name("calculate-quarterly-sales-updates")).unsafeRunSync
-    val calcPhillySalesSpanName1 = Span.Name("calculate-updated-sales1-for-philly")
-    val calcPhillySalesSpanName2 = Span.Name("calculate-updated-sales2-for-philly")
-    (IO(Thread.sleep(3)).newSpan(calcPhillySalesSpanName1, note1), IO(Thread.sleep(5)).newSpan(calcPhillySalesSpanName2, note2)).parTupled.void.trace(
-      TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
-    val entriesWithNote1 = testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(calcPhillySalesSpanName1), note1.toString)
-    val entriesWithNote2 = testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(calcPhillySalesSpanName2), note2.toString)
+    val spanRoot = Span.root(testTimer, quarterlySalesCalculateSpanName).unsafeRunSync
+    parAction(
+      IO(Thread.sleep(3)).void.newSpan(quarterlyPhillySales1CalculateSpanName, note1),
+      IO(Thread.sleep(5)).void.newSpan(quarterlyPhillySales2CalculateSpanName, note2)).trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
+    val entriesWithNote1 = testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(quarterlyPhillySales1CalculateSpanName), note1.toString)
+    val entriesWithNote2 = testEmitter.cache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(quarterlyPhillySales2CalculateSpanName), note2.toString)
     val entriesWithSpanId = testEmitter.cache.containingAll(spanId(spanRoot.spanId.spanId))
     entriesWithNote1 should have size (1)
     entriesWithNote2 should have size (1)

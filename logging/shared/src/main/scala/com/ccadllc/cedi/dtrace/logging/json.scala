@@ -23,7 +23,7 @@ import io.circe.syntax._
 
 /**
  * Provides the encoding of a `Span` - and associated `TraceSystem[F]` data - to JSON
- * using the `io.circe` framework.
+ * using the `io.circe` library.
  */
 object json {
   object encoding {

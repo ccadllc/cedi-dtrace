@@ -24,6 +24,12 @@ import org.http4s.{ Header => H4sHeader, _ }
 
 import scala.language.higherKinds
 
+/**
+ * This module provides interoperability with the [[https://github.com/http4s/http4s http4s]] library for
+ * HTTP server functionality, extracting `Span` identifiers from HTTP distributed trace headers (supporting
+ * one or more configured trace protocols, such as the provided ones for [[ https://github.com/Comcast/money Comcast Money]]
+ * and [[https://istio.io/docs/tasks/telemetry/distributed-tracing.html XB3/Zipkin]]).
+ */
 package object server {
   /**
    * This function can be used to execute a traced action within an `HttpService[F]` with
@@ -31,10 +37,15 @@ package object server {
    * and [[TraceSystem]] of `F` in implicit scope. The [[HeaderCodec]] is usually imported from either
    * `com.ccadllc.cedi.dtrace.money._`, or `com.ccadllc.cedi.dtrace.xb3._` for Money or X-B3 trace headers, respectively.
    * You can also provide your own [[HeaderCodec]] if, for instance, you wish to compose these into an aggregate
-   * or there are other types of trace headers you wish to extract.  This function also requires that you
-   * provide the initial `Span.Name` along with an `Evaluator[A]` to determine if an application-specific result
-   * should be considered a span failure - use [[tracedAction]] if you have no need to pass in an `Evaluator` - along with
-   * any [[Note]]s you wish to include in the spans.
+   * or there are other types of trace headers you wish to extract. For example, this will result
+   * in both `Money` and `XB3` HTTP Headers being considered for extraction into a `SpanId`, with `XB3` headers
+   * first considered (reverse it or use `compose` rather than `andThen` to have the `Money` headers prioritized):
+   *    ```implicit val myHeaderCodec: HeaderCodec = com.ccadllc.cedi.dtrace.interop.xb3.headerCodec.andThen(
+   *      com.ccadllc.cedi.dtrace.interop.money.headerCodec
+   *    )```
+   * This function also requires that you provide the initial `Span.Name` along with an `Evaluator[A]` to
+   * determine if an application-specific result should be considered a span failure - use [[tracedAction]] if
+   * you have no need to pass in an `Evaluator` - along with any [[Note]]s you wish to include in the spans.
    * {{{
    *  import com.ccadllc.cedi.dtrace._
    *  import com.ccadllc.cedi.dtrace.http4s._

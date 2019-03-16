@@ -30,9 +30,9 @@ import slogging._
  * record a `Span` to a log appender in both text and JSON
  * formats, also logging the associated system properties provided in
  * the passed-in `TraceContext[F]`.  The recording is described in the
- * context of an effectful program `F` with an `Sync[F]`
- * instance in implicit scope and actual occurs when that program is
- * executed.  Whether the information is recorded to log files, some
+ * context of an effectful program `F` with a `Sync[F]`
+ * instance in implicit scope and actually occurs when that program is
+ * run.  Whether the information is recorded to log files, some
  * other location, or not at all depends on the configuration of the
  * `distributed-trace.txt` and `distributed-trace.json` loggers.  Note that
  * the logging occurs only if `DEBUG` is enabled for the particular logger

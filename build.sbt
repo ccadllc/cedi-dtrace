@@ -8,7 +8,21 @@ lazy val circeVersion = "0.11.1"
 
 lazy val http4sVersion = "0.20.0-M6"
 
+lazy val kindProjectorVersion = "0.9.9"
+
 lazy val logbackVersion = "1.2.3"
+
+lazy val logstashVersion = "5.3"
+
+lazy val scalacheckVersion = "1.13.5"
+
+lazy val scalatestVersion = "3.0.5"
+
+lazy val scalacheckVersion213 = "1.14.0"
+
+lazy val scalatestVersion213 = "3.0.6-SNAP5"
+
+lazy val scodecBitsVersion = "1.1.9"
 
 lazy val slf4jVersion = "1.7.26"
 
@@ -18,6 +32,7 @@ lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
   parallelExecution in Global := !scala.util.Properties.propIsSet("disableParallel"),
   crossScalaVersions := Seq("2.12.8", "2.11.12"),
+  scalacOptions in (Compile, console) ~= (_ filterNot Set("-Xfatal-warnings", "-Ywarn-unused-import").contains),
   contributors ++= Seq(
     Contributor("sbuzzard", "Steve Buzzard"),
     Contributor("mpilquist", "Michael Pilquist")
@@ -27,15 +42,15 @@ lazy val commonSettings = Seq(
     "org.typelevel" %% "cats-effect" % catsEffectVersion
   ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
     case Some((2, v)) if v >= 13 => Seq(
-      "org.scalatest" %% "scalatest" % "3.0.6-SNAP5" % "test",
-      "org.scalacheck" %% "scalacheck" % "1.14.0" % "test"
+      "org.scalatest" %% "scalatest" % scalatestVersion213 % "test",
+      "org.scalacheck" %% "scalacheck" % scalacheckVersion213 % "test"
     )
     case _ => Seq(
-      "org.scalatest" %% "scalatest" % "3.0.5" % "test",
-      "org.scalacheck" %% "scalacheck" % "1.13.5" % "test"
+      "org.scalatest" %% "scalatest" % scalatestVersion % "test",
+      "org.scalacheck" %% "scalacheck" % scalacheckVersion % "test"
     )
   }),
-  addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.9"),
+  addCompilerPlugin("org.spire-math" %% "kind-projector" % kindProjectorVersion),
   pomExtra := (
     <url>http://github.com/ccadllc/{githubProject.value}</url>
     <developers>
@@ -98,7 +113,7 @@ lazy val loggingJVM = logging.jvm.enablePlugins(SbtOsgi).
         "org.slf4j" % "slf4j-api" % slf4jVersion,
         "ch.qos.logback" % "logback-core" % logbackVersion % "test",
         "ch.qos.logback" % "logback-classic" % logbackVersion % "test",
-        "net.logstash.logback" % "logstash-logback-encoder" % "5.3" % "optional"
+        "net.logstash.logback" % "logstash-logback-encoder" % logstashVersion % "optional"
       )
     }),
     skip in compile := (CrossVersion.partialVersion(scalaVersion.value) match {
@@ -127,7 +142,7 @@ lazy val logstash = project.in(file("logstash")).enablePlugins(SbtOsgi).
     parallelExecution in Test := false,
     libraryDependencies ++= Seq(
       "org.slf4j" % "slf4j-api" % slf4jVersion,
-      "net.logstash.logback" % "logstash-logback-encoder" % "5.3",
+      "net.logstash.logback" % "logstash-logback-encoder" % logstashVersion,
       "ch.qos.logback" % "logback-core" % logbackVersion % "test",
       "ch.qos.logback" % "logback-classic" % logbackVersion % "test"
     ),
@@ -137,7 +152,7 @@ lazy val logstash = project.in(file("logstash")).enablePlugins(SbtOsgi).
 lazy val xb3 = crossProject(JVMPlatform, JSPlatform).
   in(file("xb3")).settings(commonSettings).settings(
     name := "dtrace-xb3",
-    libraryDependencies += ("org.scodec" %% "scodec-bits" % "1.1.7")
+    libraryDependencies += ("org.scodec" %% "scodec-bits" % scodecBitsVersion)
   )
 
 lazy val xb3JVM = xb3.jvm.enablePlugins(SbtOsgi).settings(

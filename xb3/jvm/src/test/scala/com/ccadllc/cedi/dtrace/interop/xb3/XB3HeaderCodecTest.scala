@@ -42,6 +42,21 @@ class XB3HeaderCodecTest extends WordSpec with Matchers with GeneratorDrivenProp
         errorOrSpanId shouldBe Right(Some(expectedSpanId))
       }
     }
+    "decode correctly for compressed header given any valid UUID for trace-Id and any valid long integers for parent and span ID" in {
+      forAll { (traceIdValue: UUID, parentSpanIdValue: Long, spanIdValue: Long) =>
+        val expectedSpanId = SpanId(traceIdValue, parentSpanIdValue, spanIdValue)
+        val nonRootHeaders = List(
+          Header(
+            CompressedHeaderName,
+            Header.Value(s"${ByteVector.fromUUID(traceIdValue).toHex}-${ByteVector.fromLong(spanIdValue).toHex}-0-${ByteVector.fromLong(parentSpanIdValue).toHex}")))
+        val rootHeaders = List(
+          Header(
+            CompressedHeaderName,
+            Header.Value(s"${ByteVector.fromUUID(traceIdValue).toHex}-${ByteVector.fromLong(spanIdValue).toHex}")))
+        val errorOrSpanId = headerCodec.decode(if (parentSpanIdValue === spanIdValue) rootHeaders else nonRootHeaders)
+        errorOrSpanId shouldBe Right(Some(expectedSpanId))
+      }
+    }
     "decode correctly given any valid long for trace-Id and any valid long integers for parent and span ID" in {
       forAll { (traceIdValue: Long, parentSpanIdValue: Long, spanIdValue: Long) =>
         val expectedSpanId = SpanId(new UUID(traceIdValue, 0L), parentSpanIdValue, spanIdValue)
@@ -49,6 +64,21 @@ class XB3HeaderCodecTest extends WordSpec with Matchers with GeneratorDrivenProp
         val parentIdHeader = Header(ParentIdHeaderName, Header.Value(ByteVector.fromLong(parentSpanIdValue).toHex))
         val spanIdHeader = Header(SpanIdHeaderName, Header.Value(ByteVector.fromLong(spanIdValue).toHex))
         val errorOrSpanId = headerCodec.decode(List(traceIdHeader, parentIdHeader, spanIdHeader))
+        errorOrSpanId shouldBe Right(Some(expectedSpanId))
+      }
+    }
+    "decode correctly for compressed header given any valid long for trace-Id and any valid long integers for parent and span ID" in {
+      forAll { (traceIdValue: Long, parentSpanIdValue: Long, spanIdValue: Long) =>
+        val expectedSpanId = SpanId(new UUID(traceIdValue, 0L), parentSpanIdValue, spanIdValue)
+        val nonRootHeaders = List(
+          Header(
+            CompressedHeaderName,
+            Header.Value(s"${ByteVector.fromUUID(expectedSpanId.traceId).toHex}-${ByteVector.fromLong(spanIdValue).toHex}-0-${ByteVector.fromLong(parentSpanIdValue).toHex}")))
+        val rootHeaders = List(
+          Header(
+            CompressedHeaderName,
+            Header.Value(s"${ByteVector.fromUUID(expectedSpanId.traceId).toHex}-${ByteVector.fromLong(spanIdValue).toHex}")))
+        val errorOrSpanId = headerCodec.decode(if (parentSpanIdValue === spanIdValue) rootHeaders else nonRootHeaders)
         errorOrSpanId shouldBe Right(Some(expectedSpanId))
       }
     }
@@ -67,6 +97,22 @@ class XB3HeaderCodecTest extends WordSpec with Matchers with GeneratorDrivenProp
         headers shouldBe expectedHeaders
       }
     }
+    "encode correctly for compressed header for any valid UUID for trace-Id and any valid long integers for parent and span ID, where if parent == span id, parent will not be emitted" in {
+      forAll { (traceIdValue: UUID, parentSpanIdValue: Long, spanIdValue: Long) =>
+        val expectedNonRootHeaders = List(
+          Header(
+            CompressedHeaderName,
+            Header.Value(s"${ByteVector.fromUUID(traceIdValue).toHex}-${ByteVector.fromLong(spanIdValue).toHex}-0-${ByteVector.fromLong(parentSpanIdValue).toHex}")))
+        val expectedRootHeaders = List(
+          Header(
+            CompressedHeaderName,
+            Header.Value(s"${ByteVector.fromUUID(traceIdValue).toHex}-${ByteVector.fromLong(spanIdValue).toHex}")))
+        val spanId = SpanId(traceIdValue, parentSpanIdValue, spanIdValue)
+        val headers = headerCodec.encode(spanId, Map(XB3HeaderCodec.Compressed -> "true"))
+        val expectedHeaders = if (spanId.root) expectedRootHeaders else expectedNonRootHeaders
+        headers shouldBe expectedHeaders
+      }
+    }
     "round-trip correctly given any valid UUID for trace-Id and any valid long integers for parent and span ID" in {
       forAll { (traceIdValue: UUID, parentSpanIdValue: Long, spanIdValue: Long) =>
         val expectedSpanId = SpanId(traceIdValue, parentSpanIdValue, spanIdValue)
@@ -75,10 +121,26 @@ class XB3HeaderCodecTest extends WordSpec with Matchers with GeneratorDrivenProp
         errorOrSpanId shouldBe Right(Some(expectedSpanId))
       }
     }
+    "round-trip correctly for compressed header given any valid UUID for trace-Id and any valid long integers for parent and span ID" in {
+      forAll { (traceIdValue: UUID, parentSpanIdValue: Long, spanIdValue: Long) =>
+        val expectedSpanId = SpanId(traceIdValue, parentSpanIdValue, spanIdValue)
+        val headers = headerCodec.encode(expectedSpanId, Map(XB3HeaderCodec.Compressed -> "true"))
+        val errorOrSpanId = headerCodec.decode(headers)
+        errorOrSpanId shouldBe Right(Some(expectedSpanId))
+      }
+    }
     "round-trip correctly given any valid long for trace-Id and any valid long integers for parent and span ID" in {
       forAll { (traceIdValue: Long, parentSpanIdValue: Long, spanIdValue: Long) =>
         val expectedSpanId = SpanId(new UUID(traceIdValue, 0L), parentSpanIdValue, spanIdValue)
         val headers = headerCodec.encode(expectedSpanId)
+        val errorOrSpanId = headerCodec.decode(headers)
+        errorOrSpanId shouldBe Right(Some(expectedSpanId))
+      }
+    }
+    "round-trip correctly for compressed header given any valid long for trace-Id and any valid long integers for parent and span ID" in {
+      forAll { (traceIdValue: Long, parentSpanIdValue: Long, spanIdValue: Long) =>
+        val expectedSpanId = SpanId(new UUID(traceIdValue, 0L), parentSpanIdValue, spanIdValue)
+        val headers = headerCodec.encode(expectedSpanId, Map(XB3HeaderCodec.Compressed -> "true"))
         val errorOrSpanId = headerCodec.decode(headers)
         errorOrSpanId shouldBe Right(Some(expectedSpanId))
       }

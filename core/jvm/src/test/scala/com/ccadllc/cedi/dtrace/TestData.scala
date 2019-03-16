@@ -40,24 +40,32 @@ trait TestData {
     )
   )
   // format: ON
-
+  protected val quarterlySalesCalculateSpanName: Span.Name = Span.Name("calculate-quarterly-sales")
   protected val quarterlySalesCalculationSpanId: SpanId = SpanId(UUID.randomUUID, 20L, 30L)
   protected val quarterlySalesUnitsNoteValue: Note.LongValue = Note.LongValue(450000L)
-  protected val quarterlySalesUnitsNote: Note = Note(Note.Name("quarterlySalesUnits"), Some(quarterlySalesUnitsNoteValue))
+  protected val quarterlySalesUnitsNote: Note = Note(Note.Name("quarterly-sales-units"), Some(quarterlySalesUnitsNoteValue))
   protected val quarterlySalesGoalReachedNoteValue: Note.BooleanValue = Note.BooleanValue(true)
-  protected val quarterlySalesGoalReachedNote: Note = Note(Note.Name("quarterlySalesGoalReached"), Some(quarterlySalesGoalReachedNoteValue))
-  protected val salesRegionNoteValue: Note.StringValue = Note.StringValue("Philadelphia County Sales Region")
-  protected val salesRegionNote: Note = Note(Note.Name("salesRegion"), Some(salesRegionNoteValue))
+  protected val quarterlySalesGoalReachedNote: Note = Note(Note.Name("quarterly-sales-goal-reached"), Some(quarterlySalesGoalReachedNoteValue))
+  protected val quarterlyPhillySpecificNoteValue: Note.BooleanValue = Note.BooleanValue(true)
+  protected val quarterlyPhillySpecificNote: Note = Note(Note.Name("quarterly-philly-specific-note"), Some(quarterlyPhillySpecificNoteValue))
+  protected val salesRegionNoteValue: Note.StringValue = Note.StringValue("philadelphia-county-sales-region")
+  protected val salesRegionNote: Note = Note(Note.Name("sales-region"), Some(salesRegionNoteValue))
   protected val quarterlySalesTotalNoteValue: Note.DoubleValue = Note.DoubleValue(95.6)
-  protected val quarterlySalesTotalNote: Note = Note(Note.Name("quarterlySalesTotal"), Some(quarterlySalesTotalNoteValue))
+  protected val quarterlySalesTotalNote: Note = Note(Note.Name("quarterly-sales-total"), Some(quarterlySalesTotalNoteValue))
+  protected val quarterlyPhillySpecificSpanNotes: Vector[Note] = Vector[Note](quarterlyPhillySpecificNote)
   protected val quarterlySalesCalculationSpanNotes: Vector[Note] = Vector[Note](
     quarterlySalesUnitsNote, quarterlySalesGoalReachedNote, salesRegionNote, quarterlySalesTotalNote)
   protected val quarterlySalesCalculationTimer: TraceSystem.Timer[IO] = TraceSystem.realTimeTimer[IO]
   protected val quarterlySalesCalculationSpan: Span = Span(
     quarterlySalesCalculationSpanId,
-    Span.Name("Calculate Quarterly Sales"),
+    quarterlySalesCalculateSpanName,
     quarterlySalesCalculationTimer.time.unsafeRunSync,
     None,
     15000.microseconds,
     quarterlySalesCalculationSpanNotes)
+  protected val quarterlyPhillySalesCalculateSpanName: Span.Name = Span.Name("calculate-quarterly-sales-for-philly")
+  protected val requestUpdatedSalesFiguresSpanName: Span.Name = Span.Name("request-updated-sales-figures")
+  protected val generateUpdatedSalesFiguresSpanName: Span.Name = Span.Name("generate-updated-sales-figures")
+  protected val quarterlyPhillySales1CalculateSpanName: Span.Name = Span.Name("calculate-quarterly-sales-1-for-philly")
+  protected val quarterlyPhillySales2CalculateSpanName: Span.Name = Span.Name("calculate-quarterly-sales-2-for-philly")
 }

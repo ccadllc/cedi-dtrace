@@ -24,6 +24,15 @@ import org.slf4j.LoggerFactory
 import scala.language.higherKinds
 import scala.collection.JavaConverters._
 
+/**
+ * This `TraceSystem.Emitter[F]` will log `Span`s in a format that is similiar to that
+ * used by the default emitter in the `logging` module of this library, the only difference
+ * being that it uses the `logstash` encoder for interoperability in environments where
+ * the logs are shipped to Elastic Search (ES).  For such environments, it is recommended that
+ * the [[EcsLogstashLogbackEmitter]] be used going forward, as it provides better
+ * interoperatibility with ES.
+ */
+@deprecated("use EcsLogstashLogbackEmitter", "2.0.0")
 final class LogstashLogbackEmitter[F[_]](implicit F: Sync[F]) extends TraceSystem.Emitter[F] {
   private val logger = LoggerFactory.getLogger("distributed-trace.logstash")
 
