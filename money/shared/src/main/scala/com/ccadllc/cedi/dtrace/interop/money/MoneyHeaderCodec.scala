@@ -27,12 +27,13 @@ import MoneyHeaderCodec._
 
 /**
  * Implements the `HeaderCodec` trait, providing for the encoding and decoding of
- * `Money`-style tracing HTTP headers into and from a `SpanId` respectively.
+ * [[https://github.com/Comcast/money Comcast Money]]-style tracing HTTP headers into and from a `SpanId` respectively.
  */
 class MoneyHeaderCodec extends HeaderCodec {
 
   /**
-   * Encodes a `Money` compliant header.  The `properties` argument is currently unused.
+   * Encodes a [[https://github.com/Comcast/money Comcast Money]]-compliant header.  The
+   * `properties` argument is currently unused for the `Money` protocol.
    */
   override def encode(spanId: SpanId, properties: Map[String, String]): List[Header] = {
     val headerValue = Header.Value(
@@ -41,7 +42,8 @@ class MoneyHeaderCodec extends HeaderCodec {
   }
 
   /**
-   * Decodes a [[SpanId]] from a `Money` compliant header.  The `properties` argument is currently unused.
+   * Decodes a [[SpanId]] from a [[https://github.com/Comcast/money Comcast Money]]-compliant header.
+   * The `properties` argument is currently unused for the `Money` protocol.
    */
   override def decode(headers: List[Header], properties: Map[String, String]): Either[Header.DecodeFailure, Option[SpanId]] = {
     headers.collectFirst { case Header(HeaderName, Header.Value(value)) => value }.traverse {
@@ -63,6 +65,7 @@ object MoneyHeaderCodec {
 
   /** The `Money` compliant HTTP header Parent Span ID component value identifier. */
   final val ParentIdHeader: String = "parent-id"
+
   /** The `Money` compliant HTTP header Span ID component value identifier. */
   final val SpanIdHeader: String = "span-id"
 

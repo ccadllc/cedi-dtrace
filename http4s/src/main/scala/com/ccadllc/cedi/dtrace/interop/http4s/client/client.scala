@@ -23,14 +23,24 @@ import org.http4s.{ Header => H4sHeader, _ }
 
 import scala.language.higherKinds
 
+/**
+ * This module provides interoperability with the [[https://github.com/http4s/http4s http4s]] library for
+ * HTTP client functionality, generating HTTP distributed trace headers from the active `Span` (supporting
+ * one or more configured trace protocols, such as the provided ones for [[ https://github.com/Comcast/money Comcast Money]]
+ * and [[https://istio.io/docs/tasks/telemetry/distributed-tracing.html XB3/Zipkin]]).
+ */
 package object client {
   /**
    * This function will convert the passed in [[SpanId]] into one or more HTTP headers, given an instance of
    * [[HeaderCodec]] in implicit scope, and then add them to the passed-in `Request[F]`.
-   * The [[HeaderCodec]] is usually imported from either `com.ccadllc.cedi.dtrace.money._`, or
+   * The [[HeaderCodec]] is often imported from either `com.ccadllc.cedi.dtrace.money._`, or
    * `com.ccadllc.cedi.dtrace.xb3._` for Money or X-B3 trace headers, respectively.
    * You can also provide your own [[HeaderCodec]] if, for instance, you wish to compose these into an aggregate
-   * [[HeaderCodec]] or there are other types of trace headers you wish to generate.
+   * [[HeaderCodec]] or there are other types of trace headers you wish to generate.  For example, this will result
+   * in both `Money` and `XB3` HTTP Headers being generated:
+   *    ```implicit val myHeaderCodec: HeaderCodec = com.ccadllc.cedi.dtrace.interop.xb3.headerCodec.andThen(
+   *      com.ccadllc.cedi.dtrace.interop.money.headerCodec
+   *    )```
    * @param request a `Request[F]` representing the request that the client shall use to when interacting with a remote
    *   system.
    * @param spanId a [[SpanId]] containing the trace ID, span ID and parent span ID which will be used to generate one
@@ -45,13 +55,16 @@ package object client {
 
   /**
    * This function will convert the [[Span]] in the current [[TraceContext]] of effect `F` into one or more HTTP headers,
-   * given an instance of [[HeaderCodec]] and a 'cats.effect.Applicative[F]` in implicit scope,  It is more convenient
-   * to use if the `Request` is already in a [[TraceT]] context.
-   * and then add them to the passed-in `Request[TraceT[F, ?]]`.
-   * The [[HeaderCodec]] is usually imported from either `com.ccadllc.cedi.dtrace.money._`, or
-   * `com.ccadllc.cedi.dtrace.xb3._` for Money or X-B3 trace headers, respectively.
+   * given an instance of [[HeaderCodec]] and a 'cats.effect.Applicative[F]` in implicit scope, and then add the headers
+   * to the passed-in `Request[TraceT[F, ?]]`.
+   * The [[HeaderCodec]] is often imported from either `com.ccadllc.cedi.dtrace.money._`, or
+   * `com.ccadllc.cedi.dtrace.xb3._` for `Money` or `X-B3` trace headers, respectively.
    * You can also provide your own [[HeaderCodec]] if, for instance, you wish to compose these into an aggregate
-   * [[HeaderCodec]] or there are other types of trace headers you wish to generate.
+   * [[HeaderCodec]] or there are other types of trace headers you wish to generate. For example, this will result
+   * in both `Money` and `XB3` HTTP Headers being generated:
+   *    ```implicit val myHeaderCodec: HeaderCodec = com.ccadllc.cedi.dtrace.interop.xb3.headerCodec.andThen(
+   *      com.ccadllc.cedi.dtrace.interop.money.headerCodec
+   *    )```
    * @param request a `Request[TraceT[F, ?]]` representing the request that the client shall use to when interacting with a remote
    *   system, wrapped in a traced effect.
    * @param codec a [[HeaderCodec]] whose implementation provides encoding and decoding [[SpanId]] elements into one

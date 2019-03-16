@@ -30,20 +30,25 @@ import XB3HeaderCodec._
 
 /**
  * Implements the `HeaderCodec` trait, providing for the encoding and decoding of
- * `X-B3`-style tracing HTTP headers into and from a `SpanId` respectively.
+ * [[https://istio.io/docs/tasks/telemetry/distributed-tracing.html X-B3]]-style
+ * tracing HTTP headers into and from a `SpanId` respectively.
  */
 class XB3HeaderCodec extends HeaderCodec {
   /**
-   * Encodes `XB3/Zipkin` compliant HTTP headers from the passed-in [[SpanId]].
-   * Note: when called using the form `xb3HeaderCodec.encode(spanId, Map(XB3HeaderCodec.Compressed -> "true"))`
-   * a single `b3` compressed header will be generated combining the `traceId`, `spanId` and `parentSpanId`.
+   * Encodes [[https://istio.io/docs/tasks/telemetry/distributed-tracing.html X-B3]]-compliant
+   * HTTP headers from the passed-in [[SpanId]].
+   * Note: A single `b3` compressed header will be generated combining the `traceId`, `spanId`
+   * and `parentSpanId` when this function is called using the form:
+   *  `xb3HeaderCodec.encode(spanId, Map(XB3HeaderCodec.Compressed -> "true"))`
    */
   override def encode(spanId: SpanId, properties: Map[String, String]): List[Header] =
     if (compressHeaders(properties)) encodeCompressed(spanId) else encodeUncompressed(spanId)
 
   /**
-   * Decodes a [[SpanId]] from `XB3/Zipkin` compliant HTTP headers (or single compressed `b3` header if present).
-   * The `properties` argument is not currently used here.
+   * Decodes a [[SpanId]] from
+   * [[https://istio.io/docs/tasks/telemetry/distributed-tracing.html XB3/Zipkin]]-compliant
+   * HTTP headers (or single compressed `b3` header if present).
+   * The `properties` argument is not currently used with this function.
    */
   override def decode(headers: List[Header], properties: Map[String, String]): Either[Header.DecodeFailure, Option[SpanId]] =
     decodeCompressed(headers).flatMap(_.fold(decodeUncompressed(headers))(h => Right(Some(h))))
