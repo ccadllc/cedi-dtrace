@@ -42,7 +42,7 @@ class MoneyHeaderCodec extends HeaderCodec {
   }
 
   /**
-   * Decodes a [[SpanId]] from a [[https://github.com/Comcast/money Comcast Money]]-compliant header.
+   * Decodes a `SpanId` from a [[https://github.com/Comcast/money Comcast Money]]-compliant header.
    * The `properties` argument is currently unused for the `Money` protocol.
    */
   override def decode(headers: List[Header], properties: Map[String, String]): Either[Header.DecodeFailure, Option[SpanId]] = {
@@ -69,6 +69,6 @@ object MoneyHeaderCodec {
   /** The `Money` compliant HTTP header Span ID component value identifier. */
   final val SpanIdHeader: String = "span-id"
 
-  /* Used to validate / parse `Money` compliant HTTP header into a [[SpanId]] instance. */
+  /* Used to validate / parse `Money` compliant HTTP header into a `SpanId` instance. */
   final val HeaderRegex: Regex = s"$TraceIdHeader=([0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-fA-F]{12});$ParentIdHeader=([\\-0-9]+);$SpanIdHeader=([\\-0-9]+)".r
 }

@@ -36,7 +36,7 @@ import XB3HeaderCodec._
 class XB3HeaderCodec extends HeaderCodec {
   /**
    * Encodes [[https://istio.io/docs/tasks/telemetry/distributed-tracing.html X-B3]]-compliant
-   * HTTP headers from the passed-in [[SpanId]].
+   * HTTP headers from the passed-in `SpanId`.
    * Note: A single `b3` compressed header will be generated combining the `traceId`, `spanId`
    * and `parentSpanId` when this function is called using the form:
    *  `xb3HeaderCodec.encode(spanId, Map(XB3HeaderCodec.Compressed -> "true"))`
@@ -45,7 +45,7 @@ class XB3HeaderCodec extends HeaderCodec {
     if (compressHeaders(properties)) encodeCompressed(spanId) else encodeUncompressed(spanId)
 
   /**
-   * Decodes a [[SpanId]] from
+   * Decodes a `SpanId` from
    * [[https://istio.io/docs/tasks/telemetry/distributed-tracing.html XB3/Zipkin]]-compliant
    * HTTP headers (or single compressed `b3` header if present).
    * The `properties` argument is not currently used with this function.
@@ -125,7 +125,7 @@ object XB3HeaderCodec {
    */
   final val Compressed: String = "compressed-headers"
 
-  /* Used to validate / parse B3 compressed HTTP header into a [[SpanId]] instance. */
+  /* Used to validate / parse B3 compressed HTTP header into a `SpanId` instance. */
   final val CompressedHeaderRegex: Regex = s"([0-9a-fA-F]+)-([0-9a-fA-F]+)(?:-[0-9a-fA-F])?(?:-([0-9a-fA-F]+))?".r
 
   /** The `X-B3` compliant compressed header format where TraceID-SpanId-ParentId are embedded in a single header */
