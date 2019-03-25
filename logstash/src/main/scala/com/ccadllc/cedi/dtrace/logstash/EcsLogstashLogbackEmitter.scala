@@ -45,12 +45,12 @@ final class EcsLogstashLogbackEmitter[F[_]](implicit F: Sync[F]) extends TraceSy
       val root: String = "dtrace.root"
       val traceId: String = "dtrace.trace_id"
       val parentId: String = "dtrace.parent_id"
-      val spanId: String = "event.id"
-      val spanName: String = "event.action"
-      val spanStart: String = "event.start"
-      val spanOutcome: String = "event.outcome"
-      val spanDuration: String = "event.duration"
-      val spanFailureDetail: String = "error.message"
+      val spanId: String = "dtrace.span_id"
+      val spanName: String = "dtrace.span_name"
+      val spanStart: String = "dtrace.span_start"
+      val spanOutcome: String = "dtrace.span_outcome"
+      val spanDuration: String = "dtrace.span_duration"
+      val spanFailureDetail: String = "dtrace.span_failure"
       val spanMetadata: String = "labels"
     }
   }
