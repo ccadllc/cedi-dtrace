@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Combined Conditional Access Development, LLC.
+ * Copyright 2019 Combined Conditional Access Development, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,18 @@
 package com.ccadllc.cedi.dtrace
 package logging
 
-import slogging.{ SLF4JLoggerFactory, UnderlyingLoggerFactory }
+import cats.effect.Sync
+
+import scala.language.higherKinds
+
+import io.chrisdavenport.log4cats.log4s.Log4sLogger
 
 /**
- * Initializes the logging configuration for the JVM platform
- * to use the `sl4j` library.
+ * Provides the for the platform-specific initialization of the underlying logging
+ * configuration for the JavaScript platform, using `log4s`.
  */
-object LoggingFactory {
-  val value: UnderlyingLoggerFactory = SLF4JLoggerFactory()
+object LoggingConfig {
+  def createLoggers[F[_]: Sync](names: Loggers.Names): Loggers[F] = new Loggers(
+    Log4sLogger.createByName[F](names.text),
+    Log4sLogger.createByName[F](names.json))
 }

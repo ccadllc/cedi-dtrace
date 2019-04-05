@@ -6,7 +6,7 @@ lazy val catsCoreVersion = "1.6.0"
 
 lazy val circeVersion = "0.11.1"
 
-lazy val http4sVersion = "0.20.0-M6"
+lazy val http4sVersion = "0.20.0-RC1"
 
 lazy val kindProjectorVersion = "0.9.9"
 
@@ -26,7 +26,7 @@ lazy val scodecBitsVersion = "1.1.9"
 
 lazy val slf4jVersion = "1.7.26"
 
-lazy val sloggingVersion = "0.6.1"
+lazy val log4catsVersion = "0.3.0"
 
 lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
@@ -102,15 +102,14 @@ lazy val logging = crossProject(JVMPlatform, JSPlatform).in(file("logging")).
 lazy val loggingJVM = logging.jvm.enablePlugins(SbtOsgi).
   settings(
     parallelExecution in Test := false,
-    // TODO: This is only temporary until slogging publishes for 2.13
+    // TODO: This is only temporary until log4cats (and log4s) publishes for 2.13
     // Replace this libDependencies and the two skips with just a
     // libDeps for the slogging lib
     libraryDependencies := (CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, v)) if v >= 13 => Seq.empty
       case _ => libraryDependencies.value ++ Seq(
-        "biz.enef" %% "slogging" % sloggingVersion,
-        "biz.enef" %% "slogging-slf4j" % sloggingVersion,
-        "org.slf4j" % "slf4j-api" % slf4jVersion,
+        "io.chrisdavenport" %% "log4cats-core" % log4catsVersion,
+        "io.chrisdavenport" %% "log4cats-slf4j" % log4catsVersion,
         "ch.qos.logback" % "logback-core" % logbackVersion % "test",
         "ch.qos.logback" % "logback-classic" % logbackVersion % "test",
         "net.logstash.logback" % "logstash-logback-encoder" % logstashVersion % "optional"
@@ -129,10 +128,24 @@ lazy val loggingJVM = logging.jvm.enablePlugins(SbtOsgi).
 
 lazy val loggingJS = logging.js.
   settings(
-    libraryDependencies ++= Seq(
-      "biz.enef" %%% "slogging" % sloggingVersion,
-      "biz.enef" %%% "slogging-winston" % sloggingVersion
-    )
+    // TODO: This is only temporary until log4cats (and log4s) publishes for 2.13
+    // Replace this libDependencies and the two skips with just a
+    // libDeps for the slogging lib
+    libraryDependencies := (CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, v)) if v >= 13 => Seq.empty
+      case _ => libraryDependencies.value ++ Seq(
+        "io.chrisdavenport" %%% "log4cats-core" % log4catsVersion,
+        "io.chrisdavenport" %%% "log4cats-log4s" % log4catsVersion
+      )
+    }),
+    skip in compile := (CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, v)) => v >= 13
+      case _ => false
+    }),
+    skip in publish := (CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, v)) => v >= 13
+      case _ => false
+    })
   ).dependsOn(coreJS % "compile->compile;test->test")
 
 lazy val logstash = project.in(file("logstash")).enablePlugins(SbtOsgi).
@@ -175,24 +188,10 @@ lazy val http4s = project.in(file("http4s")).enablePlugins(SbtOsgi).
   settings(
     name := "dtrace-http4s",
     parallelExecution in Test := false,
-    // TODO: This is only temporary until http4s publishes for 2.13
-    // Replace this libDependencies and the two skips with just a
-    // libDeps for the two http4s libs
-    libraryDependencies := (CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, v)) if v >= 13 => Seq.empty
-      case _ => libraryDependencies.value ++ Seq(
-        "org.http4s" %% "http4s-core" % http4sVersion,
-        "org.http4s" %% "http4s-dsl" % http4sVersion % "test"
-      )
-    }),
-    skip in compile := (CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, v)) => v >= 13
-      case _ => false
-    }),
-    skip in publish := (CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, v)) => v >= 13
-      case _ => false
-    }),
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-core" % http4sVersion,
+      "org.http4s" %% "http4s-dsl" % http4sVersion % "test"
+    ),
     buildOsgiBundle("com.ccadllc.cedi.dtrace.interop.http4s")
   ).dependsOn(coreJVM % "compile->compile;test->test", moneyJVM % "compile->test", xb3JVM % "compile->test")
 

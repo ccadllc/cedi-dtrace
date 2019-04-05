@@ -33,7 +33,7 @@ import shapeless.Lazy
 trait TestSupport extends WordSpecLike with Matchers with GeneratorDrivenPropertyChecks with TraceGenerators with TestData {
   self: Suite =>
 
-  override def testEmitter[F[_]: Sync]: F[TraceSystem.Emitter[F]] = LogEmitter[F](true)
+  override def testEmitter[F[_]: Sync]: F[TraceSystem.Emitter[F]] = Sync[F].pure(LogEmitter.apply)
 
   implicit override val generatorDrivenConfig: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful = 100)
   val salesManagementSystem = TraceSystem(testSystemData, testEmitter[IO].unsafeRunSync, TraceSystem.realTimeTimer[IO])

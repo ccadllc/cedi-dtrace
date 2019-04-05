@@ -23,8 +23,6 @@ import io.circe.syntax._
 
 import scala.language.higherKinds
 
-import slogging._
-
 /**
  * This instance of the `TraceSystem.Emitter` provides the means to
  * record a `Span` to a log appender in both text and JSON
@@ -38,10 +36,7 @@ import slogging._
  * the logging occurs only if `DEBUG` is enabled for the particular logger
  * in the underlying logging configuration.
  */
-class LogEmitter[F[_]](implicit F: Sync[F]) extends TraceSystem.Emitter[F] with LazyLogging {
-  private val textLogger = LoggerFactory.getLogger("distributed-trace.txt")
-  private val jsonLogger = LoggerFactory.getLogger("distributed-trace.json")
-
+class LogEmitter[F[_]: Sync](loggers: Loggers[F]) extends TraceSystem.Emitter[F] {
   /**
    * Emit the `Span` and system properties contained in the passed-in `TraceContext[F]`
    * to an log appender, in JSON and textual format.  The emission/recording is described
@@ -55,11 +50,11 @@ class LogEmitter[F[_]](implicit F: Sync[F]) extends TraceSystem.Emitter[F] with 
   override def emit(context: TraceContext[F]): F[Unit] = {
     def emitText: F[Unit] = {
       def formatText = s"Span: [ span-id=${context.currentSpan.spanId.spanId} ] [ trace-id=${context.currentSpan.spanId.traceId} ] [ parent-id=${context.currentSpan.spanId.parentSpanId} ] [ root=${context.currentSpan.root} ] [ span-name=${context.currentSpan.spanName} ] [ system-data=${context.system.data.description} ] [ start-time=${context.currentSpan.startTime} ] [ span-duration=${context.currentSpan.duration} ] [ span-success=${context.currentSpan.failure.isEmpty} ] [ failure-detail=${context.currentSpan.failure.fold("N/A")(_.render)} ][ notes=[${context.currentSpan.notes.mkString("] [")}] ]"
-      F.delay(textLogger.debug(formatText))
+      loggers.text.debug(formatText)
     }
     def emitJson: F[Unit] = {
       import json.encoding._
-      F.delay(jsonLogger.debug(context.asJson.noSpaces))
+      loggers.json.debug(context.asJson.noSpaces)
     }
     for {
       _ <- emitJson
@@ -73,14 +68,13 @@ class LogEmitter[F[_]](implicit F: Sync[F]) extends TraceSystem.Emitter[F] with 
  * Companion object for the `LogEmitter` instance, providing a convenience constructor.
  */
 object LogEmitter {
+  val loggerNames: Loggers.Names = Loggers.Names(
+    text = "distributed-trace.txt", json = "distributed-trace.json")
   /**
    * Constructs an instance of `LogEmitter` if an instance of `Sync[F]` is
    * available in implicit scope.
-   * @param initializeConfig if true - will initialize the logging configuration.
    * @return a new instance of `LogEmitter[F]` in the `F` effect.
    */
-  def apply[F[_]](initializeConfig: Boolean)(implicit F: Sync[F]): F[TraceSystem.Emitter[F]] = {
-    val emitter: TraceSystem.Emitter[F] = new LogEmitter[F]
-    if (initializeConfig) LoggingConfig.initialize.as(emitter) else F.pure(emitter)
-  }
+  def apply[F[_]](implicit F: Sync[F]): TraceSystem.Emitter[F] =
+    new LogEmitter(LoggingConfig.createLoggers[F](loggerNames))
 }
