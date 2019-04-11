@@ -51,7 +51,7 @@ package object client {
    * @return outputRequest the input `Request[F]` enhanced with one or more tracing releated HTTP headers.
    */
   def withTracedRequest[F[_]](request: Request[F], spanId: SpanId)(implicit codec: HeaderCodec): Request[F] =
-    request.withHeaders(request.headers ++ toH4s(codec.encode(spanId)))
+    request.withHeaders((request.headers.toList ::: toH4s(codec.encode(spanId))): _*)
 
   /**
    * This function will convert the [[Span]] in the current [[TraceContext]] of effect `F` into one or more HTTP headers,

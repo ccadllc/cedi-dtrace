@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Combined Conditional Access Development, LLC.
+ * Copyright 2019 Combined Conditional Access Development, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,18 @@
 package com.ccadllc.cedi.dtrace
 package logging
 
-import slogging.{ UnderlyingLoggerFactory, WinstonLoggerFactory }
+import cats.effect.Sync
+
+import scala.language.higherKinds
+
+import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 
 /**
- * Initializes the logging configuration for the JavaScript platform
- * to use the `winston` library.
+ * Provides the for the platform-specific initialization of the underlying logging
+ * configuration for the JVM platform, using `slf4j`.
  */
-object LoggingFactory {
-  val value: UnderlyingLoggerFactory = WinstonLoggerFactory()
+object LoggingConfig {
+  def createLoggers[F[_]: Sync](names: Loggers.Names): Loggers[F] = new Loggers(
+    Slf4jLogger.getLoggerFromName[F](names.text),
+    Slf4jLogger.getLoggerFromName[F](names.json))
 }
