@@ -37,7 +37,7 @@ class MoneyHeaderCodecTest extends WordSpec with Matchers with GeneratorDrivenPr
           HeaderName,
           Header.Value(s"$TraceIdHeader=$traceIdValue;$ParentIdHeader=$parentSpanIdValue;$SpanIdHeader=$spanIdValue"))
         val errorOrSpanId = headerCodec.decode(List(header))
-        errorOrSpanId shouldBe Right(Some(expectedSpanId))
+        errorOrSpanId shouldBe Right(Header.Decoded(Some(expectedSpanId), true))
       }
     }
     "encode correctly for any valid UUID for trace-Id and any valid long integers for parent and span ID" in {
@@ -55,7 +55,7 @@ class MoneyHeaderCodecTest extends WordSpec with Matchers with GeneratorDrivenPr
         val expectedSpanId = SpanId(traceIdValue, parentSpanIdValue, spanIdValue)
         val headers = headerCodec.encode(expectedSpanId)
         val errorOrSpanId = headerCodec.decode(headers)
-        errorOrSpanId shouldBe Right(Some(expectedSpanId))
+        errorOrSpanId shouldBe Right(Header.Decoded(Some(expectedSpanId), true))
       }
     }
   }

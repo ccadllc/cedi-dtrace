@@ -48,7 +48,7 @@ trait RecordingTestSupport extends TestSupport with BeforeAndAfterEach {
 
   protected def assertRootSpanRecorded(): Unit = {
     val spanRoot = Span.root[IO](quarterlySalesCalculationTimer, Span.Name("calculate-quarterly-sales")).unsafeRunSync
-    IO(Thread.sleep(5L)).toTraceT.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
+    IO(Thread.sleep(5L)).toTraceT.trace(TraceContext(spanRoot, true, salesManagementSystem)).unsafeRunSync
     LogEmitterTestCache.containingAll(spanId(spanRoot.spanId.spanId), parentSpanId(spanRoot.spanId.spanId), spanName(spanRoot.spanName)) should have size (1)
     ()
   }
@@ -56,7 +56,7 @@ trait RecordingTestSupport extends TestSupport with BeforeAndAfterEach {
   protected def assertChildSpanRecorded(): Unit = {
     val spanRoot = Span.root[IO](quarterlySalesCalculationTimer, Span.Name("calculate-quarterly-sales")).unsafeRunSync
     val retrieveExistingSalesSpanName = Span.Name("retrieve-existing-sales")
-    IO(Thread.sleep(5L)).newSpan(retrieveExistingSalesSpanName).trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
+    IO(Thread.sleep(5L)).newSpan(retrieveExistingSalesSpanName).trace(TraceContext(spanRoot, true, salesManagementSystem)).unsafeRunSync
     LogEmitterTestCache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(retrieveExistingSalesSpanName)) should have size (1)
     LogEmitterTestCache.containingAll(spanId(spanRoot.spanId.spanId)) should have size (1)
     ()
@@ -65,7 +65,7 @@ trait RecordingTestSupport extends TestSupport with BeforeAndAfterEach {
   protected def assertChildSpanRecordedWithNote(note: Note): Unit = {
     val spanRoot = Span.root[IO](quarterlySalesCalculationTimer, Span.Name("calculate-quarterly-sales")).unsafeRunSync
     val retrieveExistingSalesSpanName = Span.Name("retrieve-existing-sales")
-    IO(Thread.sleep(5L)).newSpan(retrieveExistingSalesSpanName, note).trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
+    IO(Thread.sleep(5L)).newSpan(retrieveExistingSalesSpanName, note).trace(TraceContext(spanRoot, true, salesManagementSystem)).unsafeRunSync
     val entriesWithNote = LogEmitterTestCache.containingAll(parentSpanId(spanRoot.spanId.spanId), spanName(retrieveExistingSalesSpanName), spanNote(note))
     val entriesWithSpanId = LogEmitterTestCache.containingAll(spanId(spanRoot.spanId.spanId))
     entriesWithNote should have size (1)
@@ -84,7 +84,7 @@ trait RecordingTestSupport extends TestSupport with BeforeAndAfterEach {
     } yield ()
     def requestExistingSalesFigures: TraceIO[Boolean] = IO(false).newSpan(requestExistingSalesFiguresSpanName)
     def generateNewSalesFigures: TraceIO[Unit] = IO(Thread.sleep(5L)).newSpan(generateNewSalesFiguresSpanName)
-    calculateSales.trace(TraceContext(spanRoot, salesManagementSystem)).unsafeRunSync
+    calculateSales.trace(TraceContext(spanRoot, true, salesManagementSystem)).unsafeRunSync
     val entries = LogEmitterTestCache.containingAll(logEmitterId)
     entries should have size (3)
     entries(0).msg should include(spanName(requestExistingSalesFiguresSpanName))

@@ -113,6 +113,7 @@ trait TraceGenerators {
 
   def genTraceContext[F[_]: Effect]: Gen[TraceContext[F]] = for {
     span <- genSpan
+    sampled <- arbitrary[Boolean]
     system <- genTraceSystem[F]
-  } yield TraceContext(span, system)
+  } yield TraceContext(span, sampled, system)
 }

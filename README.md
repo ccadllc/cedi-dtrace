@@ -26,7 +26,9 @@ Where possible, it targets both the JVM and JavaScript platforms. It does not ye
 
 #### Background
 
-A *Distributed Trace* is a directed graph of *Span*s. A *Span* identifies a branch of the overall *Trace* representing a logical step or action, executing within the local program.  All but the first *Span* in a *Trace* has a Parent *Span* representing the upstream operation which triggered its child.  *Span*s are identified by a unique *Span Identifier* (`SpanId`) along with a parent `SpanId` (and the overall *Distributed Trace* GUID).  A *Trace*'s first *Span* has a parent `SpanId` equal to its own.  Each *Span* also consists of metadata about the action, including whether its action executed successfully or failed (and, if a failure, details on the cause), the duration of the span execution, where the *Span* executed (in which application; on which node; in which process; within what environment, etc), and, optionally, individual `Note`s representing metadata specific to the *Span* (e.g., the `Note` with the *Host Address* of a cable settop box for an action issuing an initialize command to the device).  A logical *Trace* (for example, "issue an initialize to a settop box") might originate from a business system with its transmission *Span* passed in an HTTP header to a microservice running in the cloud which executes *Span*s to query a persistent data store before making a custom RPC call (recorded in yet another *Span*) to a second microservice, passing the current trace information in the RPC context, before that second microservice finally issues the initialize command to the settop, ending the *Trace*.  The *dtrace library* provides several logging `Emitter`s to record the *Span*s, as they are executed, to the configured logging system in JSON and text formats but also provides the means by which custom emitters can be provided.  A custom emitter might persist spans to a graph database, for example.
+A *Distributed Trace* is a directed graph of *Span*s. A *Span* identifies a branch of the overall *Trace* representing a logical step or action, executing within the local program.  All but the first *Span* in a *Trace* has a Parent *Span* representing the upstream operation which triggered its child.  *Span*s are identified by a unique *Span Identifier* (`SpanId`) along with a parent `SpanId` (and the overall *Distributed Trace* GUID).  A *Trace*'s first *Span* has a parent `SpanId` equal to its own.  Each *Span* also consists of metadata about the action, including whether its action executed successfully or failed (and, if a failure, details on the cause), the duration of the span execution, where the *Span* executed (in which application; on which node; in which process; within what environment, etc), and, optionally, individual `Note`s representing metadata specific to the *Span* (e.g., the `Note` with the *Host Address* of a cable settop box for an action issuing an initialize command to the device).  A logical *Trace* (for example, "issue an initialize to a settop box") might originate from a business system with its transmission *Span* passed in an HTTP header to a microservice running in the cloud which executes *Span*s to query a persistent data store before making a custom RPC call (recorded in yet another *Span*) to a second microservice, passing the current trace information in the RPC context, before that second microservice finally issues the initialize command to the settop, ending the *Trace*.  The *dtrace library* provides several logging `Emitter`s to record the *Span*s, as they are executed, to the configured logging system in JSON and text formats but also provides the means by which custom emitters can be provided.  A custom emitter might persist spans to a graph database, for example.  In addition, the ability to sample traces is provided via the `sampled` property of the `TraceContext`. If the `sampled` property is true, its spans are emitted; if false, the emissions are skipped. We also encode/decode the `X-B3-Sampled` header (or sampled section of compressed header) in order to set or propagate this value (if the header or section is not present, the default is to set `sampled` to true).
+
+
 
 ### <a id="usage"></a> Examples of Use
 
@@ -184,9 +186,12 @@ val io: IO[SalesReport] = for {
    * with any `F`).  When we are done building up these annotated `TraceT` instances, we need to "tie the knot"
    * by converting the top-level instance back into a plain `IO` again before we can actually run it. This is
    * accomplished by applying the root `Span` for this process using the `trace` method on on our top-level
-   * `TraceT` instance (represented here by the `tracedIO` value).
+   * `TraceT` instance (represented here by the `tracedIO` value). We set the `sampled` indicator (second
+   * argument) to `true`, indicating we wish to emit the spans (the normal case).  This could be set to
+   * false if performing sampling and the sampling threshold has not been reached (such a threshold being
+   * application specific).
    */
-  result <- tracedIO.trace(TraceContext(rootSpan, ts))
+  result <- tracedIO.trace(TraceContext(rootSpan, true, ts))
 } yield result
 
 /*
@@ -267,7 +272,7 @@ libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-money" % "2.0.0"
 
 #### dtrace-xb3 interoperability
 
-This component provides an insance of the core HeaderCodec in order to encode and decode X-B3/Zipkin-compliant HTTP headers.
+This component provides an insance of the core HeaderCodec in order to encode and decode X-B3/Zipkin-compliant HTTP headers. The ability to parse and encode Trace ID, Span ID, Parent Span ID and Sampled Flag are provided.
 
 ```scala
 libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-xb3" % "2.0.0"

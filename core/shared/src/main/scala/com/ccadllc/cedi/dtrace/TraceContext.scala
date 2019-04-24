@@ -25,22 +25,17 @@ import scala.language.higherKinds
  * Represents a cursor into the "current" [[Span]] and associated system-level information and is associated with an
  * effectful program `F[A]` to realize a trace of that program.
  * @param currentSpan - the current [[Span]] associated with a particular effectful program.
+ * @param sampled - should we actually emit a [[Span]]? Yes, if this is true when the Span is executed.
  * @param system - a [[TraceSystem]] consisting of system-level information
  *  which further annotates a [[Span]] when recording it along with an implementation of an
  *  [[TraceSystem#Emitter]] used to perform the recording of the span.
  * @tparam F - an effectful program type representing the program type of the [[TraceSystem]] (which in turn indicates
  *   the program type of the `TraceSystem`'s `Emitter`).
  */
-case class TraceContext[F[_]](currentSpan: Span, system: TraceSystem[F]) {
+final case class TraceContext[F[_]](currentSpan: Span, sampled: Boolean, system: TraceSystem[F]) {
 
   private[dtrace] def childSpan(spanName: Span.Name)(implicit F: Sync[F]): F[TraceContext[F]] =
     currentSpan.newChild(system.timer, spanName) map { c => copy(currentSpan = c) }
-
-  private[dtrace] def setNotes(notes: Vector[Note]): TraceContext[F] =
-    copy(currentSpan = currentSpan.setNotes(notes))
-
-  private[dtrace] def updateStartTime(implicit F: Functor[F]): F[TraceContext[F]] =
-    currentSpan.updateStartTime(system.timer) map { updated => copy(currentSpan = updated) }
 
   private[dtrace] def emitSuccess(implicit F: Sync[F]): F[Unit] =
     finishSuccess flatMap system.emitter.emit
@@ -48,11 +43,17 @@ case class TraceContext[F[_]](currentSpan: Span, system: TraceSystem[F]) {
   private[dtrace] def emitFailure(detail: FailureDetail)(implicit F: Sync[F]): F[Unit] =
     finishFailure(detail) flatMap system.emitter.emit
 
-  private def finishSuccess(implicit F: Functor[F]): F[TraceContext[F]] =
-    currentSpan.finishSuccess(system.timer) map { ss => copy(currentSpan = ss) }
+  private[dtrace] def setNotes(notes: Vector[Note]): TraceContext[F] =
+    copy(currentSpan = currentSpan.setNotes(notes))
+
+  private[dtrace] def updateStartTime(implicit F: Functor[F]): F[TraceContext[F]] =
+    currentSpan.updateStartTime(system.timer) map { updated => copy(currentSpan = updated) }
 
   private def finishFailure(detail: FailureDetail)(implicit F: Functor[F]): F[TraceContext[F]] =
     currentSpan.finishFailure(system.timer, detail) map { us => copy(currentSpan = us) }
+
+  private def finishSuccess(implicit F: Functor[F]): F[TraceContext[F]] =
+    currentSpan.finishSuccess(system.timer) map { ss => copy(currentSpan = ss) }
 
   override def toString: String = s"[currentSpan=$currentSpan] [system=$system]"
 }

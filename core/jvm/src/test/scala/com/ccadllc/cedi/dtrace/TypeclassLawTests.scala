@@ -73,6 +73,7 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
     val timer = TraceSystem.realTimeTimer[IO]
     TraceContext(
       Span.root(timer, quarterlySalesCalculateSpanName, quarterlySalesCalculationSpanNotes: _*).unsafeRunSync,
+      true,
       TraceSystem(testSystemData, new TestEmitter[IO], timer))
   }
 
