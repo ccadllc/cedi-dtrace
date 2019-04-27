@@ -250,9 +250,10 @@ package object dtrace {
 
   private[dtrace] def translate[F[_], G[_]](tc: TraceContext[F], trans: F ~> G): TraceContext[G] = {
     val emitter: TraceSystem.Emitter[G] = new TraceSystem.Emitter[G] {
-      def emit(tcg: TraceContext[G]): G[Unit] = trans(tc.system.emitter.emit(tc.copy(currentSpan = tcg.currentSpan)))
+      def emit(tcg: TraceContext[G]): G[Unit] = trans(
+        tc.system.emitter.emit(tc.copy(currentSpan = tcg.currentSpan, sampled = tcg.sampled)))
       def description: String = tc.system.emitter.description
     }
-    TraceContext(tc.currentSpan, TraceSystem(tc.system.data, emitter, tc.system.timer.translate(trans)))
+    TraceContext(tc.currentSpan, tc.sampled, TraceSystem(tc.system.data, emitter, tc.system.timer.translate(trans)))
   }
 }

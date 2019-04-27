@@ -65,7 +65,7 @@ final class TraceT[F[_], A](private[dtrace] val toEffect: TraceContext[F] => F[A
     tc: TraceContext[F],
     evaluator: Evaluator[A],
     notes: Note*)(resultAnnotator: PartialFunction[Either[Throwable, A], Vector[Note]])(implicit F: Sync[F]): F[A] =
-    tc.updateStartTime flatMap { updated =>
+    if (tc.sampled) tc.updateStartTime.flatMap { updated =>
       toEffect(updated).attempt.flatMap { eOrR =>
         val annotatedTc = updated.setNotes(notes.toVector ++ resultAnnotator.applyOrElse(eOrR, (_: Either[Throwable, A]) => Vector.empty))
         eOrR match {
@@ -74,6 +74,7 @@ final class TraceT[F[_], A](private[dtrace] val toEffect: TraceContext[F] => F[A
         }
       }
     }
+    else toEffect(tc)
 
   /**
    * When passed a top-level [[TraceContext]], convert this `TraceT` into its underlying effectful

@@ -24,6 +24,13 @@ import cats.Show
  */
 final case class Header(name: Header.CaseInsensitiveName, value: Header.Value)
 object Header {
+  /**
+   * Represents a decoded header, which will possibly contain a `SpanId`
+   * if the appropriate headers were found and sets `sampled` to true
+   * unless the headers indicate sampling should be set to false.
+   */
+  final case class Decoded(spanId: Option[SpanId], sampled: Boolean)
+
   final case class CaseInsensitiveName(value: String) {
     /* Added to suppress equals/hashcode warning from compiler when using the `override val hashCode` idiom */
     private val hc: Int = value.toLowerCase.hashCode
@@ -57,7 +64,8 @@ trait HeaderCodec { self =>
    * behavior for that protocol. For example, the `xb3` module allows
    * one to pass `Map("Compressed", "true")` to generate a compressed
    * 'b3' header which combines the trace ID, span ID and parent XB3
-   * header values into one.
+   * header values into one and `Map("Sampling", "false")` to set the
+   * X-B3-Sampled to "0".
    */
   def encode(spanId: SpanId, properties: Map[String, String]): List[Header]
 
@@ -68,16 +76,16 @@ trait HeaderCodec { self =>
   def encode(spanId: SpanId): List[Header] = encode(spanId, Map.empty)
 
   /**
-   * Decode a [[SpanId]] from protocol-specific Headers.
+   * Decode a [[SpanId]] and sampled flag from protocol-specific Headers.
    * Protocol-specific name/value properties can be passed in the given map.
    */
-  def decode(headers: List[Header], properties: Map[String, String]): Either[Header.DecodeFailure, Option[SpanId]]
+  def decode(headers: List[Header], properties: Map[String, String]): Either[Header.DecodeFailure, Header.Decoded]
 
   /**
-   * Decode a [[SpanId]] from protocol-specific Headers.  A convenience variant of
+   * Decode a [[SpanId]] and sampled flag from protocol-specific Headers.  A convenience variant of
    * `decode(headers, properties)` when no `properties` apply to the decoding.
    */
-  def decode(headers: List[Header]): Either[Header.DecodeFailure, Option[SpanId]] = decode(headers, Map.empty)
+  def decode(headers: List[Header]): Either[Header.DecodeFailure, Header.Decoded] = decode(headers, Map.empty)
 
   /**
    * Convenience methods to compose multiple [[HeaderCodec]]s when parsing and encoding
@@ -85,8 +93,8 @@ trait HeaderCodec { self =>
    */
   def andThen(other: HeaderCodec): HeaderCodec = new HeaderCodec {
     def encode(spanId: SpanId, props: Map[String, String]): List[Header] = self.encode(spanId, props) ++ other.encode(spanId, props)
-    def decode(headers: List[Header], props: Map[String, String]): Either[Header.DecodeFailure, Option[SpanId]] = self.decode(headers, props) match {
-      case Right(None) => other.decode(headers, props)
+    def decode(headers: List[Header], props: Map[String, String]): Either[Header.DecodeFailure, Header.Decoded] = self.decode(headers, props) match {
+      case Right(Header.Decoded(None, _)) => other.decode(headers, props)
       case other => other
     }
   }

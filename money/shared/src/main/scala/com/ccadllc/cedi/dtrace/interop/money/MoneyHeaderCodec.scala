@@ -45,14 +45,14 @@ class MoneyHeaderCodec extends HeaderCodec {
    * Decodes a `SpanId` from a [[https://github.com/Comcast/money Comcast Money]]-compliant header.
    * The `properties` argument is currently unused for the `Money` protocol.
    */
-  override def decode(headers: List[Header], properties: Map[String, String]): Either[Header.DecodeFailure, Option[SpanId]] = {
+  override def decode(headers: List[Header], properties: Map[String, String]): Either[Header.DecodeFailure, Header.Decoded] = {
     headers.collectFirst { case Header(HeaderName, Header.Value(value)) => value }.traverse {
       case value @ HeaderRegex(traceId, _, parentId, spanId) =>
         Either.catchNonFatal { SpanId(UUID.fromString(traceId), parentId.toLong, spanId.toLong) }.leftMap { t =>
           Header.DecodeFailure(s"Could not parse $value into a SpanId", Some(t))
         }
       case value => Left(Header.DecodeFailure(s"Could not parse $value into a SpanId", None))
-    }
+    }.map(Header.Decoded(_, true))
   }
 }
 

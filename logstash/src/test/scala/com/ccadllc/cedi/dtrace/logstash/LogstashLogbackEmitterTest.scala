@@ -24,7 +24,7 @@ class LogstashLogbackEmitterTest extends WordSpec with TestData {
     "work" in {
       val system = TraceSystem(testSystemData, new LogstashLogbackEmitter[IO], quarterlySalesCalculationTimer)
       val spanRoot = Span.root[IO](quarterlySalesCalculationTimer, Span.Name("calculate-quarterly-sales")).unsafeRunSync
-      IO.unit.toTraceT.trace(TraceContext(spanRoot, system)).unsafeRunSync
+      IO.unit.toTraceT.trace(TraceContext(spanRoot, true, system)).unsafeRunSync
     }
   }
 }

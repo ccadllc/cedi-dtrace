@@ -79,9 +79,9 @@ package object server {
     spanName: Span.Name,
     evaluator: Evaluator[A],
     notes: Note*)(action: TraceT[F, A])(implicit codec: HeaderCodec, F: Sync[F], ts: TraceSystem[F]): F[A] = codec.decode(fromHttp4s(req.headers.toList)) match {
-    case Right(spanIdMaybe) =>
-      spanIdMaybe.fold(Span.root[F](ts.timer, spanName, notes: _*)) { Span.newChild[F](ts.timer, _, spanName, notes: _*) }.flatMap { span =>
-        action.trace(TraceContext(span, ts), evaluator, notes: _*)
+    case Right(decoded) =>
+      decoded.spanId.fold(Span.root[F](ts.timer, spanName, notes: _*)) { Span.newChild[F](ts.timer, _, spanName, notes: _*) }.flatMap { span =>
+        action.trace(TraceContext(span, decoded.sampled, ts), evaluator, notes: _*)
       }
     case Left(errDetail) => F.raiseError[A](errDetail)
   }

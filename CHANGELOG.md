@@ -1,5 +1,9 @@
 2.0.0
 =====
+ - Added the ability to set a `sampled` indicator in the `TraceContext[F]` and
+   to encode/decode the sampled indicator to/from XB3 headers.  If `sampled`
+   is set to `false` in the `TraceContext`, the actual emission of `Span`s
+   for that trace are skipped.
  - Added an Elastic Common Search (ECS) compliant emitter within the logstash
    module which encodes the spans in a manner consistent with the ECS
    specification (1.0.0-beta2 revision).  The top-level `metadata` map in the
