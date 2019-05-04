@@ -159,12 +159,14 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
     note1: Note, note2: Note)(parAction: (TraceIO[Unit], TraceIO[Unit]) => TraceIO[Unit]): Unit = {
     val testEmitter = new TestEmitter[IO]
     val testTimer = TraceSystem.realTimeTimer[IO]
+    val start = testTimer.time.unsafeRunSync
     val salesManagementSystem = TraceSystem(testSystemData, testEmitter, testTimer)
     val spanRoot = Span.root(testTimer, quarterlySalesCalculateSpanName).unsafeRunSync
     parAction(
       IO(Thread.sleep(3)).void.newSpan(quarterlyPhillySales1CalculateSpanName, note1),
       IO(
         Thread.sleep(5)).void.newSpan(quarterlyPhillySales2CalculateSpanName, note2)).trace(TraceContext(spanRoot, true, salesManagementSystem)).unsafeRunSync
+    val end = testTimer.time.unsafeRunSync
     val entriesWithNote1 = testEmitter.cache.containingAll(
       parentSpanId(spanRoot.spanId.spanId), spanName(quarterlyPhillySales1CalculateSpanName), note1.toString)
     val entriesWithNote2 = testEmitter.cache.containingAll(
@@ -173,6 +175,9 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
     entriesWithNote1 should have size (1)
     entriesWithNote2 should have size (1)
     entriesWithSpanId should have size (1)
+    entriesWithNote1.foreach(_.tc.currentSpan.startTime.value should (be >= start.value and be <= end.value))
+    entriesWithNote2.foreach(_.tc.currentSpan.startTime.value should (be >= start.value and be <= end.value))
+    entriesWithSpanId.foreach(_.tc.currentSpan.startTime.value should (be >= start.value and be <= end.value))
     ()
   }
   private def spanName(name: Span.Name) = s"span-name=$name"
