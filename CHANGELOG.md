@@ -1,3 +1,7 @@
+2.0.1
+=====
+ - Fix issue where TraceSystem timer type gets misconfigured in `F ~> G`.
+   Results in nonsensical Span times when using `Parallel` typeclasses.  Issue #75.
 2.0.0
 =====
  - Added the ability to set a `sampled` indicator in the `TraceContext[F]` and

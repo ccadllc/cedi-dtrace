@@ -140,19 +140,19 @@ object TraceSystem {
     final case class Monotonic[F[_]](clock: Clock[F], unit: TimeUnit = TimeUnit.NANOSECONDS) extends Timer[F] {
       val description: String = s"A monotonic generator for time in units of $unit"
       def time(implicit F: Functor[F]): F[Time] = clock.monotonic(unit).map(Time(_, unit, Time.Source.Monotonic))
-      def translate[G[_]](trans: F ~> G): Timer[G] = Monotonic(transClock(clock, trans), unit)
+      def translate[G[_]](trans: F ~> G): Timer[G] = copy(clock = transClock(clock, trans))
     }
     final case class RealTime[F[_]](clock: Clock[F], unit: TimeUnit = TimeUnit.MICROSECONDS) extends Timer[F] {
       val description: String = s"A real-time generator for time in units of $unit"
       def time(implicit F: Functor[F]): F[Time] = clock.realTime(unit).map(Time(_, unit, Time.Source.RealTime))
-      def translate[G[_]](trans: F ~> G): Timer[G] = Monotonic(transClock(clock, trans), unit)
+      def translate[G[_]](trans: F ~> G): Timer[G] = copy(clock = transClock(clock, trans))
     }
     def monotonic[F[_]: Sync](unit: TimeUnit): Timer[F] = Monotonic(Clock.create[F], unit)
     def realTime[F[_]: Sync](unit: TimeUnit): Timer[F] = RealTime(Clock.create[F], unit)
 
     private def transClock[F[_], G[_]](clock: Clock[F], trans: F ~> G): Clock[G] = new Clock[G] {
-      def realTime(unit: TimeUnit): G[Long] = trans(clock.realTime(unit))
       def monotonic(unit: TimeUnit): G[Long] = trans(clock.monotonic(unit))
+      def realTime(unit: TimeUnit): G[Long] = trans(clock.realTime(unit))
     }
   }
   def monotonicTimer[F[_]: Sync]: Timer[F] = Timer.monotonic[F](TimeUnit.NANOSECONDS)

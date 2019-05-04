@@ -21,9 +21,9 @@ import scala.language.higherKinds
 
 class TestEmitter[F[_]](implicit F: Sync[F]) extends TraceSystem.Emitter[F] {
   class EmitterTestCache {
-    case class EmitterTestEntry(msg: String)
+    case class EmitterTestEntry(msg: String, tc: TraceContext[F])
     private var emitterLogCache: Vector[EmitterTestEntry] = Vector.empty
-    def put(msg: String): Unit = synchronized { emitterLogCache = emitterLogCache :+ EmitterTestEntry(msg.toLowerCase) }
+    def put(msg: String, tc: TraceContext[F]): Unit = synchronized { emitterLogCache = emitterLogCache :+ EmitterTestEntry(msg.toLowerCase, tc) }
     def all: Vector[EmitterTestEntry] = emitterLogCache
     def containingAll(substrings: String*): Vector[EmitterTestEntry] = {
       def containing(substrings: Seq[String])(predicate: (EmitterTestEntry, Seq[String]) => Boolean): Vector[EmitterTestEntry] = {
@@ -40,6 +40,6 @@ class TestEmitter[F[_]](implicit F: Sync[F]) extends TraceSystem.Emitter[F] {
     def formatText(context: TraceContext[F]) = {
       s"Span: [ span-id=${context.currentSpan.spanId.spanId} ] [ trace-id=${context.currentSpan.spanId.traceId} ] [ parent-id=${context.currentSpan.spanId.parentSpanId} ] [ span-name=${context.currentSpan.spanName} ] [ system-data=${context.system.data.description} ] [ start-time=${context.currentSpan.startTime} ] [ span-duration=${context.currentSpan.duration} ] [ span-success=${context.currentSpan.failure.isEmpty} ] [ failure-detail=${context.currentSpan.failure.fold("N/A")(_.render)} ][ notes=[${context.currentSpan.notes.mkString("] [")}] ]"
     }
-    F.delay(cache.put(formatText(tc)))
+    F.delay(cache.put(formatText(tc), tc))
   }
 }
