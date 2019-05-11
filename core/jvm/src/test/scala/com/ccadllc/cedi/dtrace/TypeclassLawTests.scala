@@ -35,6 +35,8 @@ import java.nio.charset.Charset
 import org.scalactic.source
 import org.scalacheck._
 import org.scalatest.prop.Checkers
+import org.scalatest.OptionValues._
+import org.scalatest.TryValues._
 import org.scalatest.{ FunSuite, Matchers, Tag }
 
 import org.typelevel.discipline.Laws
@@ -174,6 +176,27 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
     f.value shouldBe 'empty
     testC.tick()
     f.value shouldBe Some(Success(1))
+    ()
+  }
+
+  testAsync("parMap2 should be stack safe") { testC =>
+    implicit val cs = testC.contextShift[IO]
+    val count = 100000
+    val tasks = (0 until count).map(_ => TraceIO(1))
+    val sum = tasks.foldLeft(TraceIO(0))((acc, t) => (acc, t).parMapN(_ + _))
+    val f = sum.trace(tc).unsafeToFuture()
+    testC.tick()
+    f.value shouldBe Some(Success(count))
+    ()
+  }
+
+  testAsync("parTraverse should be stack safe") { testC =>
+    implicit val cs = testC.contextShift[IO]
+    val count = 100000
+    val numbers = (0 until count).toVector
+    val f = numbers.parTraverse(i => TraceIO.pure(i + 1)).trace(tc).unsafeToFuture()
+    testC.tick()
+    f.value.value.success.value.sum shouldBe numbers.map(_ + 1).sum
     ()
   }
 

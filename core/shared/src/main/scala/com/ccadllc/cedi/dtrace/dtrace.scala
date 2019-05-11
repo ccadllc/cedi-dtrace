@@ -53,6 +53,18 @@ package object dtrace {
         IO.Par.unwrap(tiop.toEffect(translate(tc, P.parallel)))
       }
     }
+    /**
+     * Creates a simple, noncancelable `TraceIO[A]` instance that
+     * executes an asynchronous process on evaluation.
+     *
+     * The given function is being injected with a side-effectful
+     * callback for signaling the final result of an asynchronous
+     * process.
+     *
+     * @param k is a function that should be called with a
+     *       callback for signaling the result once it is ready
+     */
+    def async[A](cb: (Either[Throwable, A] => Unit) => Unit): TraceIO[A] = toTraceIO(IO.async(cb))
 
     /**
      * Ask for the current `TraceContext[IO]` in a `TraceIO`.
