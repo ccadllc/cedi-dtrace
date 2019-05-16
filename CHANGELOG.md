@@ -1,3 +1,6 @@
+2.0.2
+=====
+ - Fix Stack Overflow for parTraverse.  Issue #79.
 2.0.1
 =====
  - Fix issue where TraceSystem timer type gets misconfigured in `F ~> G`.
