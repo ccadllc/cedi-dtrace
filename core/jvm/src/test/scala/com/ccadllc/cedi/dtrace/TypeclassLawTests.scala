@@ -181,7 +181,7 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
 
   testAsync("parMap2 should be stack safe") { testC =>
     implicit val cs = testC.contextShift[IO]
-    val count = 100000
+    val count = 500000
     val tasks = (0 until count).map(_ => TraceIO(1))
     val sum = tasks.foldLeft(TraceIO(0))((acc, t) => (acc, t).parMapN(_ + _))
     val f = sum.trace(tc).unsafeToFuture()
@@ -192,7 +192,7 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
 
   testAsync("parTraverse should be stack safe") { testC =>
     implicit val cs = testC.contextShift[IO]
-    val count = 100000
+    val count = 500000
     val numbers = (0 until count).toVector
     val f = numbers.parTraverse(i => TraceIO.pure(i + 1)).trace(tc).unsafeToFuture()
     testC.tick()
