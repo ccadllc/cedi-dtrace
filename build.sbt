@@ -8,7 +8,7 @@ lazy val circeVersion = "0.11.1"
 
 lazy val http4sVersion = "0.20.0"
 
-lazy val kindProjectorVersion = "0.9.9"
+lazy val kindProjectorVersion = "0.9.10"
 
 lazy val logbackVersion = "1.2.3"
 
