@@ -16,7 +16,7 @@ lazy val logstashVersion = "5.3"
 
 lazy val scalacheckVersion = "1.13.5"
 
-lazy val scalatestVersion = "3.0.5"
+lazy val scalatestVersion = "3.0.8"
 
 lazy val scalacheckVersion213 = "1.14.0"
 
