@@ -1,37 +1,33 @@
 import sbtcrossproject.crossProject
 
-lazy val catsEffectVersion = "1.2.0"
+lazy val catsEffectVersion = "2.0.0-M4"
 
-lazy val catsCoreVersion = "1.6.0"
+lazy val catsCoreVersion = "2.0.0-M4"
 
-lazy val circeVersion = "0.11.1"
+lazy val circeVersion = "0.12.0-M3"
 
-lazy val http4sVersion = "0.20.0"
+lazy val http4sVersion = "0.21.0-M1"
 
-lazy val kindProjectorVersion = "0.9.9"
+lazy val kindProjectorVersion = "0.10.3"
 
 lazy val logbackVersion = "1.2.3"
 
 lazy val logstashVersion = "5.3"
 
-lazy val scalacheckVersion = "1.13.5"
+lazy val scalacheckVersion = "1.14.0"
 
-lazy val scalatestVersion = "3.0.5"
+lazy val scalatestVersion = "3.1.0-SNAP13"
 
-lazy val scalacheckVersion213 = "1.14.0"
-
-lazy val scalatestVersion213 = "3.0.6-SNAP5"
-
-lazy val scodecBitsVersion = "1.1.9"
+lazy val scodecBitsVersion = "1.1.12"
 
 lazy val slf4jVersion = "1.7.26"
 
-lazy val log4catsVersion = "0.3.0"
+lazy val log4catsVersion = "0.4.0-M1"
 
 lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
   parallelExecution in Global := !scala.util.Properties.propIsSet("disableParallel"),
-  crossScalaVersions := Seq("2.12.8", "2.11.12"),
+  crossScalaVersions := Seq("2.13.0", "2.12.8", "2.11.12"),
   scalacOptions in (Compile, console) ~= (_ filterNot Set("-Xfatal-warnings", "-Ywarn-unused-import").contains),
   contributors ++= Seq(
     Contributor("sbuzzard", "Steve Buzzard"),
@@ -39,18 +35,11 @@ lazy val commonSettings = Seq(
   ),
   libraryDependencies ++= Seq(
     "org.typelevel" %% "cats-core" % catsCoreVersion,
-    "org.typelevel" %% "cats-effect" % catsEffectVersion
-  ) ++ (CrossVersion.partialVersion(scalaVersion.value) match {
-    case Some((2, v)) if v >= 13 => Seq(
-      "org.scalatest" %% "scalatest" % scalatestVersion213 % "test",
-      "org.scalacheck" %% "scalacheck" % scalacheckVersion213 % "test"
-    )
-    case _ => Seq(
-      "org.scalatest" %% "scalatest" % scalatestVersion % "test",
-      "org.scalacheck" %% "scalacheck" % scalacheckVersion % "test"
-    )
-  }),
-  addCompilerPlugin("org.spire-math" %% "kind-projector" % kindProjectorVersion),
+    "org.typelevel" %% "cats-effect" % catsEffectVersion,
+    "org.scalatest" %% "scalatest" % scalatestVersion % "test",
+    "org.scalacheck" %% "scalacheck" % scalacheckVersion % "test"
+  ),
+  addCompilerPlugin("org.typelevel" % "kind-projector" % kindProjectorVersion cross CrossVersion.binary),
   pomExtra := (
     <url>http://github.com/ccadllc/{githubProject.value}</url>
     <developers>
@@ -126,27 +115,12 @@ lazy val loggingJVM = logging.jvm.enablePlugins(SbtOsgi).
     buildOsgiBundle("com.ccadllc.cedi.dtrace.logging")
   ).dependsOn(coreJVM % "compile->compile;test->test")
 
-lazy val loggingJS = logging.js.
-  settings(
-    // TODO: This is only temporary until log4cats (and log4s) publishes for 2.13
-    // Replace this libDependencies and the two skips with just a
-    // libDeps for the slogging lib
-    libraryDependencies := (CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, v)) if v >= 13 => Seq.empty
-      case _ => libraryDependencies.value ++ Seq(
-        "io.chrisdavenport" %%% "log4cats-core" % log4catsVersion,
-        "io.chrisdavenport" %%% "log4cats-log4s" % log4catsVersion
-      )
-    }),
-    skip in compile := (CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, v)) => v >= 13
-      case _ => false
-    }),
-    skip in publish := (CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, v)) => v >= 13
-      case _ => false
-    })
-  ).dependsOn(coreJS % "compile->compile;test->test")
+lazy val loggingJS = logging.js.settings(
+  libraryDependencies ++= Seq(
+    "io.chrisdavenport" %%% "log4cats-core" % log4catsVersion,
+    "io.chrisdavenport" %%% "log4cats-log4s" % log4catsVersion
+  )
+).dependsOn(coreJS % "compile->compile;test->test")
 
 lazy val logstash = project.in(file("logstash")).enablePlugins(SbtOsgi).
   settings(commonSettings).

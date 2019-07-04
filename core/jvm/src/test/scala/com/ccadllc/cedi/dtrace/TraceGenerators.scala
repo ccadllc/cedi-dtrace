@@ -21,99 +21,113 @@ import cats.effect.implicits._
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-import org.scalacheck.{ Arbitrary, Gen }
+import org.scalactic.anyvals.PosZInt
+import org.scalatest.prop._
 
 import scala.concurrent.duration._
 import scala.language.higherKinds
 
-import Arbitrary.arbitrary
+import CommonGenerators._
 
 trait TraceGenerators {
 
   def testEmitter[F[_]](implicit F: Sync[F]): F[TraceSystem.Emitter[F]] = F.delay(new TestEmitter[F])
 
-  def genTsTimer[F[_]: Sync]: Gen[TraceSystem.Timer[F]] =
-    Gen.oneOf(Gen.const(TraceSystem.monotonicTimer[F]), Gen.const(TraceSystem.realTimeTimer[F]))
+  def genBoolean: Generator[Boolean] = specificValues(true, false)
 
-  def genOption[A](g: Gen[A]): Gen[Option[A]] = Gen.oneOf(Gen.const(Option.empty[A]), g map Option.apply)
+  def genTsTimer[F[_]: Sync]: Generator[TraceSystem.Timer[F]] =
+    specificValues(TraceSystem.monotonicTimer[F], TraceSystem.realTimeTimer[F])
 
-  def genUUID: Gen[UUID] = for {
-    hi <- arbitrary[Long]
-    lo <- arbitrary[Long]
+  implicit def genUUID: Generator[UUID] = for {
+    hi <- longs
+    lo <- longs
   } yield new UUID(hi, lo)
 
-  def genTimeUnit: Gen[TimeUnit] = Gen.oneOf(Gen.const(TimeUnit.MILLISECONDS), Gen.const(TimeUnit.NANOSECONDS))
+  def genTimeUnit: Generator[TimeUnit] = specificValues(TimeUnit.MILLISECONDS, TimeUnit.NANOSECONDS)
 
-  def genTimeSource: Gen[TraceSystem.Time.Source] = Gen.oneOf(
-    Gen.const(TraceSystem.Time.Source.Monotonic),
-    Gen.const(TraceSystem.Time.Source.RealTime))
+  def genTimeSource: Generator[TraceSystem.Time.Source] = specificValues(
+    TraceSystem.Time.Source.Monotonic,
+    TraceSystem.Time.Source.RealTime)
 
-  def genTsTime(min: Long, max: Long): Gen[TraceSystem.Time] = for {
-    v <- Gen.chooseNum(min, max)
+  def genTsTime(min: Long, max: Long): Generator[TraceSystem.Time] = for {
+    v <- longsBetween(min, max)
     u <- genTimeUnit
     s <- genTimeSource
   } yield TraceSystem.Time(v, u, s)
 
-  def genValidTsTime: Gen[TraceSystem.Time] = genTsTime(Long.MinValue >> 1, Long.MaxValue)
-  def genFiniteDuration: Gen[FiniteDuration] = genTsTime(-256L, 256L) map { t => FiniteDuration(t.value, t.unit) }
-  def genVectorOfN[A](size: Int, genElement: Gen[A]): Gen[Vector[A]] = Gen.listOfN(size, genElement) map { _.toVector }
-  def genVectorOfN[A](minimum: Int, maximum: Int, genElement: Gen[A]): Gen[Vector[A]] = Gen.chooseNum(minimum, maximum) flatMap { genVectorOfN(_, genElement) }
-  def genStr: Gen[String] = Gen.listOf(Gen.alphaNumChar) map { _.mkString }
+  def genValidTsTime: Generator[TraceSystem.Time] = genTsTime(Long.MinValue >> 1, Long.MaxValue)
+  def genFiniteDuration: Generator[FiniteDuration] = genTsTime(-256L, 256L) map { t => FiniteDuration(t.value, t.unit) }
+  def genVectorOfN[A](size: PosZInt, genElement: Generator[A]): Generator[Vector[A]] =
+    vectors(genElement).havingSize(size)
+  def genVectorOfN[A](minimum: PosZInt, maximum: PosZInt, genElement: Generator[A]): Generator[Vector[A]] =
+    vectors(genElement).havingSizesBetween(minimum, maximum)
 
-  def genTraceSystemDataPair: Gen[(String, String)] = for {
-    name <- genStr
-    value <- genStr
+  def genTraceSystemDataPair: Generator[(String, String)] = for {
+    name <- strings
+    value <- strings
   } yield name -> value
 
-  def genTraceSystemData: Gen[TraceSystem.Data] = for {
-    id <- Gen.nonEmptyMap(genTraceSystemDataPair)
-    meta <- Gen.nonEmptyMap(genTraceSystemDataPair)
+  def genTraceSystemData: Generator[TraceSystem.Data] = for {
+    id <- maps(genTraceSystemDataPair).havingSizesBetween(1, 50)
+    meta <- maps(genTraceSystemDataPair).havingSizesBetween(1, 50)
   } yield TraceSystem.Data(TraceSystem.Data.Identity(id), TraceSystem.Data.Meta(meta))
 
-  def genTraceSystem[F[_]: Effect]: Gen[TraceSystem[F]] = for {
+  def genTraceSystem[F[_]: Effect]: Generator[TraceSystem[F]] = for {
     data <- genTraceSystemData
     timer <- genTsTimer[F]
   } yield TraceSystem(data, testEmitter[F].toIO.unsafeRunSync, timer)
 
-  def genSpanId: Gen[SpanId] = for {
+  def genSpanId: Generator[SpanId] = for {
     traceId <- genUUID
-    parentId <- arbitrary[Long]
-    childId <- arbitrary[Long]
+    parentId <- longs
+    childId <- longs
   } yield SpanId(traceId, parentId, childId)
 
-  def genNoteName: Gen[Note.Name] = genStr map Note.Name.apply
-  def genNoteLongValue: Gen[Note.LongValue] = arbitrary[Long] map Note.LongValue.apply
-  def genNoteBooleanValue: Gen[Note.BooleanValue] = arbitrary[Boolean] map Note.BooleanValue.apply
-  def genNoteStringValue: Gen[Note.StringValue] = genStr map Note.StringValue.apply
-  def genNoteDoubleValue: Gen[Note.DoubleValue] = arbitrary[Double] map Note.DoubleValue.apply
+  def genNoteName: Generator[Note.Name] = strings map Note.Name.apply
+  def genNoteLongValue: Generator[Note.LongValue] = longs map Note.LongValue.apply
+  def genNoteBooleanValue: Generator[Note.BooleanValue] = genBoolean map Note.BooleanValue.apply
+  def genNoteStringValue: Generator[Note.StringValue] = strings map Note.StringValue.apply
+  def genNoteDoubleValue: Generator[Note.DoubleValue] = doubles map Note.DoubleValue.apply
 
-  def genNote: Gen[Note] = for {
+  def genNote: Generator[Note] = for {
     name <- genNoteName
-    value <- genOption(Gen.oneOf(genNoteLongValue, genNoteBooleanValue, genNoteStringValue, genNoteDoubleValue))
+    value <- Generator.optionGenerator(genNoteValue)
   } yield Note(name, value)
 
-  def genNotes: Gen[Vector[Note]] = genVectorOfN(0, 256, genNote)
+  def genNotes: Generator[Vector[Note]] = genVectorOfN(PosZInt(0), PosZInt(256), genNote)
 
-  def genSpanName: Gen[Span.Name] = genStr map Span.Name.apply
+  def genNoteValue[A]: Generator[Note.Value] = for {
+    ln <- genNoteLongValue
+    bn <- genNoteBooleanValue
+    sn <- genNoteStringValue
+    dn <- genNoteDoubleValue
+    value <- specificValues(ln, bn, sn, dn)
+  } yield value
 
-  def genExceptionFailureDetail: Gen[FailureDetail.Exception] = genStr map { s => FailureDetail.Exception(new IllegalStateException(s)) }
+  def genSpanName: Generator[Span.Name] = strings map Span.Name.apply
 
-  def genMessageFailureDetail: Gen[FailureDetail.Message] = genStr map FailureDetail.Message.apply
+  def genExceptionFailureDetail: Generator[FailureDetail.Exception] = strings map { s => FailureDetail.Exception(new IllegalStateException(s)) }
 
-  def genFailureDetail: Gen[FailureDetail] = Gen.oneOf(genExceptionFailureDetail, genMessageFailureDetail)
+  def genMessageFailureDetail: Generator[FailureDetail.Message] = strings map FailureDetail.Message.apply
 
-  def genSpan: Gen[Span] = for {
+  def genFailureDetail: Generator[FailureDetail] = for {
+    gefd <- genExceptionFailureDetail
+    gmfd <- genMessageFailureDetail
+    fd <- specificValues(gefd, gmfd)
+  } yield fd
+
+  def genSpan: Generator[Span] = for {
     spanId <- genSpanId
     spanName <- genSpanName
     startTime <- genValidTsTime
-    failure <- genOption(genFailureDetail)
+    failure <- Generator.optionGenerator(genFailureDetail)
     duration <- genFiniteDuration
     notes <- genNotes
   } yield Span(spanId, spanName, startTime, failure, duration, notes)
 
-  def genTraceContext[F[_]: Effect]: Gen[TraceContext[F]] = for {
+  def genTraceContext[F[_]: Effect]: Generator[TraceContext[F]] = for {
     span <- genSpan
-    sampled <- arbitrary[Boolean]
+    sampled <- genBoolean
     system <- genTraceSystem[F]
   } yield TraceContext(span, sampled, system)
 }

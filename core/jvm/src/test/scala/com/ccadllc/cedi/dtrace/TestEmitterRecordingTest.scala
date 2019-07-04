@@ -21,9 +21,10 @@ import cats.implicits._
 
 import scala.concurrent.ExecutionContext
 
-import org.scalatest.{ BeforeAndAfterEach, Matchers, WordSpec }
+import org.scalatest.{ BeforeAndAfterEach, Matchers }
+import org.scalatest.wordspec.AnyWordSpec
 
-class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Matchers with TestData {
+class TestEmitterRecordingTest extends AnyWordSpec with BeforeAndAfterEach with Matchers with TestData {
   "the distributed trace recording mechanism for emitting to a test string emitter" should {
     "support recording a successful current tracing span which is the root span containing same parent and current span IDs" in {
       val testEmitter = new TestEmitter[IO]
@@ -105,7 +106,7 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
       } yield ()
       generateSalesFigures.trace(TraceContext(spanRoot, false, salesManagementSystem)).unsafeRunSync
       val entries = testEmitter.cache.all
-      entries shouldBe 'empty
+      entries shouldBe Nil
     }
   }
 

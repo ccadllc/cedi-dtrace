@@ -23,13 +23,13 @@ import cats.effect.{ IO, Effect }
 import io.circe._
 import io.circe.syntax._
 
-import org.scalacheck.Arbitrary
+import org.scalatest.prop.Generator
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 
 import json.encoding._
 
-class JsonLogEncodingTests extends WordSpec with TestSupport {
+class JsonLogEncodingTests extends AnyWordSpec with TestSupport {
 
   // format: OFF
   val calculateQuarterlySalesTraceContextJson = Json.obj(
@@ -52,8 +52,8 @@ class JsonLogEncodingTests extends WordSpec with TestSupport {
   )
   // format: ON
 
-  implicit def arbTrace[F[_]: Effect]: Arbitrary[TraceContext[F]] = Arbitrary(genTraceContext[F])
+  implicit def traceGenerator[F[_]: Effect]: Generator[TraceContext[F]] = genTraceContext[F]
 
-  "Trace" should { encodeArbitraryJson[TraceContext[IO]] }
+  "Trace" should { encodeGeneratedJson[TraceContext[IO]] }
   "Trace" should { encodeSpecificJson(calculateQuarterlySalesTraceContext, calculateQuarterlySalesTraceContextJson) }
 }

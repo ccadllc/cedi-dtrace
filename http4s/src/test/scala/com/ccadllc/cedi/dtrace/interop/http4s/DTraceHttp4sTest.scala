@@ -22,10 +22,11 @@ import cats.effect._
 import org.http4s._
 import org.http4s.dsl.io._
 
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.Matchers
 import org.scalatest.EitherValues._
 import org.scalatest.OptionValues._
 import org.scalatest.prop.GeneratorDrivenPropertyChecks
+import org.scalatest.wordspec.AnyWordSpec
 
 import scodec.bits.ByteVector
 
@@ -34,7 +35,7 @@ import interop.http4s.server._
 
 import Uri.uri
 
-class DTraceHttp4sTest extends WordSpec with Matchers with GeneratorDrivenPropertyChecks with TraceGenerators with TestData {
+class DTraceHttp4sTest extends AnyWordSpec with Matchers with GeneratorDrivenPropertyChecks with TraceGenerators with TestData {
 
   implicit override val generatorDrivenConfig: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful = 100)
 

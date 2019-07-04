@@ -19,15 +19,15 @@ package money
 
 import java.util.UUID
 
-import org.scalatest.{ Matchers, WordSpec }
-import org.scalatest.prop.GeneratorDrivenPropertyChecks
-import org.scalacheck.Arbitrary
+import org.scalatest.Matchers
+import org.scalatest.prop.{ Generator, GeneratorDrivenPropertyChecks }
+import org.scalatest.wordspec.AnyWordSpec
 
 import MoneyHeaderCodec._
 
-class MoneyHeaderCodecTest extends WordSpec with Matchers with GeneratorDrivenPropertyChecks with TraceGenerators {
+class MoneyHeaderCodecTest extends AnyWordSpec with Matchers with GeneratorDrivenPropertyChecks with TraceGenerators {
 
-  implicit val arbitraryUUID: Arbitrary[UUID] = Arbitrary(genUUID)
+  implicit val uuidGenerator: Generator[UUID] = genUUID
 
   "the Money Header Codec" should {
     "decode correctly given any valid UUID for trace-Id and any valid long integers for parent and span ID" in {

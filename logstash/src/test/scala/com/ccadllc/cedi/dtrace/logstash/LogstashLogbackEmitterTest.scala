@@ -17,9 +17,9 @@ package com.ccadllc.cedi.dtrace
 package logstash
 
 import cats.effect.IO
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 
-class LogstashLogbackEmitterTest extends WordSpec with TestData {
+class LogstashLogbackEmitterTest extends AnyWordSpec with TestData {
   "LogstashLogbackEmitterTest" should {
     "work" in {
       val system = TraceSystem(testSystemData, new LogstashLogbackEmitter[IO], quarterlySalesCalculationTimer)
