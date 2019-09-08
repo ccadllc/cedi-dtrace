@@ -8,7 +8,7 @@ lazy val circeVersion = "0.11.1"
 
 lazy val http4sVersion = "0.20.0"
 
-lazy val kindProjectorVersion = "0.9.9"
+lazy val kindProjectorVersion = "0.10.0"
 
 lazy val logbackVersion = "1.2.3"
 
@@ -50,7 +50,7 @@ lazy val commonSettings = Seq(
       "org.scalacheck" %% "scalacheck" % scalacheckVersion % "test"
     )
   }),
-  addCompilerPlugin("org.spire-math" %% "kind-projector" % kindProjectorVersion),
+  addCompilerPlugin("org.typelevel" %% "kind-projector" % kindProjectorVersion),
   pomExtra := (
     <url>http://github.com/ccadllc/{githubProject.value}</url>
     <developers>
