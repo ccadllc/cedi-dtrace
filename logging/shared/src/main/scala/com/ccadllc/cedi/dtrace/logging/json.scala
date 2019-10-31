@@ -16,8 +16,6 @@
 package com.ccadllc.cedi.dtrace
 package logging
 
-import scala.language.higherKinds
-
 import io.circe._
 import io.circe.syntax._
 

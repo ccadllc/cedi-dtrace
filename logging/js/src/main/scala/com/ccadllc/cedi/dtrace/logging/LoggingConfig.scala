@@ -18,16 +18,12 @@ package logging
 
 import cats.effect.Sync
 
-import scala.language.higherKinds
-
-import io.chrisdavenport.log4cats.log4s.Log4sLogger
-
 /**
  * Provides the for the platform-specific initialization of the underlying logging
  * configuration for the JavaScript platform, using `log4s`.
  */
 object LoggingConfig {
   def createLoggers[F[_]: Sync](names: Loggers.Names): Loggers[F] = new Loggers(
-    Log4sLogger.createByName[F](names.text),
-    Log4sLogger.createByName[F](names.json))
+    Log4sLogger.create[F](names.text),
+    Log4sLogger.create[F](names.json))
 }

@@ -20,7 +20,6 @@ import cats.effect.Sync
 import cats.implicits._
 
 import scala.concurrent.duration._
-import scala.language.higherKinds
 
 /**
  * Represents a single span for a distributed trace.  A span is the traced execution of an effectful program `F`,

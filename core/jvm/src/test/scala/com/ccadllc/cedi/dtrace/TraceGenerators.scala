@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit
 import org.scalacheck.{ Arbitrary, Gen }
 
 import scala.concurrent.duration._
-import scala.language.higherKinds
 
 import Arbitrary.arbitrary
 

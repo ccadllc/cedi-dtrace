@@ -19,8 +19,6 @@ import cats.Functor
 import cats.effect.Sync
 import cats.implicits._
 
-import scala.language.higherKinds
-
 /**
  * Represents a cursor into the "current" [[Span]] and associated system-level information and is associated with an
  * effectful program `F[A]` to realize a trace of that program.

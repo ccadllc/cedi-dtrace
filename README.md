@@ -6,7 +6,7 @@ Quick links:
 - [Examples of use](#usage)
 - [Configuration](#config)
 - [How to get latest version](#getit)
-- API Docs [Core](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-core_2.12/2.0.0/dtrace-core_2.12-2.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/index.html) [Logging](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logging_2.12/2.0.0/dtrace-logging_2.12-2.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logging/index.html) [Logstash](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logstash_2.12/2.0.0/dtrace-logstash_2.12-2.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logstash/index.html) [Money](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-money_2.12/2.0.0/dtrace-money_2.12-2.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/money/index.html) [Http4s](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-http4s_2.12/2.0.0/dtrace-http4s_2.12-2.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/http4s/index.html) [XB3](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-xb3_2.12/2.0.0/dtrace-xb3_2.12-2.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/xb3/index.html)
+- API Docs [Core](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-core_2.12/3.0.0/dtrace-core_2.12-3.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/index.html) [Logging](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logging_2.12/3.0.0/dtrace-logging_2.12-3.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logging/index.html) [Logstash](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-logstash_2.12/3.0.0/dtrace-logstash_2.12-3.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/logstash/index.html) [Money](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-money_2.12/3.0.0/dtrace-money_2.12-3.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/money/index.html) [Http4s](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-http4s_2.12/3.0.0/dtrace-http4s_2.12-3.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/http4s/index.html) [XB3](https://oss.sonatype.org/service/local/repositories/releases/archive/com/ccadllc/cedi/dtrace-xb3_2.12/3.0.0/dtrace-xb3_2.12-3.0.0-javadoc.jar/!/com/ccadllc/cedi/dtrace/xb3/index.html)
 
 
 ### <a id="about"></a>About the library
@@ -236,14 +236,14 @@ io.unsafeRunSync()
 
 ### <a id="getit"></a>How to get latest Version
 
-Cedi Distributed Trace supports Scala 2.11 and 2.12 (and will support 2.13 once all dependent projects do so). This distribution is published to Maven Central and consists of several library components/modules, described below.
+Cedi Distributed Trace supports Scala 2.12 and 2.13. This distribution is published to Maven Central and consists of several library components/modules, described below.
 
 #### dtrace-core
 
 This is the core functionality, recording trace and span information over effectful programs, passing these recorded events to registred emitters for disposition. It is published for both the JVM and the JavaScript (JS) platforms.
 
 ```scala
-libraryDependencies += "com.ccadllc.cedi" %%% "dtrace-core" % "2.0.0"
+libraryDependencies += "com.ccadllc.cedi" %%% "dtrace-core" % "3.0.0"
 ```
 
 #### dtrace-logging
@@ -251,7 +251,7 @@ libraryDependencies += "com.ccadllc.cedi" %%% "dtrace-core" % "2.0.0"
 This component provides emitters for logging the trace spans in text and/or JSON format using the `sf4j` logging framework for the JVM and `log4s` JS logger for the JavaScript (JS) platform.  It uses the `circe` library for formatting the trace span information as JSON.  It uses the `io.chrisdavenport.log4cats` library to abstract the particular platform targeted from the logging API.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-logging" % "2.0.0"
+libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-logging" % "3.0.0"
 ```
 
 #### dtrace-logstash
@@ -259,7 +259,7 @@ libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-logging" % "2.0.0"
 This component provides emitters for logging using the Elastic Search (EC) logstash encoder in both a format that mirrors the standard dtrace format used in the `logging` module described above as well as one which does so in an [Elastic Search Common Schema (ECS)](https://github.com/elastic/ecs)-compliant format.  This module is currently targeted to the JVM only.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logstash" % "2.0.0"
+libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logstash" % "3.0.0"
 ```
 
 #### dtrace-money interoperability
@@ -267,7 +267,7 @@ libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-logstash" % "2.0.0"
 This component provides an instance of the core HeaderCodec in order to encode and decode Money-compliant HTTP headers.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-money" % "2.0.0"
+libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-money" % "3.0.0"
 ```
 
 #### dtrace-xb3 interoperability
@@ -275,7 +275,7 @@ libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-money" % "2.0.0"
 This component provides an insance of the core HeaderCodec in order to encode and decode X-B3/Zipkin-compliant HTTP headers. The ability to parse and encode Trace ID, Span ID, Parent Span ID and Sampled Flag are provided.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-xb3" % "2.0.0"
+libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-xb3" % "3.0.0"
 ```
 
 #### dtrace-http4s interoperability
@@ -283,7 +283,7 @@ libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-xb3" % "2.0.0"
 This component provides convenience functions to ingest trace-related HTTP headers (such as Money or X-B3) in an http4s server-side service and to propagate trace-related HTTP headers within an http4s client-side request to a remote entity.  This module is used in combination with either or both the dtrace-xb3 and dtrace-money modules.  If you have another protocol you wish to use instead, it will likewise interoperate with any implementation of the core HeaderCodec trait in implicit scope. This module is currently targeted to the JVM only.
 
 ```scala
-libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-http4s" % "2.0.0"
+libraryDependencies ++= "com.ccadllc.cedi" %% "dtrace-http4s" % "3.0.0"
 ```
 
 ## Copyright and License

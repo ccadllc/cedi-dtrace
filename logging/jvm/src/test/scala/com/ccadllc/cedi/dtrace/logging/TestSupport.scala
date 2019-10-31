@@ -23,26 +23,26 @@ import io.circe.syntax._
 
 import org.scalacheck.Arbitrary
 
-import org.scalatest.{ Matchers, Suite, WordSpecLike }
-import org.scalatest.prop.GeneratorDrivenPropertyChecks
+import org.scalatest.Suite
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
-import scala.language.higherKinds
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import shapeless.Lazy
 
-trait TestSupport extends WordSpecLike with Matchers with GeneratorDrivenPropertyChecks with TraceGenerators with TestData {
+trait TestSupport extends AnyWordSpecLike with Matchers with ScalaCheckPropertyChecks with TraceGenerators with TestData {
   self: Suite =>
 
   override def testEmitter[F[_]: Sync]: F[TraceSystem.Emitter[F]] = Sync[F].pure(LogEmitter.apply)
 
-  implicit override val generatorDrivenConfig: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful = 100)
   val salesManagementSystem = TraceSystem(testSystemData, testEmitter[IO].unsafeRunSync, TraceSystem.realTimeTimer[IO])
   val calculateQuarterlySalesTraceContext = TraceContext(quarterlySalesCalculationSpan, true, salesManagementSystem)
 
-  def encodeArbitraryJson[A: Arbitrary](implicit encoder: Lazy[Encoder[A]]): Unit = {
+  def encodeGeneratedJson[A: Arbitrary](implicit encoder: Lazy[Encoder[A]]): Unit = {
     implicit val e = encoder.value
     "encode arbitrary instances to JSON" in {
-      forAll { (msg: A) => msg.asJson.noSpaces should not be ('empty) }
+      forAll { (msg: A) => msg.asJson.noSpaces should not be (None) }
     }
   }
   def encodeSpecificJson[A](a: A, json: Json)(implicit encoder: Lazy[Encoder[A]]): Unit = {

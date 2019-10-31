@@ -17,8 +17,6 @@ package com.ccadllc.cedi.dtrace
 
 import cats.effect.Sync
 
-import scala.language.higherKinds
-
 class TestEmitter[F[_]](implicit F: Sync[F]) extends TraceSystem.Emitter[F] {
   class EmitterTestCache {
     case class EmitterTestEntry(msg: String, tc: TraceContext[F])

@@ -22,8 +22,6 @@ import cats.implicits._
 
 import org.http4s.{ Header => H4sHeader, _ }
 
-import scala.language.higherKinds
-
 /**
  * This module provides interoperability with the [[https://github.com/http4s/http4s http4s]] library for
  * HTTP server functionality, extracting `Span` identifiers from HTTP distributed trace headers (supporting

@@ -18,8 +18,6 @@ package logging
 
 import cats.effect.Sync
 
-import scala.language.higherKinds
-
 import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
 
 /**

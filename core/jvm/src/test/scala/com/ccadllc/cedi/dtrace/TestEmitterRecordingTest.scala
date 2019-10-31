@@ -21,9 +21,11 @@ import cats.implicits._
 
 import scala.concurrent.ExecutionContext
 
-import org.scalatest.{ BeforeAndAfterEach, Matchers, WordSpec }
+import org.scalatest.BeforeAndAfterEach
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
 
-class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Matchers with TestData {
+class TestEmitterRecordingTest extends AnyWordSpec with BeforeAndAfterEach with Matchers with TestData {
   "the distributed trace recording mechanism for emitting to a test string emitter" should {
     "support recording a successful current tracing span which is the root span containing same parent and current span IDs" in {
       val testEmitter = new TestEmitter[IO]
@@ -105,7 +107,7 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
       } yield ()
       generateSalesFigures.trace(TraceContext(spanRoot, false, salesManagementSystem)).unsafeRunSync
       val entries = testEmitter.cache.all
-      entries shouldBe 'empty
+      entries shouldBe Nil
     }
   }
 
@@ -144,7 +146,7 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
   private def assertNonEmptyParallelApplyChildSpansRecordedOnTimeWithNotes(note1: Note, note2: Note): Unit = {
     implicit val co = IO.contextShift(ExecutionContext.global)
     assertParallelChildSpansRecordedOnTimeWithNotes(note1, note2) { (io1: TraceIO[Unit], io2: TraceIO[Unit]) =>
-      (io1 -> io2).parTupled(NonEmptyParallel[TraceIO, TraceIO.Par]).void
+      (io1 -> io2).parTupled(NonEmptyParallel[TraceIO]).void
     }
   }
 
@@ -158,7 +160,7 @@ class TestEmitterRecordingTest extends WordSpec with BeforeAndAfterEach with Mat
   private def assertNonEmptyParallelFlatMapChildSpansRecordedOnTimeWithNotes(note1: Note, note2: Note): Unit = {
     implicit val co = IO.contextShift(ExecutionContext.global)
     assertParallelChildSpansRecordedOnTimeWithNotes(note1, note2) { (io1: TraceIO[Unit], io2: TraceIO[Unit]) =>
-      NonEmptyParallel[TraceIO, TraceIO.Par].parProductR(io1)(io2)
+      NonEmptyParallel[TraceIO].parProductR(io1)(io2)
     }
   }
 
