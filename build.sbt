@@ -24,7 +24,7 @@ lazy val scalatestVersion213 = "3.0.6-SNAP5"
 
 lazy val scodecBitsVersion = "1.1.9"
 
-lazy val slf4jVersion = "1.7.26"
+lazy val slf4jVersion = "1.7.29"
 
 lazy val log4catsVersion = "0.3.0"
 
