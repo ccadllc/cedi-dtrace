@@ -32,7 +32,11 @@ lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
   parallelExecution in Global := !scala.util.Properties.propIsSet("disableParallel"),
   crossScalaVersions := Seq("2.13.1", "2.12.10"),
-  scalacOptions += "-language:higherKinds",
+  scalacOptions --= Seq("-Ywarn-unused-import", "-Xfuture"),
+  scalacOptions ++= Seq("-language:higherKinds") ++ (CrossVersion.partialVersion(scalaBinaryVersion.value) match {
+     case Some((2, v)) if v <= 12 => Seq("-Xfuture", "-Ywarn-unused-import", "-Ypartial-unification", "-Yno-adapted-args")
+     case _ => Seq.empty
+  }),
   scalacOptions in (Compile, console) ~= (_ filterNot Set("-Xfatal-warnings", "-Ywarn-unused-import").contains),
   contributors ++= Seq(
     Contributor("sbuzzard", "Steve Buzzard"),
