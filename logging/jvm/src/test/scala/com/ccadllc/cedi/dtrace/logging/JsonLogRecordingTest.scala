@@ -18,9 +18,9 @@ package logging
 
 import java.util.UUID
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 
-class JsonLogRecordingTest extends WordSpec with RecordingTestSupport {
+class JsonLogRecordingTest extends AnyWordSpec with RecordingTestSupport {
   override protected def logEmitterId: String = """"span-id""""
   override protected def spanName(name: Span.Name) = s""""span-name":"$name""""
   override protected def spanId(id: Long) = s""""span-id":$id"""

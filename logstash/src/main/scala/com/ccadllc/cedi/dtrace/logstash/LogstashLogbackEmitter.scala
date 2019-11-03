@@ -18,10 +18,12 @@ package logstash
 
 import cats.effect.Sync
 import cats.implicits._
+
 import net.logstash.logback.marker.LogstashMarker
 import net.logstash.logback.marker.Markers._
+
 import org.slf4j.LoggerFactory
-import scala.language.higherKinds
+
 import scala.collection.JavaConverters._
 
 /**

@@ -21,8 +21,6 @@ import cats.implicits._
 
 import io.circe.syntax._
 
-import scala.language.higherKinds
-
 /**
  * This instance of the `TraceSystem.Emitter` provides the means to
  * record a `Span` to a log appender in both text and JSON

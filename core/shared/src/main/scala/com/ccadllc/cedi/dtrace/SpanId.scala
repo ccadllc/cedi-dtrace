@@ -17,7 +17,6 @@ package com.ccadllc.cedi.dtrace
 
 import java.util.UUID
 
-import scala.language.higherKinds
 import scala.util.Random
 
 import cats.effect.Sync

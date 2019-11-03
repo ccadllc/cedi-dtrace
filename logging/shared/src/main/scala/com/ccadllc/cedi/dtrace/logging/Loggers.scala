@@ -16,8 +16,6 @@
 package com.ccadllc.cedi.dtrace
 package logging
 
-import scala.language.higherKinds
-
 import io.chrisdavenport.log4cats.Logger
 
 final class Loggers[F[_]](val text: Logger[F], val json: Logger[F])

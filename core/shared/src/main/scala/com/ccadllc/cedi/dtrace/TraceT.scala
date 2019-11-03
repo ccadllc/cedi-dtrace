@@ -21,7 +21,6 @@ import cats.implicits._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{ FiniteDuration, TimeUnit }
-import scala.language.higherKinds
 
 /**
  * This is the main construct of the library.  It represents a function `TraceContext => F[A]`
@@ -110,7 +109,7 @@ final class TraceT[F[_], A](private[dtrace] val toEffect: TraceContext[F] => F[A
     TraceT.suspendEffect(tc => toEffect(tc).bestEffortOnFinish(f(_).toEffect(tc)))
 
   /**
-   * Returns a `TraceT[F, ?]` action that treats the source task as the
+   * Returns a `TraceT[F, *]` action that treats the source task as the
    * acquisition of a resource, which is then exploited by the `use`
    * function and then `released`.
    *
@@ -144,7 +143,7 @@ final class TraceT[F[_], A](private[dtrace] val toEffect: TraceContext[F] => F[A
     bracketCase(use)((a, _) => release(a))
 
   /**
-   * Returns a new `TraceT[F, ?]` task that treats the source task as the
+   * Returns a new `TraceT[F, *]` task that treats the source task as the
    * acquisition of a resource, which is then exploited by the `use`
    * function and then `released`, with the possibility of
    * distinguishing between normal termination and cancellation, such
@@ -181,7 +180,7 @@ final class TraceT[F[_], A](private[dtrace] val toEffect: TraceContext[F] => F[A
   /**
    * Generates a new `TraceT[F, B]` from this instance using the supplied function `A => TraceT[F, B]`.
    * @param f function from `A` => `TraceT[F, B]`
-   * _Note that because `TraceT[F, ?]` needs to apply its function of `TraceContext[F] => F[?]` in order to
+   * _Note that because `TraceT[F, *]` needs to apply its function of `TraceContext[F] => F[*]` in order to
    * map over the underlying value, in order for it to be stack-safe, `F` needs to have a `Monad[F]` in
    * implicit scope in order to create a pure F in the suspension of the effect.  This isn't a compile-time
    * requirement as you can have a non-stack-safe flatMap with just a `FlatMap[F]` in scope  as long
@@ -191,7 +190,7 @@ final class TraceT[F[_], A](private[dtrace] val toEffect: TraceContext[F] => F[A
     TraceT.suspendEffect(tc => toEffect(tc).flatMap(f(_).toEffect(tc)))
 
   /**
-   * Returns a `TraceT[F, ?]` action that ensures the `finalizer` is always run.
+   * Returns a `TraceT[F, *]` action that ensures the `finalizer` is always run.
    *
    * The `guarantee` operation is the equivalent of the
    * `try {} catch {} finally {}` statements from mainstream languages.
@@ -206,7 +205,7 @@ final class TraceT[F[_], A](private[dtrace] val toEffect: TraceContext[F] => F[A
     guaranteeCase(_ => finalizer)
 
   /**
-   * Returns a new `TraceT[F, ?]` task that ensures the 'finalizer'
+   * Returns a new `TraceT[F, *]` task that ensures the 'finalizer'
    * function is always run, with the possibility of
    * distinguishing between normal termination and cancellation.
    * during the computation, or in case of cancellation.
@@ -237,7 +236,7 @@ final class TraceT[F[_], A](private[dtrace] val toEffect: TraceContext[F] => F[A
   /**
    * Generates a new `TraceT[F, B]` from this instance using the supplied function `A => B`.
    * @param f function from `A` => `B`
-   * _Note that because `TraceT[F, ?]` needs to apply its function of `TraceContext[F] => F[?]` in order to
+   * _Note that because `TraceT[F, *]` needs to apply its function of `TraceContext[F] => F[*]` in order to
    * map over the underlying value, in order for it to be stack-safe, `F` needs to have a `Monad[F]` in
    * implicit scope.  This isn't a compile-time requirement as you can have a non-stack-safe map as long
    * as you know you will not have deeply nested maps._
@@ -407,16 +406,16 @@ object TraceT extends TraceTPolyFunctions with TraceTInstances {
    * being injected with a side-effectful callback, to be called
    * when the asynchronous process is complete with a final result.
    */
-  def cancelable[F[_], A](k: (Either[Throwable, A] => Unit) => CancelToken[TraceT[F, ?]])(implicit F: Concurrent[F]): TraceT[F, A] =
+  def cancelable[F[_], A](k: (Either[Throwable, A] => Unit) => CancelToken[TraceT[F, *]])(implicit F: Concurrent[F]): TraceT[F, A] =
     TraceT.suspendEffect { tc => F.cancelable(k(_).toEffect(tc)) }
 
   /**
-   * Generate a `ContextShift[TraceT[F, ?]]` given a `ContextShift[F] and `Monad[F]` in implicit scope.
+   * Generate a `ContextShift[TraceT[F, *]]` given a `ContextShift[F] and `Monad[F]` in implicit scope.
    * The context shift data structure provides a means by which a program can be evaluated on a thread pool
    * (really, an `scala.concurrent.ExecutionContext` representing the pool) and then will shift back to the
    * `ExecutionContext` it was created with.
    */
-  def contextShift[F[_]: Monad: ContextShift]: ContextShift[TraceT[F, ?]] = implicitly[ContextShift[TraceT[F, ?]]]
+  def contextShift[F[_]: Monad: ContextShift]: ContextShift[TraceT[F, *]] = implicitly[ContextShift[TraceT[F, *]]]
 
   /**
    * Lifts the non-strict, possibly impure expression computing `A` into a `TraceT[F, A]`
@@ -452,7 +451,7 @@ object TraceT extends TraceTPolyFunctions with TraceTInstances {
    * This operation can be used in `flatMap` chains to "shift" the
    * continuation of the run-loop to another thread or call stack.
    */
-  def shift[F[_]](implicit cs: ContextShift[TraceT[F, ?]]): TraceT[F, Unit] = cs.shift
+  def shift[F[_]](implicit cs: ContextShift[TraceT[F, *]]): TraceT[F, Unit] = cs.shift
 
   /**
    * Lifts the non-strict, possibly impure expression computing a `TraceT[F, A]` into a `TraceT[F, A]`.
@@ -466,9 +465,9 @@ object TraceT extends TraceTPolyFunctions with TraceTInstances {
     toTraceT(F.delay(t)).flatMap(identity)
 
   /**
-   * Generates a `Timer[TraceT[F, ?]]` given a `Timer[F]` in implicit scope.
+   * Generates a `Timer[TraceT[F, *]]` given a `Timer[F]` in implicit scope.
    */
-  def timer[F[_]: Timer]: Timer[TraceT[F, ?]] = implicitly[Timer[TraceT[F, ?]]]
+  def timer[F[_]: Timer]: Timer[TraceT[F, *]] = implicitly[Timer[TraceT[F, *]]]
 
   /**
    * Lifts a program `F` which computes `A` into a `TraceT[F, A]` context.
@@ -480,7 +479,7 @@ object TraceT extends TraceTPolyFunctions with TraceTInstances {
   /**
    * Internal API — suspends the execution of `toEffect` in the `F` context.
    *
-   * Used to build `TraceT[F, ?]` values for `F[_]` data types that implement `Monad`,
+   * Used to build `TraceT[F, *]` values for `F[_]` data types that implement `Monad`,
    * in which case it is safer to trigger the `F[_]` context earlier.
    *
    * The basic requirement of `F` for callers of this function is `Functor`; however we are
@@ -493,7 +492,7 @@ object TraceT extends TraceTPolyFunctions with TraceTInstances {
    * instance is stack unsafe, even if the underlying `F` is stack safe.
    *
    * TODO: Look into a better construct such that we don't have to depend on the
-   * underlying `F` having a `Monad[F]` in order to make the overall `TraceT[F, ?]`
+   * underlying `F` having a `Monad[F]` in order to make the overall `TraceT[F, *]`
    * stacksafe as it is very brittle and non-type-safe.
    *
    * This was taken pretty much whole cloth from [[https://github.com/typelevel/cats/blob/master/core/src/main/scala/cats/data/Kleisli.scala#L104 Kleisli]]
@@ -507,11 +506,11 @@ object TraceT extends TraceTPolyFunctions with TraceTInstances {
 
 private[dtrace] sealed trait TraceTPolyFunctions {
   /**
-   * An instance of the polymorphic function `F` ~> `TraceT[F, ?]` for any effectful program result type `?`
+   * An instance of the polymorphic function `F` ~> `TraceT[F, *]` for any effectful program result type `*`
    * is made available in implicit scope.
    */
-  implicit def liftToTraceT[F[_]]: F ~> TraceT[F, ?] =
-    new (F ~> TraceT[F, ?]) {
+  implicit def liftToTraceT[F[_]]: F ~> TraceT[F, *] =
+    new (F ~> TraceT[F, *]) {
       def apply[A](fa: F[A]): TraceT[F, A] = TraceT.toTraceT(fa)
     }
 }
@@ -523,42 +522,42 @@ private[dtrace] sealed trait TraceTInstances extends TraceTConcurrentEffectInsta
 
 private[dtrace] sealed trait TraceTConcurrentEffectInstance extends TraceTConcurrentInstance with TraceTEffectInstance {
 
-  implicit def concurrentEffectTraceTInstance[F[_]: ConcurrentEffect: TraceContext]: ConcurrentEffect[TraceT[F, ?]] = new ConcurrentEffectTraceT[F]
+  implicit def concurrentEffectTraceTInstance[F[_]: ConcurrentEffect: TraceContext]: ConcurrentEffect[TraceT[F, *]] = new ConcurrentEffectTraceT[F]
 
   /**
-   * A `ConcurrentEffect[TraceT[F, ?]]` typeclass instance given an instance of `ConcurrentEffect[F]` and an
+   * A `ConcurrentEffect[TraceT[F, *]]` typeclass instance given an instance of `ConcurrentEffect[F]` and an
    * instance of `TraceContext[F]`.
-   * Note that this typeclass and the `Effect[TraceT[F, ?]]` typeclass are the only instances requiring
+   * Note that this typeclass and the `Effect[TraceT[F, *]]` typeclass are the only instances requiring
    * an implicit `TraceContext[F]` in scope.  This is because the tracing must be terminated and the underlying
    * `F` effect exposed in order to ultimately derive a `SyncIO`, which the `runAsync` function of `Effect` and
    * `runCancelable` function of `ConcurrentEffect` return, and in order to do that, a `TraceContext[F]` must be
    * made available.
    */
-  protected class ConcurrentEffectTraceT[F[_]](implicit F: ConcurrentEffect[F], TC: TraceContext[F]) extends ConcurrentTraceT[F] with ConcurrentEffect[TraceT[F, ?]] {
+  protected class ConcurrentEffectTraceT[F[_]](implicit F: ConcurrentEffect[F], TC: TraceContext[F]) extends ConcurrentTraceT[F] with ConcurrentEffect[TraceT[F, *]] {
 
     override def runAsync[A](ta: TraceT[F, A])(cb: Either[Throwable, A] => IO[Unit]): SyncIO[Unit] =
       F.runAsync(ta.trace(TC))(cb)
 
-    override def runCancelable[A](ta: TraceT[F, A])(cb: Either[Throwable, A] => IO[Unit]): SyncIO[CancelToken[TraceT[F, ?]]] =
+    override def runCancelable[A](ta: TraceT[F, A])(cb: Either[Throwable, A] => IO[Unit]): SyncIO[CancelToken[TraceT[F, *]]] =
       F.runCancelable(ta.trace(TC))(cb).map(TraceT.toTraceT(_))
 
-    override def toString: String = "ConcurrentEffect[TraceT[F, ?]]"
+    override def toString: String = "ConcurrentEffect[TraceT[F, *]]"
   }
 }
 
 private[dtrace] sealed trait TraceTConcurrentInstance extends TraceTAsyncInstance {
 
-  implicit def concurrentTraceTInstance[F[_]: Concurrent]: Concurrent[TraceT[F, ?]] = new ConcurrentTraceT[F]
+  implicit def concurrentTraceTInstance[F[_]: Concurrent]: Concurrent[TraceT[F, *]] = new ConcurrentTraceT[F]
 
-  /** A `Concurrent[TraceT[F, ?]]` typeclass instance given an instance of `Concurrent[F]`. */
-  protected class ConcurrentTraceT[F[_]](implicit F: Concurrent[F]) extends AsyncTraceT[F] with Concurrent[TraceT[F, ?]] {
-    override def cancelable[A](k: (Either[Throwable, A] => Unit) => CancelToken[TraceT[F, ?]]): TraceT[F, A] =
+  /** A `Concurrent[TraceT[F, *]]` typeclass instance given an instance of `Concurrent[F]`. */
+  protected class ConcurrentTraceT[F[_]](implicit F: Concurrent[F]) extends AsyncTraceT[F] with Concurrent[TraceT[F, *]] {
+    override def cancelable[A](k: (Either[Throwable, A] => Unit) => CancelToken[TraceT[F, *]]): TraceT[F, A] =
       TraceT.suspendEffect { tc => F.cancelable(k(_).toEffect(tc)) }
 
-    override def start[A](ta: TraceT[F, A]): TraceT[F, Fiber[TraceT[F, ?], A]] =
+    override def start[A](ta: TraceT[F, A]): TraceT[F, Fiber[TraceT[F, *], A]] =
       TraceT.suspendEffect { tc => F.start(ta.toEffect(tc)) map toTraceTFiber }
 
-    override def racePair[A, B](ta: TraceT[F, A], tb: TraceT[F, B]): TraceT[F, Either[(A, Fiber[TraceT[F, ?], B]), (Fiber[TraceT[F, ?], A], B)]] =
+    override def racePair[A, B](ta: TraceT[F, A], tb: TraceT[F, B]): TraceT[F, Either[(A, Fiber[TraceT[F, *], B]), (Fiber[TraceT[F, *], A], B)]] =
       TraceT.suspendEffect { tc =>
         F.racePair(ta.toEffect(tc), tb.toEffect(tc)) map {
           case Right(((fiba, b))) => Right(toTraceTFiber(fiba) -> b)
@@ -571,9 +570,9 @@ private[dtrace] sealed trait TraceTConcurrentInstance extends TraceTAsyncInstanc
 
     override def liftIO[A](ioa: IO[A]): TraceT[F, A] = Concurrent.liftIO(ioa)(this)
 
-    override def toString: String = "Concurrent[TraceT[F, ?]]"
+    override def toString: String = "Concurrent[TraceT[F, *]]"
 
-    private def toTraceTFiber[A](faf: Fiber[F, A]): Fiber[TraceT[F, ?], A] = new Fiber[TraceT[F, ?], A] {
+    private def toTraceTFiber[A](faf: Fiber[F, A]): Fiber[TraceT[F, *], A] = new Fiber[TraceT[F, *], A] {
       def cancel: TraceT[F, Unit] = TraceT.toTraceT(faf.cancel)
       def join: TraceT[F, A] = TraceT.toTraceT(faf.join)
     }
@@ -582,91 +581,91 @@ private[dtrace] sealed trait TraceTConcurrentInstance extends TraceTAsyncInstanc
 
 private[dtrace] sealed trait TraceTEffectInstance extends TraceTAsyncInstance {
 
-  implicit def effectTraceTInstance[F[_]: Effect: TraceContext]: Effect[TraceT[F, ?]] = new EffectTraceT[F]
+  implicit def effectTraceTInstance[F[_]: Effect: TraceContext]: Effect[TraceT[F, *]] = new EffectTraceT[F]
 
   /**
-   * An `Effect[TraceT[F, ?]]` typeclass instance given an instance of `Effect[F]` and an instance of `TraceContext[F]`.
-   * Note that this typeclass and the `ConcurrentEffect[TraceT[F, ?]]` typeclass are the only instances requiring an
+   * An `Effect[TraceT[F, *]]` typeclass instance given an instance of `Effect[F]` and an instance of `TraceContext[F]`.
+   * Note that this typeclass and the `ConcurrentEffect[TraceT[F, *]]` typeclass are the only instances requiring an
    * implicit `TraceContext[F]` in scope.  This is because the tracing must be terminated and the underlying `F` effect
    * exposed in order to ultimately derive a `SyncIO`, which the `runAsync` function of `Effect` and `runCancelable`
    * function of `ConcurrentEffect` return, and in order to do that, a `TraceContext[F]` must be made available.
    */
-  protected class EffectTraceT[F[_]](implicit F: Effect[F], TC: TraceContext[F]) extends AsyncTraceT[F] with Effect[TraceT[F, ?]] {
+  protected class EffectTraceT[F[_]](implicit F: Effect[F], TC: TraceContext[F]) extends AsyncTraceT[F] with Effect[TraceT[F, *]] {
 
     override def runAsync[A](ta: TraceT[F, A])(cb: Either[Throwable, A] => IO[Unit]): SyncIO[Unit] =
       F.runAsync(ta.trace(TC))(cb)
 
-    override def toString: String = "Effect[TraceT[F, ?]]"
+    override def toString: String = "Effect[TraceT[F, *]]"
   }
 }
 
 private[dtrace] sealed trait TraceTAsyncInstance extends TraceTSyncInstance {
 
-  implicit def asyncTraceTInstance[F[_]: Async]: Async[TraceT[F, ?]] = new AsyncTraceT[F]
+  implicit def asyncTraceTInstance[F[_]: Async]: Async[TraceT[F, *]] = new AsyncTraceT[F]
 
-  /** A `Async[TraceT[F, ?]]` typeclass instance given an instance of `Async[F]`. */
-  protected class AsyncTraceT[F[_]](implicit F: Async[F]) extends SyncTraceT[F] with Async[TraceT[F, ?]] {
+  /** A `Async[TraceT[F, *]]` typeclass instance given an instance of `Async[F]`. */
+  protected class AsyncTraceT[F[_]](implicit F: Async[F]) extends SyncTraceT[F] with Async[TraceT[F, *]] {
     override def async[A](cb: (Either[Throwable, A] => Unit) => Unit): TraceT[F, A] = TraceT.async(cb)
     override def asyncF[A](cb: (Either[Throwable, A] => Unit) => TraceT[F, Unit]): TraceT[F, A] = TraceT.asyncF(cb)
 
     override def liftIO[A](ioa: IO[A]): TraceT[F, A] =
       Async.liftIO(ioa)(this)
 
-    override def toString: String = "Async[TraceT[F, ?]]"
+    override def toString: String = "Async[TraceT[F, *]]"
   }
 }
 
 private[dtrace] sealed trait TraceTSyncInstance extends TraceTBracketInstance {
 
-  implicit def syncTraceTInstance[F[_]: Sync]: Sync[TraceT[F, ?]] = new SyncTraceT[F]
+  implicit def syncTraceTInstance[F[_]: Sync]: Sync[TraceT[F, *]] = new SyncTraceT[F]
 
-  /** A `Sync[TraceT[F, ?]]` typeclass instance given an instance of `Sync[F]`. */
-  protected class SyncTraceT[F[_]: Sync] extends BracketTraceT[F] with Sync[TraceT[F, ?]] {
+  /** A `Sync[TraceT[F, *]]` typeclass instance given an instance of `Sync[F]`. */
+  protected class SyncTraceT[F[_]: Sync] extends BracketTraceT[F] with Sync[TraceT[F, *]] {
 
     override def suspend[A](ta: => TraceT[F, A]): TraceT[F, A] = TraceT.suspend(ta)
 
-    override def toString: String = "Sync[TraceT[F, ?]]"
+    override def toString: String = "Sync[TraceT[F, *]]"
   }
 }
 
 private[dtrace] sealed trait TraceTBracketInstance extends TraceTMonadErrorInstance {
 
-  implicit def bracketTraceTInstance[F[_]](implicit F: Bracket[F, Throwable]): Bracket[TraceT[F, ?], Throwable] =
+  implicit def bracketTraceTInstance[F[_]](implicit F: Bracket[F, Throwable]): Bracket[TraceT[F, *], Throwable] =
     new BracketTraceT[F]
 
-  /** A `Bracket[TraceT[F, ?], Throwable]` typeclass instance given an instance of `Bracket[F, Throwable]`. */
-  protected class BracketTraceT[F[_]](implicit F: Bracket[F, Throwable]) extends MonadErrorTraceT[F] with Bracket[TraceT[F, ?], Throwable] {
+  /** A `Bracket[TraceT[F, *], Throwable]` typeclass instance given an instance of `Bracket[F, Throwable]`. */
+  protected class BracketTraceT[F[_]](implicit F: Bracket[F, Throwable]) extends MonadErrorTraceT[F] with Bracket[TraceT[F, *], Throwable] {
 
     override def bracketCase[A, B](acquire: TraceT[F, A])(use: A => TraceT[F, B])(release: (A, ExitCase[Throwable]) => TraceT[F, Unit]): TraceT[F, B] =
       acquire.bracketCase(use)(release)
 
-    override def toString: String = "Bracket[TraceT[F, ?], Throwable]"
+    override def toString: String = "Bracket[TraceT[F, *], Throwable]"
   }
 }
 
 private[dtrace] sealed trait TraceTMonadErrorInstance extends TraceTMonadInstance {
 
-  implicit def monadErrorTraceTInstance[F[_]](implicit F: MonadError[F, Throwable]): MonadError[TraceT[F, ?], Throwable] =
+  implicit def monadErrorTraceTInstance[F[_]](implicit F: MonadError[F, Throwable]): MonadError[TraceT[F, *], Throwable] =
     new MonadErrorTraceT[F]
 
-  /** A `MonadError[TraceT[F, ?], Throwable]` typeclass instance given an instance of `MonadError[F, Throwable]`. */
-  protected class MonadErrorTraceT[F[_]](implicit F: MonadError[F, Throwable]) extends MonadTraceT[F] with MonadError[TraceT[F, ?], Throwable] {
+  /** A `MonadError[TraceT[F, *], Throwable]` typeclass instance given an instance of `MonadError[F, Throwable]`. */
+  protected class MonadErrorTraceT[F[_]](implicit F: MonadError[F, Throwable]) extends MonadTraceT[F] with MonadError[TraceT[F, *], Throwable] {
     override def attempt[A](ta: TraceT[F, A]): TraceT[F, Either[Throwable, A]] = ta.attempt
 
     override def raiseError[A](err: Throwable): TraceT[F, A] = TraceT.raiseError(err)
 
     override def handleErrorWith[A](ta: TraceT[F, A])(f: Throwable => TraceT[F, A]): TraceT[F, A] = ta.handleErrorWith(f)
 
-    override def toString: String = "MonadError[TraceT[F, ?], Throwable]"
+    override def toString: String = "MonadError[TraceT[F, *], Throwable]"
   }
 }
 
 private[dtrace] sealed trait TraceTMonadInstance {
 
-  implicit def monadTraceTInstance[F[_]: Monad]: Monad[TraceT[F, ?]] = new MonadTraceT[F]
+  implicit def monadTraceTInstance[F[_]: Monad]: Monad[TraceT[F, *]] = new MonadTraceT[F]
 
-  /** A `Monad[TraceT[F, ?]]` typeclass instance given an instance of `Monad[F, Throwable]` */
-  protected class MonadTraceT[F[_]](implicit F: Monad[F]) extends Monad[TraceT[F, ?]] {
+  /** A `Monad[TraceT[F, *]]` typeclass instance given an instance of `Monad[F, Throwable]` */
+  protected class MonadTraceT[F[_]](implicit F: Monad[F]) extends Monad[TraceT[F, *]] {
 
     override def pure[A](a: A): TraceT[F, A] = TraceT.pure(a)
 
@@ -677,32 +676,32 @@ private[dtrace] sealed trait TraceTMonadInstance {
     override def tailRecM[A, B](a: A)(f: A => TraceT[F, Either[A, B]]): TraceT[F, B] =
       TraceT.suspendEffect { tc => F.tailRecM(a)(f(_).toEffect(tc)) }
 
-    override def toString: String = "Monad[TraceT[F, ?]]"
+    override def toString: String = "Monad[TraceT[F, *]]"
   }
 }
 
 private[dtrace] sealed trait TraceTTimerInstance {
 
-  implicit def timerTraceTInstance[F[_]: Timer]: Timer[TraceT[F, ?]] = new TraceTTimer[F]
+  implicit def timerTraceTInstance[F[_]: Timer]: Timer[TraceT[F, *]] = new TraceTTimer[F]
 
-  /** A `Timer[TraceT[F, ?]]` typeclass instance given an instance of `Timer[F]. */
-  protected class TraceTTimer[F[_]](implicit F: Timer[F]) extends Timer[TraceT[F, ?]] {
+  /** A `Timer[TraceT[F, *]]` typeclass instance given an instance of `Timer[F]. */
+  protected class TraceTTimer[F[_]](implicit F: Timer[F]) extends Timer[TraceT[F, *]] {
 
-    override val clock: Clock[TraceT[F, ?]] = new Clock[TraceT[F, ?]] {
+    override val clock: Clock[TraceT[F, *]] = new Clock[TraceT[F, *]] {
       def realTime(unit: TimeUnit): TraceT[F, Long] = TraceT.toTraceT(F.clock.realTime(unit))
       def monotonic(unit: TimeUnit): TraceT[F, Long] = TraceT.toTraceT(F.clock.monotonic(unit))
     }
     override def sleep(duration: FiniteDuration): TraceT[F, Unit] = TraceT.toTraceT(F.sleep(duration))
 
-    override def toString: String = "Timer[TraceT[F, ?]]"
+    override def toString: String = "Timer[TraceT[F, *]]"
   }
 }
 
 private[dtrace] sealed trait TraceTContextShiftInstance {
   /**
-   * Generates a `ContextShift[TraceT[F, ?]` in implicit scope, given a `Monad[F]` and `ContextShift[F]` in implicit scope.
+   * Generates a `ContextShift[TraceT[F, *]` in implicit scope, given a `Monad[F]` and `ContextShift[F]` in implicit scope.
    */
-  implicit def contextShiftInstance[F[_]](implicit cs: ContextShift[F], F: Monad[F]): ContextShift[TraceT[F, ?]] = new ContextShift[TraceT[F, ?]] {
+  implicit def contextShiftInstance[F[_]](implicit cs: ContextShift[F], F: Monad[F]): ContextShift[TraceT[F, *]] = new ContextShift[TraceT[F, *]] {
     def shift: TraceT[F, Unit] = TraceT.toTraceT(cs.shift)
     def evalOn[A](ec: ExecutionContext)(f: TraceT[F, A]): TraceT[F, A] =
       TraceT.suspendEffect { tc => cs.evalOn(ec)(f.toEffect(tc)) }
@@ -710,42 +709,43 @@ private[dtrace] sealed trait TraceTContextShiftInstance {
 }
 
 private[dtrace] sealed trait TraceTParallelInstances extends TraceTParallelInstance {
-  implicit def ioParApplicative(implicit cs: ContextShift[IO], p: Parallel[IO, IO.Par]): Applicative[TraceT[IO.Par, ?]] =
-    implicitly[Parallel[TraceT[IO, ?], TraceT[IO.Par, ?]]].applicative
+  implicit def ioParApplicative(implicit cs: ContextShift[IO], p: Parallel.Aux[IO, IO.Par]): Applicative[TraceT[IO.Par, *]] =
+    implicitly[Parallel.Aux[TraceT[IO, *], TraceT[IO.Par, *]]].applicative
 }
 
 private[dtrace] sealed trait TraceTParallelInstance extends TraceTNonEmptyParallelInstance {
 
-  implicit def parallelTraceTInstance[M[_], F[_]](implicit P: Parallel[M, F], M: Monad[M], F: Applicative[F]): Parallel[TraceT[M, ?], TraceT[F, ?]] =
-    new ParallelTraceT[M, F]
+  implicit def parallelTraceTInstance[M[_], G[_]](
+    implicit
+    P: Parallel.Aux[M, G], M: Monad[M], G: Applicative[G]): Parallel.Aux[TraceT[M, *], TraceT[G, *]] = new ParallelTraceT[M, G]
 
   /**
-   * A `Parallel[TraceT[M, ?], TraceT[F, ?]` typeclass instance given an instance of `Parallel[M, F]`.
+   * A `Parallel[TraceT[M, *]` typeclass instance given an instance of `Parallel[M]`.
    *
-   * _Note that to summon an implicit instance of `Parallel[M, F]`, if one is not directly available,
+   * _Note that to summon an implicit instance of `Parallel[M]`, if one is not directly available,
    * you need (at least in the case where `M` == `cats.effect.IO`) an instance of `ContextShift[M]`
-   * (*not* `ContextShift[TraceT[M, ?]]`) in implicit scope_.
+   * (*not* `ContextShift[TraceT[M, *]]`) in implicit scope_.
    */
-  protected class ParallelTraceT[M[_], F[_]](implicit P: Parallel[M, F], M: Monad[M], F: Applicative[F]) extends NonEmptyParallelTraceT[M, F] with Parallel[TraceT[M, ?], TraceT[F, ?]] {
-    override def applicative: Applicative[TraceT[F, ?]] = new Applicative[TraceT[F, ?]] {
+  protected class ParallelTraceT[M[_], G[_]](implicit P: Parallel.Aux[M, G], M: Monad[M], G: Applicative[G]) extends NonEmptyParallelTraceT[M, G] with Parallel[TraceT[M, *]] {
+    override def applicative: Applicative[F] = new Applicative[F] {
 
-      override def ap[A, B](tab: TraceT[F, A => B])(ta: TraceT[F, A]): TraceT[F, B] =
+      override def ap[A, B](tab: F[A => B])(ta: F[A]): F[B] =
         map2(tab, ta)(_(_))
 
-      override def map[A, B](ta: TraceT[F, A])(f: A => B): TraceT[F, B] =
+      override def map[A, B](ta: F[A])(f: A => B): F[B] =
         parAppSuspendEffect(tc => P.applicative.map(ta.toEffect(tc))(f))
 
-      override def map2[A, B, Z](ta: TraceT[F, A], tb: TraceT[F, B])(f: (A, B) => Z): TraceT[F, Z] =
+      override def map2[A, B, Z](ta: F[A], tb: F[B])(f: (A, B) => Z): F[Z] =
         parAppSuspendEffect(tc => P.applicative.map2(ta.toEffect(tc), tb.toEffect(tc))(f))
 
-      override def product[A, B](ta: TraceT[F, A], tab: TraceT[F, B]): TraceT[F, (A, B)] =
+      override def product[A, B](ta: F[A], tab: F[B]): F[(A, B)] =
         map2(ta, tab)((_, _))
 
-      override def pure[A](a: A): TraceT[F, A] = TraceT.toTraceT(P.applicative.pure(a))
+      override def pure[A](a: A): F[A] = TraceT.toTraceT(P.applicative.pure(a))
 
-      override def toString: String = "ParApplicative[TraceT[F, ?]]"
+      override def toString: String = "ParApplicative[TraceT[G, *]]"
     }
-    override def monad: Monad[TraceT[M, ?]] = new Monad[TraceT[M, ?]] {
+    override def monad: Monad[TraceT[M, *]] = new Monad[TraceT[M, *]] {
       override def pure[A](a: A): TraceT[M, A] = TraceT.toTraceT(P.monad.pure(a))
 
       override def map[A, B](ta: TraceT[M, A])(f: A => B): TraceT[M, B] = TraceT.suspendEffect { tc =>
@@ -759,40 +759,41 @@ private[dtrace] sealed trait TraceTParallelInstance extends TraceTNonEmptyParall
       override def tailRecM[A, B](a: A)(f: A => TraceT[M, Either[A, B]]): TraceT[M, B] =
         TraceT.suspendEffect { tc => P.monad.tailRecM(a)(f(_).toEffect(tc)) }
 
-      override def toString: String = "ParMonad[TraceT[M, ?]]"
+      override def toString: String = "ParMonad[TraceT[M, *]]"
     }
   }
 }
 
 private[dtrace] sealed trait TraceTNonEmptyParallelInstance {
 
-  implicit def neParallelTraceTInstance[M[_], F[_]](implicit P: NonEmptyParallel[M, F], M: FlatMap[M], F: Apply[F]): NonEmptyParallel[TraceT[M, ?], TraceT[F, ?]] =
-    new NonEmptyParallelTraceT[M, F]
+  implicit def neParallelTraceTInstance[M[_], G[_]](implicit P: NonEmptyParallel.Aux[M, G], M: FlatMap[M], G: Apply[G]): NonEmptyParallel.Aux[TraceT[M, *], TraceT[G, *]] =
+    new NonEmptyParallelTraceT[M, G]
 
   /**
-   * A `NonEmptyParallel[TraceT[M, ?], TraceT[F, ?]` typeclass instance given an instance of `NonEmptyParallel[M, F]`.
+   * A `NonEmptyParallel[TraceT[M, *], TraceT[G, *]` typeclass instance given an instance of `NonEmptyParallel.Aux[M, G]`.
    *
-   * _Note that to summon an implicit instance of `NonEmptyParallel[M, F]`, if one is not directly available,
+   * _Note that to summon an implicit instance of `NonEmptyParallel.Aux[M, G]`, if one is not directly available,
    * you need (at least in the case where `M` == `cats.effect.IO`) an instance of `ContextShift[M]`
-   * (*not* `ContextShift[TraceT[M, ?]]`) in implicit scope_.
+   * (*not* `ContextShift[TraceT[M, *]]`) in implicit scope_.
    */
-  protected class NonEmptyParallelTraceT[M[_], F[_]](implicit P: NonEmptyParallel[M, F], M: FlatMap[M], F: Apply[F]) extends NonEmptyParallel[TraceT[M, ?], TraceT[F, ?]] {
-    def apply: Apply[TraceT[F, ?]] = new Apply[TraceT[F, ?]] {
-      override def ap[A, B](tab: TraceT[F, A => B])(ta: TraceT[F, A]): TraceT[F, B] =
+  protected class NonEmptyParallelTraceT[M[_], G[_]](implicit P: NonEmptyParallel.Aux[M, G], M: FlatMap[M], F: Apply[G]) extends NonEmptyParallel[TraceT[M, *]] {
+    type F[x] = TraceT[G, x]
+    def apply: Apply[F] = new Apply[F] {
+      override def ap[A, B](tab: F[A => B])(ta: F[A]): F[B] =
         map2(tab, ta)(_(_))
 
-      override def map[A, B](ta: TraceT[F, A])(f: A => B): TraceT[F, B] =
+      override def map[A, B](ta: F[A])(f: A => B): F[B] =
         parAppSuspendEffect(tc => P.apply.map(ta.toEffect(tc))(f))
 
-      override def map2[A, B, Z](ta: TraceT[F, A], tb: TraceT[F, B])(f: (A, B) => Z): TraceT[F, Z] =
+      override def map2[A, B, Z](ta: F[A], tb: F[B])(f: (A, B) => Z): F[Z] =
         parAppSuspendEffect(tc => P.apply.map2(ta.toEffect(tc), tb.toEffect(tc))(f))
 
-      override def product[A, B](ta: TraceT[F, A], tab: TraceT[F, B]): TraceT[F, (A, B)] =
+      override def product[A, B](ta: F[A], tab: F[B]): F[(A, B)] =
         map2(ta, tab)((_, _))
 
-      override def toString: String = "ParApply[TraceT[F, ?]]"
+      override def toString: String = "ParApply[TraceT[F, *]]"
     }
-    def flatMap: FlatMap[TraceT[M, ?]] = new FlatMap[TraceT[M, ?]] {
+    def flatMap: FlatMap[TraceT[M, *]] = new FlatMap[TraceT[M, *]] {
       override def flatMap[A, B](ta: TraceT[M, A])(f: A => TraceT[M, B]): TraceT[M, B] = TraceT.suspendEffect { tc =>
         P.flatMap.flatMap(ta.toEffect(tc))(f(_).toEffect(tc))
       }
@@ -805,19 +806,19 @@ private[dtrace] sealed trait TraceTNonEmptyParallelInstance {
       override def tailRecM[A, B](a: A)(f: A => TraceT[M, Either[A, B]]): TraceT[M, B] =
         TraceT.suspendEffect { tc => P.flatMap.tailRecM(a)(f(_).toEffect(tc)) }
 
-      override def toString: String = "ParFlatMap[TraceT[M, ?]]"
+      override def toString: String = "ParFlatMap[TraceT[M, *]]"
     }
-    def sequential: TraceT[F, ?] ~> TraceT[M, ?] = new (TraceT[F, ?] ~> TraceT[M, ?]) {
-      def apply[A](tfa: TraceT[F, A]): TraceT[M, A] = TraceT.suspendEffect[M, A] { tc =>
+    def sequential: F ~> TraceT[M, *] = new (F ~> TraceT[M, *]) {
+      def apply[A](tfa: F[A]): TraceT[M, A] = TraceT.suspendEffect[M, A] { tc =>
         P.sequential(tfa.toEffect(translate(tc, P.parallel)))
       }
     }
-    def parallel: TraceT[M, ?] ~> TraceT[F, ?] = new (TraceT[M, ?] ~> TraceT[F, ?]) {
-      def apply[A](tma: TraceT[M, A]): TraceT[F, A] = TraceT.suspendEffect[F, A] { tc =>
+    def parallel: TraceT[M, *] ~> F = new (TraceT[M, *] ~> F) {
+      def apply[A](tma: TraceT[M, A]): F[A] = TraceT.suspendEffect[G, A] { tc =>
         P.parallel(tma.toEffect(translate(tc, P.sequential)))
       }
     }
-    protected def parAppSuspendEffect[A](action: TraceContext[F] => F[A]): TraceT[F, A] =
+    protected def parAppSuspendEffect[A](action: TraceContext[G] => G[A]): F[A] =
       parallel(TraceT.suspendEffect[M, A](tcm => P.sequential(action(translate(tcm, P.parallel)))))
   }
 }

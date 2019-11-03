@@ -34,10 +34,12 @@ import java.nio.charset.Charset
 
 import org.scalactic.source
 import org.scalacheck._
-import org.scalatest.prop.Checkers
 import org.scalatest.OptionValues._
 import org.scalatest.TryValues._
-import org.scalatest.{ FunSuite, Matchers, Tag }
+import org.scalatest.Tag
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
+import org.scalatestplus.scalacheck.Checkers
 
 import org.typelevel.discipline.Laws
 import org.typelevel.discipline.scalatest.Discipline
@@ -47,7 +49,7 @@ import scala.concurrent.duration._
 import scala.util.Success
 import scala.util.control.NonFatal
 
-class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discipline with TestInstances with TestData {
+class TypeclassLawTests extends AnyFunSuite with Matchers with Checkers with Discipline with TestInstances with TestData {
 
   private implicit def eqTraceIO[A](implicit A: Eq[A], testC: TestContext): Eq[TraceIO[A]] =
     new Eq[TraceIO[A]] {
@@ -92,12 +94,14 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
 
   checkAllAsync("TraceIO.parallel", implicit testC => {
     implicit val cs = testC.contextShift[IO]
-    ParallelTests[TraceIO, TraceIO.Par].parallel[Int, Int]
+    val module = ParallelTests[TraceIO]
+    module.parallel[Int, Int]
   })
 
   checkAllAsync("TraceIO.nonEmptyParallel", implicit testC => {
     implicit val cs = testC.contextShift[IO]
-    NonEmptyParallelTests[TraceIO, TraceIO.Par].nonEmptyParallel[Int, Int]
+    val module = NonEmptyParallelTests[TraceIO]
+    module.nonEmptyParallel[Int, Int]
   })
 
   testAsync("TraceIO.Par's applicative instance is different") { implicit testC =>
@@ -159,7 +163,7 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
   testAsync("ContextShift[TraceIO].shift") { testC =>
     implicit val cs = TraceIO.contextShift(testC)
     val f = cs.shift.trace(tc).unsafeToFuture()
-    f.value shouldBe 'empty
+    f.value shouldBe None
     testC.tick()
     f.value shouldBe Some(Success(()))
     ()
@@ -169,11 +173,11 @@ class TypeclassLawTests extends FunSuite with Matchers with Checkers with Discip
     implicit val cs = TraceIO.contextShift(testC)
     val testC2 = TestContext()
     val f = cs.evalOn(testC2)(TraceIO(1)).trace(tc).unsafeToFuture()
-    f.value shouldBe 'empty
+    f.value shouldBe None
     testC.tick()
-    f.value shouldBe 'empty
+    f.value shouldBe None
     testC2.tick()
-    f.value shouldBe 'empty
+    f.value shouldBe None
     testC.tick()
     f.value shouldBe Some(Success(1))
     ()

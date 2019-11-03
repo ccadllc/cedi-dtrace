@@ -1,3 +1,13 @@
+3.0.0
+=====
+ - Support for scala 2.13 and updated libraries (notably using scalatest for
+   property testing, and rev cats/cats-effect from 1.x to 2.x).
+   Note that we can now move (most) tests into shared and use AsyncFreeSpec, with
+   the exception of that which we inherit from
+   cats-effect, which is still using scalacheck.  This will be done in
+   a subsequent point release as its an implementation detail which does not
+   affect the library API.  This version requires and depends on
+   cedi-build 1.2.0.
 2.0.2
 =====
  - Fix Stack Overflow for parTraverse.  Issue #79.

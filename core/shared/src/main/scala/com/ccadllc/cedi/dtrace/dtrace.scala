@@ -20,7 +20,6 @@ import cats.effect._
 import cats.implicits._
 
 import scala.concurrent.ExecutionContext
-import scala.language.higherKinds
 
 /**
  * The distributed trace (dtrace) library provides the means to derive and record a distributed trace across effectful
@@ -42,14 +41,14 @@ package object dtrace {
    */
   object TraceIO {
     /**
-     * Type alias provided for convenience when using an `IO.Par` as the type of `cats.effect.Parallel` or
-     * `cats.effect.NonEmptyParallel` effectful program being traced.
+     * Type alias provided for convenience when using an `IO.Par` as the type of `cats.effect.Parallel.Aux` or
+     * `cats.effect.NonEmptyParallel.Aux` effectful program being traced.
      */
     type Par[A] = TraceT[IO.Par, A]
 
     object Par {
       def apply[A](iop: IO.Par[A]): Par[A] = TraceT.toTraceT(iop)
-      def unwrap[A](tiop: TraceIO.Par[A])(implicit P: NonEmptyParallel[IO, IO.Par]): TraceIO[A] = TraceT { tc =>
+      def unwrap[A](tiop: TraceIO.Par[A])(implicit P: NonEmptyParallel.Aux[IO, IO.Par]): TraceIO[A] = TraceT { tc =>
         IO.Par.unwrap(tiop.toEffect(translate(tc, P.parallel)))
       }
     }

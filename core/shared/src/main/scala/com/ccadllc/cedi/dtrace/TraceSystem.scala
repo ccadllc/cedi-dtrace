@@ -23,7 +23,6 @@ import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
 
-import scala.language.higherKinds
 import scala.util.matching.Regex
 
 /**

@@ -19,17 +19,18 @@ package xb3
 
 import java.util.UUID
 
-import org.scalatest.{ Matchers, WordSpec }
-import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import org.scalacheck.Arbitrary
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import scodec.bits.ByteVector
 
 import XB3HeaderCodec._
 
-class XB3HeaderCodecTest extends WordSpec with Matchers with GeneratorDrivenPropertyChecks with TraceGenerators {
+class XB3HeaderCodecTest extends AnyWordSpec with Matchers with ScalaCheckPropertyChecks with TraceGenerators {
 
-  implicit val arbitraryUUID: Arbitrary[UUID] = Arbitrary(genUUID)
+  implicit val uuidArb: Arbitrary[UUID] = Arbitrary(genUUID)
 
   "the X-B3 Header Codec" should {
     "decode correctly given any valid UUID for trace-Id and any valid long integers for parent and span ID and sampled boolean" in {

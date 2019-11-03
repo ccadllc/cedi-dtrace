@@ -21,8 +21,6 @@ import cats.Applicative
 
 import org.http4s.{ Header => H4sHeader, _ }
 
-import scala.language.higherKinds
-
 /**
  * This module provides interoperability with the [[https://github.com/http4s/http4s http4s]] library for
  * HTTP client functionality, generating HTTP distributed trace headers from the active `Span` (supporting
@@ -56,7 +54,7 @@ package object client {
   /**
    * This function will convert the [[Span]] in the current [[TraceContext]] of effect `F` into one or more HTTP headers,
    * given an instance of [[HeaderCodec]] and a 'cats.effect.Applicative[F]` in implicit scope, and then add the headers
-   * to the passed-in `Request[TraceT[F, ?]]`.
+   * to the passed-in `Request[TraceT[F, *]]`.
    * The [[HeaderCodec]] is often imported from either `com.ccadllc.cedi.dtrace.money._`, or
    * `com.ccadllc.cedi.dtrace.xb3._` for `Money` or `X-B3` trace headers, respectively.
    * You can also provide your own [[HeaderCodec]] if, for instance, you wish to compose these into an aggregate
@@ -65,15 +63,15 @@ package object client {
    *    ```implicit val myHeaderCodec: HeaderCodec = com.ccadllc.cedi.dtrace.interop.xb3.headerCodec.andThen(
    *      com.ccadllc.cedi.dtrace.interop.money.headerCodec
    *    )```
-   * @param request a `Request[TraceT[F, ?]]` representing the request that the client shall use to when interacting with a remote
+   * @param request a `Request[TraceT[F, *]]` representing the request that the client shall use to when interacting with a remote
    *   system, wrapped in a traced effect.
    * @param codec a [[HeaderCodec]] whose implementation provides encoding and decoding [[SpanId]] elements into one
    *   or more protocol-specific HTTP headers.  Provided in implicit scope.
    * @param F a `cats.effect.Applicative[F]` used by `TraceT.ask[F]` to get the current `TraceContext[F]`.  Provided in implicit scope.
-   * @return outputRequest the input `Request[TraceT[F, ?]]` enhanced with one or more tracing releated HTTP headers and itself wrapped
-   *   in a `TraceT[F, ?]` context.
+   * @return outputRequest the input `Request[TraceT[F, *]]` enhanced with one or more tracing releated HTTP headers and itself wrapped
+   *   in a `TraceT[F, *]` context.
    */
-  def traceRequest[F[_]](request: Request[TraceT[F, ?]])(implicit codec: HeaderCodec, F: Applicative[F]): TraceT[F, Request[TraceT[F, ?]]] =
+  def traceRequest[F[_]](request: Request[TraceT[F, *]])(implicit codec: HeaderCodec, F: Applicative[F]): TraceT[F, Request[TraceT[F, *]]] =
     TraceT.ask[F].map { tc => withTracedRequest(request, tc.currentSpan.spanId) }
 
   private def toH4s(headers: List[Header]): List[H4sHeader] = headers.map { h => H4sHeader(h.name.value, h.value.value) }

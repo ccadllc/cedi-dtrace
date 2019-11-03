@@ -22,10 +22,10 @@ import cats.effect._
 import org.http4s._
 import org.http4s.dsl.io._
 
-import org.scalatest.{ Matchers, WordSpec }
-import org.scalatest.EitherValues._
 import org.scalatest.OptionValues._
-import org.scalatest.prop.GeneratorDrivenPropertyChecks
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import scodec.bits.ByteVector
 
@@ -34,9 +34,7 @@ import interop.http4s.server._
 
 import Uri.uri
 
-class DTraceHttp4sTest extends WordSpec with Matchers with GeneratorDrivenPropertyChecks with TraceGenerators with TestData {
-
-  implicit override val generatorDrivenConfig: PropertyCheckConfiguration = PropertyCheckConfiguration(minSuccessful = 100)
+class DTraceHttp4sTest extends AnyWordSpec with Matchers with ScalaCheckPropertyChecks with TraceGenerators with TestData {
 
   "the dtrace http4s client-side trace header generation and server-side trace header extraction functions" should {
     "extract the expected trace ID from the HTTP headers passed in the client request and propagate it to the server-side action using X-B3 header codec" in {
@@ -50,8 +48,8 @@ class DTraceHttp4sTest extends WordSpec with Matchers with GeneratorDrivenProper
               TraceIO.ask.map { _.currentSpan.spanId.traceId }
             }.map { traceId => Response[IO](status = Status.Ok).withEntity(traceId.toString) }
         }
-        val traceIdStr = ByteVector(serverAction.run(clientRequest).value.unsafeRunSync.value.body.compile.toVector.unsafeRunSync).decodeUtf8.right.value
-        traceIdStr shouldBe requestTc.currentSpan.spanId.traceId.toString
+        val traceIdStr = ByteVector(serverAction.run(clientRequest).value.unsafeRunSync.value.body.compile.toVector.unsafeRunSync).decodeUtf8
+        traceIdStr shouldBe Right(requestTc.currentSpan.spanId.traceId.toString)
       }
     }
     "extract the expected trace ID from the HTTP headers passed in the client request and propagate it to the server-side action using Money header codec" in {
@@ -65,8 +63,8 @@ class DTraceHttp4sTest extends WordSpec with Matchers with GeneratorDrivenProper
               TraceIO.ask.map { _.currentSpan.spanId.traceId }
             }.map { traceId => Response[IO](status = Status.Ok).withEntity(traceId.toString) }
         }
-        val traceIdStr = ByteVector(serverAction.run(clientRequest).value.unsafeRunSync.value.body.compile.toVector.unsafeRunSync).decodeUtf8.right.value
-        traceIdStr shouldBe requestTc.currentSpan.spanId.traceId.toString
+        val traceIdStr = ByteVector(serverAction.run(clientRequest).value.unsafeRunSync.value.body.compile.toVector.unsafeRunSync).decodeUtf8
+        traceIdStr shouldBe Right(requestTc.currentSpan.spanId.traceId.toString)
       }
     }
     "generate a new root span for the server-side action when no trace headers are present in the client request with Money headers" in {
@@ -80,8 +78,8 @@ class DTraceHttp4sTest extends WordSpec with Matchers with GeneratorDrivenProper
               TraceIO.ask.map { _.currentSpan.spanId.traceId }
             }.map { traceId => Response[IO](status = Status.Ok).withEntity(traceId.toString) }
         }
-        val traceIdStr = ByteVector(serverAction.run(clientRequest).value.unsafeRunSync.value.body.compile.toVector.unsafeRunSync).decodeUtf8.right.value
-        traceIdStr should not be (requestTc.currentSpan.spanId.traceId.toString)
+        val traceIdStr = ByteVector(serverAction.run(clientRequest).value.unsafeRunSync.value.body.compile.toVector.unsafeRunSync).decodeUtf8
+        traceIdStr should not be (Right(requestTc.currentSpan.spanId.traceId.toString))
       }
     }
     "generate a new root span for the server-side action when no trace headers are present in the client request with X-B3 headers" in {
@@ -95,8 +93,8 @@ class DTraceHttp4sTest extends WordSpec with Matchers with GeneratorDrivenProper
               TraceIO.ask.map { _.currentSpan.spanId.traceId }
             }.map { traceId => Response[IO](status = Status.Ok).withEntity(traceId.toString) }
         }
-        val traceIdStr = ByteVector(serverAction.run(clientRequest).value.unsafeRunSync.value.body.compile.toVector.unsafeRunSync).decodeUtf8.right.value
-        traceIdStr should not be (requestTc.currentSpan.spanId.traceId.toString)
+        val traceIdStr = ByteVector(serverAction.run(clientRequest).value.unsafeRunSync.value.body.compile.toVector.unsafeRunSync).decodeUtf8
+        traceIdStr should not be (Right(requestTc.currentSpan.spanId.traceId.toString))
       }
     }
     "extract the expected trace ID from the HTTP headers passed in the client request and propagate it to the server-side action using composite X-B3/Money header codec (preferring X-B3 when parsing on server-side and encoding both header types on client-side requests)" in {
@@ -110,8 +108,8 @@ class DTraceHttp4sTest extends WordSpec with Matchers with GeneratorDrivenProper
               TraceIO.ask.map { _.currentSpan.spanId.traceId }
             }.map { traceId => Response[IO](status = Status.Ok).withEntity(traceId.toString) }
         }
-        val traceIdStr = ByteVector(serverAction.run(clientRequest).value.unsafeRunSync.value.body.compile.toVector.unsafeRunSync).decodeUtf8.right.value
-        traceIdStr shouldBe requestTc.currentSpan.spanId.traceId.toString
+        val traceIdStr = ByteVector(serverAction.run(clientRequest).value.unsafeRunSync.value.body.compile.toVector.unsafeRunSync).decodeUtf8
+        traceIdStr shouldBe Right(requestTc.currentSpan.spanId.traceId.toString)
       }
     }
     "generate a new root span for the server-side action when no trace headers are present in the client request using composite X-B3/Money header codec (preferring X-B3 when parsing on server-side and encoding both header types on client-side requests)" in {
@@ -125,8 +123,8 @@ class DTraceHttp4sTest extends WordSpec with Matchers with GeneratorDrivenProper
               TraceIO.ask.map { _.currentSpan.spanId.traceId }
             }.map { traceId => Response[IO](status = Status.Ok).withEntity(traceId.toString) }
         }
-        val traceIdStr = ByteVector(serverAction.run(clientRequest).value.unsafeRunSync.value.body.compile.toVector.unsafeRunSync).decodeUtf8.right.value
-        traceIdStr should not be (requestTc.currentSpan.spanId.traceId.toString)
+        val traceIdStr = ByteVector(serverAction.run(clientRequest).value.unsafeRunSync.value.body.compile.toVector.unsafeRunSync).decodeUtf8
+        traceIdStr should not be (Right(requestTc.currentSpan.spanId.traceId.toString))
       }
     }
   }

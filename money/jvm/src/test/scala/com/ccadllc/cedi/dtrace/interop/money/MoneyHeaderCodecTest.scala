@@ -19,13 +19,14 @@ package money
 
 import java.util.UUID
 
-import org.scalatest.{ Matchers, WordSpec }
-import org.scalatest.prop.GeneratorDrivenPropertyChecks
 import org.scalacheck.Arbitrary
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
 
 import MoneyHeaderCodec._
 
-class MoneyHeaderCodecTest extends WordSpec with Matchers with GeneratorDrivenPropertyChecks with TraceGenerators {
+class MoneyHeaderCodecTest extends AnyWordSpec with Matchers with ScalaCheckPropertyChecks with TraceGenerators {
 
   implicit val arbitraryUUID: Arbitrary[UUID] = Arbitrary(genUUID)
 
