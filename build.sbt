@@ -12,7 +12,7 @@ lazy val kindProjectorVersion = "0.10.3"
 
 lazy val logbackVersion = "1.2.3"
 
-lazy val logstashVersion = "5.3"
+lazy val logstashVersion = "6.3"
 
 lazy val scalacheckVersion = "1.14.2"
 
