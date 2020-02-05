@@ -6,7 +6,7 @@ lazy val catsCoreVersion = "2.1.0"
 
 lazy val circeVersion = "0.12.3"
 
-lazy val http4sVersion = "0.21.0-M6"
+lazy val http4sVersion = "0.21.0-RC4"
 
 lazy val kindProjectorVersion = "0.10.3"
 
