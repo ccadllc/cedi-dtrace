@@ -107,7 +107,7 @@ val traceSystem = LogEmitter[IO].map { emitter =>
     * example.  Note that these levels of precision may be rounded up or down if using
     * `cats.effect.Clock#monotonic`, as it will likely be using `System.currentTimeMillis`
     * which will only provide millisecond level precision (roughly).
-    *
+    */
     timer = TraceSystem.realTimeTimer[IO]
   )
 }
