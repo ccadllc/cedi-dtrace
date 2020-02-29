@@ -1,6 +1,7 @@
 import sbtcrossproject.crossProject
 
-lazy val catsEffectVersion = "2.1.0"
+
+lazy val catsEffectVersion = "2.1.1"
 
 lazy val catsCoreVersion = "2.1.1"
 
