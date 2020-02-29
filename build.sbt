@@ -2,7 +2,7 @@ import sbtcrossproject.crossProject
 
 lazy val catsEffectVersion = "2.0.0"
 
-lazy val catsCoreVersion = "2.1.0"
+lazy val catsCoreVersion = "2.1.1"
 
 lazy val circeVersion = "0.12.3"
 
@@ -16,11 +16,11 @@ lazy val logstashVersion = "6.3"
 
 lazy val scalacheckVersion = "1.14.3"
 
-lazy val scalatestVersion = "3.1.0"
+lazy val scalatestVersion = "3.1.1"
 
 lazy val scalatestDisciplineVersion = "1.0.0-RC2"
 
-lazy val scodecBitsVersion = "1.1.12"
+lazy val scodecBitsVersion = "1.1.14"
 
 lazy val slf4jVersion = "1.7.30"
 
