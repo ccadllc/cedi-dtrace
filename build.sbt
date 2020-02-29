@@ -20,7 +20,7 @@ lazy val scalatestVersion = "3.1.0"
 
 lazy val scalatestDisciplineVersion = "1.0.0-RC2"
 
-lazy val scodecBitsVersion = "1.1.12"
+lazy val scodecBitsVersion = "1.1.14"
 
 lazy val slf4jVersion = "1.7.30"
 
