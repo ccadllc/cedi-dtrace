@@ -20,10 +20,10 @@ import cats.effect.Sync
 
 /**
  * Provides the for the platform-specific initialization of the underlying logging
- * configuration for the JavaScript platform, using `log4s`.
+ * configuration for the JavaScript platform, using `scalajs-logging`.
  */
 object LoggingConfig {
-  def createLoggers[F[_]: Sync](names: Loggers.Names): Loggers[F] = new Loggers(
-    Log4sLogger.create[F](names.text),
-    Log4sLogger.create[F](names.json))
+  def createLoggers[F[_]: Sync](names: Loggers.Names, level: Option[LoggingLevel]): Loggers[F] = new Loggers(
+    ScalajsLogger.create[F](names.text, level),
+    ScalajsLogger.create[F](names.json, level))
 }

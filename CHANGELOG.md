@@ -1,3 +1,7 @@
+4.0.0
+=====
+ - Support for scalajs 1.0.0 and swapping out log4s with scalajs-logging
+
 3.0.0
 =====
  - Support for scala 2.13 and updated libraries (notably using scalatest for

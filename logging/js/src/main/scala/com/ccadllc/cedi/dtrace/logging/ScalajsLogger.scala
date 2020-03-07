@@ -20,57 +20,85 @@
 package com.ccadllc.cedi.dtrace
 package logging
 
+import cats.Applicative
 import cats.effect.Sync
+import cats.implicits._
 
 import io.chrisdavenport.log4cats._
 
-object Log4sLogger {
-  def create[F[_]: Sync](name: String): SelfAwareLogger[F] = new SelfAwareLogger[F] {
-    private val logger = org.log4s.getLogger(name)
+import java.io.PrintWriter
+
+import org.scalajs.logging._
+
+object ScalajsLogger {
+  def create[F[_]: Sync](name: String, level: Option[LoggingLevel]): SelfAwareLogger[F] = new SelfAwareLogger[F] {
+    private val traceEnabled = level.exists(_ === LoggingLevel.Trace)
+    private val debugEnabled = level.exists(_ === LoggingLevel.Debug)
+    private val infoEnabled = level.exists(_ === LoggingLevel.Info)
+    private val warnEnabled = level.exists(_ === LoggingLevel.Warn)
+    private val errorEnabled = level.exists(_ === LoggingLevel.Error)
+
+    private val logger = level match {
+      case Some(LoggingLevel.Trace | LoggingLevel.Debug) =>
+        new ScalaConsoleLogger(Level.Debug)
+      case Some(LoggingLevel.Info) =>
+        new ScalaConsoleLogger(Level.Info)
+      case Some(LoggingLevel.Warn) =>
+        new ScalaConsoleLogger(Level.Warn)
+      case Some(LoggingLevel.Error) =>
+        new ScalaConsoleLogger(Level.Error)
+      case _ => NullLogger
+    }
 
     override def isTraceEnabled: F[Boolean] =
-      Sync[F].delay(logger.isTraceEnabled)
+      Applicative[F].pure(traceEnabled)
 
     override def isDebugEnabled: F[Boolean] =
-      Sync[F].delay(logger.isDebugEnabled)
+      Applicative[F].pure(debugEnabled)
 
     override def isInfoEnabled: F[Boolean] =
-      Sync[F].delay(logger.isInfoEnabled)
+      Applicative[F].pure(infoEnabled)
 
     override def isWarnEnabled: F[Boolean] =
-      Sync[F].delay(logger.isWarnEnabled)
+      Applicative[F].pure(warnEnabled)
 
     override def isErrorEnabled: F[Boolean] =
-      Sync[F].delay(logger.isErrorEnabled)
+      Applicative[F].pure(errorEnabled)
 
     override def error(message: => String): F[Unit] =
       Sync[F].delay(logger.error(message))
 
     override def error(t: Throwable)(message: => String): F[Unit] =
-      Sync[F].delay(logger.error(t)(message))
+      Sync[F].delay(logger.error(withStackTrace(message, t)))
 
     override def warn(message: => String): F[Unit] =
       Sync[F].delay(logger.warn(message))
 
     override def warn(t: Throwable)(message: => String): F[Unit] =
-      Sync[F].delay(logger.warn(t)(message))
+      Sync[F].delay(logger.warn(withStackTrace(message, t)))
 
     override def info(message: => String): F[Unit] =
       Sync[F].delay(logger.info(message))
 
     override def info(t: Throwable)(message: => String): F[Unit] =
-      Sync[F].delay(logger.info(t)(message))
+      Sync[F].delay(logger.info(withStackTrace(message, t)))
 
     override def debug(message: => String): F[Unit] =
       Sync[F].delay(logger.debug(message))
 
     override def debug(t: Throwable)(message: => String): F[Unit] =
-      Sync[F].delay(logger.debug(t)(message))
+      Sync[F].delay(logger.debug(withStackTrace(message, t)))
 
     override def trace(message: => String): F[Unit] =
-      Sync[F].delay(logger.trace(message))
+      Sync[F].delay(logger.debug(message)).whenA(traceEnabled)
 
     override def trace(t: Throwable)(message: => String): F[Unit] =
-      Sync[F].delay(logger.trace(t)(message))
+      Sync[F].delay(logger.trace(withStackTrace(message, t))).whenA(traceEnabled)
+
+    private def withStackTrace(message: => String, t: Throwable) = {
+      val errors = new StringWriter
+      t.printStackTrace(new PrintWriter(errors))
+      show"$message: ${errors.toString}"
+    }
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 Combined Conditional Access Development, LLC.
+ * Copyright 2020 Combined Conditional Access Development, LLC.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,17 @@
 package com.ccadllc.cedi.dtrace
 package logging
 
-import cats.effect.Sync
+import cats.{ Eq, Show }
 
-import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
+sealed abstract class LoggingLevel extends Product with Serializable
+object LoggingLevel {
+  case object Trace extends LoggingLevel
+  case object Debug extends LoggingLevel
+  case object Info extends LoggingLevel
+  case object Warn extends LoggingLevel
+  case object Error extends LoggingLevel
+  case object Off extends LoggingLevel
 
-/**
- * Provides the for the platform-specific initialization of the underlying logging
- * configuration for the JVM platform, using `slf4j`.
- */
-object LoggingConfig {
-  def createLoggers[F[_]: Sync](names: Loggers.Names, level: Option[LoggingLevel]): Loggers[F] = new Loggers(
-    Slf4jLogger.getLoggerFromName[F](names.text),
-    Slf4jLogger.getLoggerFromName[F](names.json))
+  implicit val eq: Eq[LoggingLevel] = Eq.fromUniversalEquals
+  implicit val show: Show[LoggingLevel] = Show.fromToString
 }

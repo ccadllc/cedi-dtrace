@@ -27,7 +27,7 @@ lazy val slf4jVersion = "1.7.30"
 
 lazy val log4catsVersion = "1.0.1"
 
-lazy val log4sVersion = "1.8.2"
+lazy val scalajslogVersion = "1.0.0"
 
 lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
@@ -115,7 +115,7 @@ lazy val loggingJVM = logging.jvm.enablePlugins(SbtOsgi).
 lazy val loggingJS = logging.js.settings(
   libraryDependencies ++= Seq(
     "io.chrisdavenport" %%% "log4cats-core" % log4catsVersion,
-    "org.log4s" %%% "log4s" % log4sVersion
+    "org.scala-js" %%% "scalajs-logging" % scalajslogVersion
   )
 ).dependsOn(coreJS % "compile->compile;test->test")
 
