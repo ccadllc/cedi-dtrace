@@ -41,7 +41,7 @@ object json {
         "start-time"      -> tc.currentSpan.startTime.asJson,
         "span-success"    -> tc.currentSpan.failure.isEmpty.asJson,
         "failure-detail"  -> tc.currentSpan.failure.map(_.render).asJson,
-        "span-duration"   -> tc.currentSpan.duration.toMicros.asJson,
+        "span-duration"   -> tc.currentSpan.duration.toUnit(tc.system.timer.unit).asJson,
         "notes"           -> tc.currentSpan.notes.map { n => n.name.value -> n.value }.collect { case (name, Some(value)) => name -> value.toString }.toMap.asJson
       )
     }
