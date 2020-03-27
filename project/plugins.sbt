@@ -1,6 +1,6 @@
 resolvers += Resolver.sonatypeRepo("public")
 
-addSbtPlugin("com.ccadllc.cedi" %% "build" % "1.2.1")
+addSbtPlugin("com.ccadllc.cedi" %% "build" % "1.2.2")
 
 addSbtPlugin("org.lyranthe.sbt" % "partial-unification" % "1.1.2")
 
