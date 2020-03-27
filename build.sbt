@@ -27,8 +27,6 @@ lazy val slf4jVersion = "1.7.30"
 
 lazy val log4catsVersion = "1.0.1"
 
-lazy val log4sVersion = "1.8.2"
-
 lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
   parallelExecution in Global := !scala.util.Properties.propIsSet("disableParallel"),
@@ -69,7 +67,6 @@ lazy val root = project.in(file(".")).aggregate(
   coreJVM,
   coreJS,
   loggingJVM,
-  loggingJS,
   logstash,
   xb3JVM,
   xb3JS,
@@ -111,13 +108,6 @@ lazy val loggingJVM = logging.jvm.enablePlugins(SbtOsgi).
     ),
     buildOsgiBundle("com.ccadllc.cedi.dtrace.logging")
   ).dependsOn(coreJVM % "compile->compile;test->test")
-
-lazy val loggingJS = logging.js.settings(
-  libraryDependencies ++= Seq(
-    "io.chrisdavenport" %%% "log4cats-core" % log4catsVersion,
-    "org.log4s" %%% "log4s" % log4sVersion
-  )
-).dependsOn(coreJS % "compile->compile;test->test")
 
 lazy val logstash = project.in(file("logstash")).enablePlugins(SbtOsgi).
   settings(commonSettings).

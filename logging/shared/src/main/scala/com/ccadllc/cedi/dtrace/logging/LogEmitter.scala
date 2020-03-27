@@ -47,7 +47,7 @@ class LogEmitter[F[_]: Sync](loggers: Loggers[F]) extends TraceSystem.Emitter[F]
    */
   override def emit(context: TraceContext[F]): F[Unit] = {
     def emitText: F[Unit] = {
-      def formatText = s"Span: [ span-id=${context.currentSpan.spanId.spanId} ] [ trace-id=${context.currentSpan.spanId.traceId} ] [ parent-id=${context.currentSpan.spanId.parentSpanId} ] [ root=${context.currentSpan.root} ] [ span-name=${context.currentSpan.spanName} ] [ system-data=${context.system.data.description} ] [ start-time=${context.currentSpan.startTime} ] [ span-duration=${context.currentSpan.duration} ] [ span-success=${context.currentSpan.failure.isEmpty} ] [ failure-detail=${context.currentSpan.failure.fold("N/A")(_.render)} ][ notes=[${context.currentSpan.notes.mkString("] [")}] ]"
+      def formatText = s"Span: [ span-id=${context.currentSpan.spanId.spanId} ] [ trace-id=${context.currentSpan.spanId.traceId} ] [ parent-id=${context.currentSpan.spanId.parentSpanId} ] [ root=${context.currentSpan.root} ] [ span-name=${context.currentSpan.spanName} ] [ system-data=${context.system.data.description} ] [ start-time=${context.currentSpan.startTime} ] [ span-duration=${context.currentSpan.duration.toCoarsest} ] [ span-success=${context.currentSpan.failure.isEmpty} ] [ failure-detail=${context.currentSpan.failure.fold("N/A")(_.render)} ][ notes=[${context.currentSpan.notes.mkString("] [")}] ]"
       loggers.text.debug(formatText)
     }
     def emitJson: F[Unit] = {
@@ -63,7 +63,7 @@ class LogEmitter[F[_]: Sync](loggers: Loggers[F]) extends TraceSystem.Emitter[F]
 }
 
 /**
- * Companion object for the `LogEmitter` instance, providing a convenience constructor.
+ * Companion object for the `LogEmitter` instance, providing convenience constructors.
  */
 object LogEmitter {
   val loggerNames: Loggers.Names = Loggers.Names(
@@ -74,5 +74,15 @@ object LogEmitter {
    * @return a new instance of `LogEmitter[F]` in the `F` effect.
    */
   def apply[F[_]](implicit F: Sync[F]): TraceSystem.Emitter[F] =
-    new LogEmitter(LoggingConfig.createLoggers[F](loggerNames))
+    new LogEmitter(LoggingConfig.createLoggers[F](loggerNames, None))
+
+  /**
+   * Constructs an instance of `LogEmitter` if with an explicit log level an
+   * instance of `Sync[F]` is available in implicit scope.
+   * @param level - for implementations which do not support external configuration
+   * of levels, pass a level directly in code.
+   * @return a new instance of `LogEmitter[F]` in the `F` effect.
+   */
+  def apply[F[_]](level: LoggingLevel)(implicit F: Sync[F]): TraceSystem.Emitter[F] =
+    new LogEmitter(LoggingConfig.createLoggers[F](loggerNames, Some(level)))
 }

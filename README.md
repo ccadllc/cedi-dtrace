@@ -248,7 +248,7 @@ libraryDependencies += "com.ccadllc.cedi" %%% "dtrace-core" % "3.0.0"
 
 #### dtrace-logging
 
-This component provides emitters for logging the trace spans in text and/or JSON format using the `sf4j` logging framework for the JVM and `log4s` JS logger for the JavaScript (JS) platform.  It uses the `circe` library for formatting the trace span information as JSON.  It uses the `io.chrisdavenport.log4cats` library to abstract the particular platform targeted from the logging API.
+This component provides emitters for logging the trace spans in text and/or JSON format using the `sf4j` logging framework for the JVM.  It uses the `circe` library for formatting the trace span information as JSON.  It uses the `io.chrisdavenport.log4cats` library to abstract the particular platform targeted from the logging API.
 
 ```scala
 libraryDependencies ++= "com.ccadllc.cedi" %%% "dtrace-logging" % "3.0.0"

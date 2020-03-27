@@ -68,7 +68,7 @@ final class EcsLogstashLogbackEmitter[F[_]](implicit F: Sync[F]) extends TraceSy
           and[LogstashMarker](append(ecs.field.spanName, s.spanName.value)).
           and[LogstashMarker](append(ecs.field.spanStart, s.startTime.show)).
           and[LogstashMarker](append(ecs.field.spanOutcome, if (s.failure.isEmpty) "success" else "failure")).
-          and[LogstashMarker](append(ecs.field.spanDuration, s.duration.toNanos)).
+          and[LogstashMarker](append(ecs.field.spanDuration, s.duration.toUnit(tc.system.timer.unit))).
           and[LogstashMarker](append(ecs.field.spanFailureDetail, s.failure.map(_.render).orNull)).
           and[LogstashMarker](append(
             ecs.field.spanMetadata,
@@ -76,10 +76,10 @@ final class EcsLogstashLogbackEmitter[F[_]](implicit F: Sync[F]) extends TraceSy
               n => n.name.value -> n.value).collect { case (name, Some(value)) => name -> value.toString }.toMap).asJava))
         tc.system.data.identity.values.foldLeft(m) { case (acc, (k, v)) => acc.and[LogstashMarker](append(k, v)) }
       }
-      logger.debug(marker, "Span {} {} after {} microseconds",
+      logger.debug(marker, s"Span {} {} after {} ${tc.system.timer.unit.toString.toLowerCase}s",
         s.spanName.value,
         if (s.failure.isEmpty) "succeeded" else "failed",
-        s.duration.toMicros.toString)
+        s.duration.toUnit(tc.system.timer.unit).toString)
     }
   }
 }
