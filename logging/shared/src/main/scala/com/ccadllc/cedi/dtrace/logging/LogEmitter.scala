@@ -74,15 +74,5 @@ object LogEmitter {
    * @return a new instance of `LogEmitter[F]` in the `F` effect.
    */
   def apply[F[_]](implicit F: Sync[F]): TraceSystem.Emitter[F] =
-    new LogEmitter(LoggingConfig.createLoggers[F](loggerNames, None))
-
-  /**
-   * Constructs an instance of `LogEmitter` if with an explicit log level an
-   * instance of `Sync[F]` is available in implicit scope.
-   * @param level - for implementations which do not support external configuration
-   * of levels, pass a level directly in code.
-   * @return a new instance of `LogEmitter[F]` in the `F` effect.
-   */
-  def apply[F[_]](level: LoggingLevel)(implicit F: Sync[F]): TraceSystem.Emitter[F] =
-    new LogEmitter(LoggingConfig.createLoggers[F](loggerNames, Some(level)))
+    new LogEmitter(LoggingConfig.createLoggers[F](loggerNames))
 }

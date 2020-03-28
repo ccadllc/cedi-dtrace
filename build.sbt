@@ -1,5 +1,6 @@
 import sbtcrossproject.crossProject
 
+import com.typesafe.tools.mima.core._
 
 lazy val catsEffectVersion = "2.1.2"
 
@@ -63,17 +64,12 @@ lazy val commonSettings = Seq(
   )
 )
 
-lazy val root = project.in(file(".")).aggregate(
-  coreJVM,
-  coreJS,
-  loggingJVM,
-  logstash,
-  xb3JVM,
-  xb3JS,
-  moneyJVM,
-  moneyJS,
-  http4s
-).settings(commonSettings).settings(noPublish)
+lazy val root = project
+  .in(file("."))
+  .disablePlugins(MimaPlugin)
+  .aggregate(coreJVM, coreJS, loggingJVM, logstash, xb3JVM, xb3JS, moneyJVM, moneyJS, http4s)
+  .settings(commonSettings)
+  .settings(noPublish)
 
 lazy val core = crossProject(JVMPlatform, JSPlatform).in(file("core")).
   settings(commonSettings).
@@ -85,7 +81,7 @@ lazy val core = crossProject(JVMPlatform, JSPlatform).in(file("core")).
 lazy val coreJVM = core.jvm.enablePlugins(SbtOsgi).
   settings(buildOsgiBundle("com.ccadllc.cedi.dtrace"))
 
-lazy val coreJS = core.js
+lazy val coreJS = core.js.disablePlugins(MimaPlugin)
 
 lazy val logging = crossProject(JVMPlatform, JSPlatform).in(file("logging")).
   settings(commonSettings).settings(
@@ -142,7 +138,9 @@ lazy val moneyJVM = money.jvm.enablePlugins(SbtOsgi).settings(
   buildOsgiBundle("com.ccadllc.cedi.dtrace.interop.money")
 ).dependsOn(coreJVM % "compile->compile;test->test")
 
-lazy val moneyJS = money.js.dependsOn(coreJS % "compile->compile;test->test")
+lazy val moneyJS = money.js
+  .disablePlugins(MimaPlugin)
+  .dependsOn(coreJS % "compile->compile;test->test")
 
 lazy val http4s = project.in(file("http4s")).enablePlugins(SbtOsgi).
   settings(commonSettings).

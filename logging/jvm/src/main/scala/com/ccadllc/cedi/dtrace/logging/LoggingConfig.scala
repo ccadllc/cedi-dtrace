@@ -25,7 +25,7 @@ import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
  * configuration for the JVM platform, using `slf4j`.
  */
 object LoggingConfig {
-  def createLoggers[F[_]: Sync](names: Loggers.Names, level: Option[LoggingLevel]): Loggers[F] = new Loggers(
+  def createLoggers[F[_]: Sync](names: Loggers.Names): Loggers[F] = new Loggers(
     Slf4jLogger.getLoggerFromName[F](names.text),
     Slf4jLogger.getLoggerFromName[F](names.json))
 }
