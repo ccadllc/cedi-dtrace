@@ -42,14 +42,14 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.Checkers
 
 import org.typelevel.discipline.Laws
-import org.typelevel.discipline.scalatest.Discipline
+import org.typelevel.discipline.scalatest.FunSuiteDiscipline
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.Success
 import scala.util.control.NonFatal
 
-class TypeclassLawTests extends AnyFunSuite with Matchers with Checkers with Discipline with TestInstances with TestData {
+class TypeclassLawTests extends AnyFunSuite with Matchers with Checkers with FunSuiteDiscipline with TestInstances with TestData {
 
   private implicit def eqTraceIO[A](implicit A: Eq[A], testC: TestContext): Eq[TraceIO[A]] =
     new Eq[TraceIO[A]] {
