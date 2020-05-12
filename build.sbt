@@ -26,7 +26,7 @@ lazy val scodecBitsVersion = "1.1.14"
 
 lazy val slf4jVersion = "1.7.30"
 
-lazy val log4catsVersion = "1.0.1"
+lazy val log4catsVersion = "1.1.1"
 
 lazy val commonSettings = Seq(
   githubProject := "cedi-dtrace",
