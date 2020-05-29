@@ -19,3 +19,4 @@ target
 *.log
 *.swp
 *~
+project/metals.sbt
