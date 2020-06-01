@@ -61,7 +61,8 @@ lazy val commonSettings = Seq(
       </developer>
       }
     </developers>
-  )
+  ),
+  mimaFailOnNoPrevious := false
 )
 
 lazy val root = project
@@ -70,6 +71,7 @@ lazy val root = project
   .aggregate(coreJVM, coreJS, loggingJVM, logstash, xb3JVM, xb3JS, moneyJVM, moneyJS, http4s)
   .settings(commonSettings)
   .settings(noPublish)
+  .settings(mimaPreviousArtifacts := Set.empty)
 
 lazy val core = crossProject(JVMPlatform, JSPlatform).in(file("core")).
   settings(commonSettings).
