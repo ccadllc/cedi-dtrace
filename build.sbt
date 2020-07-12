@@ -2,7 +2,7 @@ import sbtcrossproject.crossProject
 
 import com.typesafe.tools.mima.core._
 
-lazy val catsEffectVersion = "2.1.3"
+lazy val catsEffectVersion = "2.1.4"
 
 lazy val catsCoreVersion = "2.1.1"
 
