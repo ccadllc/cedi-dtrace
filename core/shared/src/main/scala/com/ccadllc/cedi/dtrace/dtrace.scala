@@ -17,7 +17,7 @@ package com.ccadllc.cedi
 
 import cats._
 import cats.effect._
-import cats.implicits._
+import cats.syntax.all._
 
 import scala.concurrent.ExecutionContext
 

@@ -20,7 +20,7 @@ import java.util.UUID
 import scala.util.Random
 
 import cats.effect.Sync
-import cats.implicits._
+import cats.syntax.all._
 
 /**
  * Represents the core identity of a [[Span]].

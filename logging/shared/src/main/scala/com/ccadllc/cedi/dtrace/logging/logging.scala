@@ -15,7 +15,7 @@
  */
 package com.ccadllc.cedi.dtrace
 
-import cats.implicits._
+import cats.syntax.all._
 
 import io.circe._
 

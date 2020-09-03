@@ -17,7 +17,7 @@ package com.ccadllc.cedi.dtrace
 
 import cats.Functor
 import cats.effect.Sync
-import cats.implicits._
+import cats.syntax.all._
 
 import scala.concurrent.duration._
 

@@ -17,7 +17,7 @@ package com.ccadllc.cedi.dtrace
 package logging
 
 import cats.effect.Sync
-import cats.implicits._
+import cats.syntax.all._
 
 import io.circe.syntax._
 

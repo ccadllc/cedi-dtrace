@@ -17,7 +17,7 @@ package com.ccadllc.cedi.dtrace
 
 import cats._
 import cats.effect.{ Clock, Sync }
-import cats.implicits._
+import cats.syntax.all._
 
 import java.time.Instant
 import java.time.format.DateTimeFormatter
