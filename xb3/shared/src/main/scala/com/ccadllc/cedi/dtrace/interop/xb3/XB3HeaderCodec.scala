@@ -18,7 +18,7 @@ package interop
 package xb3
 
 import cats.data.OptionT
-import cats.implicits._
+import cats.syntax.all._
 
 import java.util.UUID
 

@@ -17,7 +17,7 @@ package com.ccadllc.cedi.dtrace
 package interop
 package money
 
-import cats.implicits._
+import cats.syntax.all._
 
 import java.util.UUID
 

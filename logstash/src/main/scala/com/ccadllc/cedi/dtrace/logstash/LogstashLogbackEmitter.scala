@@ -17,7 +17,7 @@ package com.ccadllc.cedi.dtrace
 package logstash
 
 import cats.effect.Sync
-import cats.implicits._
+import cats.syntax.all._
 
 import net.logstash.logback.marker.LogstashMarker
 import net.logstash.logback.marker.Markers._

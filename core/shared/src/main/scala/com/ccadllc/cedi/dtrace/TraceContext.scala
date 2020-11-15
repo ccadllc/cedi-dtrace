@@ -17,7 +17,7 @@ package com.ccadllc.cedi.dtrace
 
 import cats.Functor
 import cats.effect.Sync
-import cats.implicits._
+import cats.syntax.all._
 
 /**
  * Represents a cursor into the "current" [[Span]] and associated system-level information and is associated with an

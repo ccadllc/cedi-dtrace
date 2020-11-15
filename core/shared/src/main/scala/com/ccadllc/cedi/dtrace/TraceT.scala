@@ -17,7 +17,7 @@ package com.ccadllc.cedi.dtrace
 
 import cats._
 import cats.effect._
-import cats.implicits._
+import cats.syntax.all._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{ FiniteDuration, TimeUnit }

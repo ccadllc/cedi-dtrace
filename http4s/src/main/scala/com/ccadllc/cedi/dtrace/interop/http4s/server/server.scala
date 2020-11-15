@@ -18,7 +18,7 @@ package interop
 package http4s
 
 import cats.effect.Sync
-import cats.implicits._
+import cats.syntax.all._
 
 import org.http4s.{ Header => H4sHeader, _ }
 
