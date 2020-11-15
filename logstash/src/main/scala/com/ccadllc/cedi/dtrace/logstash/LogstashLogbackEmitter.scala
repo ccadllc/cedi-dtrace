@@ -52,9 +52,9 @@ final class LogstashLogbackEmitter[F[_]](implicit F: Sync[F]) extends TraceSyste
           and[LogstashMarker](append("start-time", s.startTime.show)).
           and[LogstashMarker](append("span-success", s.failure.isEmpty)).
           and[LogstashMarker](append("failure-detail", s.failure.map(_.render).orNull)).
-          and[LogstashMarker](append("span-duration", s.duration.toMicros)).
+          and[LogstashMarker](append("span-duration", s.duration.toUnit(tc.system.timer.unit))).
           and[LogstashMarker](append("notes", s.notes.map(n => n.name.value -> n.value).collect { case (name, Some(value)) => name -> value.toString }.toMap.asJava))
-      logger.debug(marker, "Span {} {} after {} microseconds",
+      logger.debug(marker, s"Span {} {} after {} ${tc.system.timer.unit.toString.toLowerCase}s",
         s.spanName.value,
         if (s.failure.isEmpty) "succeeded" else "failed",
         s.duration.toMicros.toString)
