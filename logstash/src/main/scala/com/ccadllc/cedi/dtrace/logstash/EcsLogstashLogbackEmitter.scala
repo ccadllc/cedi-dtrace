@@ -76,7 +76,7 @@ final class EcsLogstashLogbackEmitter[F[_]](implicit F: Sync[F]) extends TraceSy
               n => n.name.value -> n.value).collect { case (name, Some(value)) => name -> value.toString }.toMap).asJava))
         tc.system.data.identity.values.foldLeft(m) { case (acc, (k, v)) => acc.and[LogstashMarker](append(k, v)) }
       }
-      logger.debug(marker, s"Span {} {} after {} ${tc.system.timer.unit.toString.toLowerCase}s",
+      logger.debug(marker, s"Span {} {} after {} ${tc.system.timer.unit.toString.toLowerCase}",
         s.spanName.value,
         if (s.failure.isEmpty) "succeeded" else "failed",
         s.duration.toUnit(tc.system.timer.unit).toString)
