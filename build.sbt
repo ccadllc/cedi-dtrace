@@ -12,7 +12,7 @@ lazy val http4sVersion = "0.21.14"
 
 lazy val kindProjectorVersion = "0.10.3"
 
-lazy val logbackVersion = "1.2.3"
+lazy val logbackVersion = "1.2.7"
 
 lazy val logstashVersion = "6.5"
 
