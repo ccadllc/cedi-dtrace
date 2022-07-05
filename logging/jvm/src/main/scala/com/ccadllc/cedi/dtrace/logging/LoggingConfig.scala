@@ -18,7 +18,7 @@ package logging
 
 import cats.effect.Sync
 
-import io.chrisdavenport.log4cats.slf4j.Slf4jLogger
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 /**
  * Provides the for the platform-specific initialization of the underlying logging
